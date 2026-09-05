@@ -121,9 +121,9 @@ now visible in the UI:
 |---|---|---|
 | Dec 2025 | ₹14,73,360 | Lower than Jan — two employees resolve to older, cheaper contracts |
 | Jan 2026 | ₹14,82,320 | |
-| Feb 2026 | ₹15,63,028 | Higher — February overtime reached payroll |
+| Feb 2026 | ₹15,58,668 | Higher — February overtime reached payroll |
 
-Feb filtered to Engineering alone: ₹5,03,998.
+Feb filtered to Engineering alone: ₹5,03,589.
 
 Counts: 22 employees, 24 contracts, 859 attendance, 11 leave requests, 3 payruns,
 60 payslips, 840 lines, 6 warnings.

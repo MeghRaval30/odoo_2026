@@ -406,18 +406,40 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------- attendance
 
+    #: Attendance spans every payroll period we seed. It used to start in
+    #: February, which left the December and January payslips reading
+    #: "Worked Days 0.00 / 23.00" — the payruns were correct but looked broken.
+    ATTENDANCE_FROM = date(2025, 12, 1)
+    ATTENDANCE_TO = date(2026, 3, 31)
+
+    #: Overtime is confined to February onward. December and January are clean
+    #: eight-hour months, which keeps the demo's headline evidence intact: the
+    #: December-under-January gap is caused purely by two employees resolving
+    #: to older, cheaper contracts, and February's rise is purely overtime.
+    #: Sprinkling overtime everywhere would swamp both signals with noise.
+    OVERTIME_FROM = date(2026, 2, 1)
+
     def _attendance(self, employees):
         made = 0
+        span = (self.ATTENDANCE_TO - self.ATTENDANCE_FROM).days + 1
+        # Nobody is at their desk on a company holiday. Generating attendance
+        # on them made worked days exceed expected days — January read 22 of 21.
+        holidays = set(Holiday.objects.values_list("date", flat=True))
         for emp in employees:
-            for offset in range(0, 60):
-                day = date(2026, 2, 1) + timedelta(days=offset)
-                if day > date(2026, 3, 31) or day.weekday() >= 5:
+            for offset in range(span):
+                day = self.ATTENDANCE_FROM + timedelta(days=offset)
+                if day.weekday() >= 5 or day in holidays:
                     continue
                 if random.random() < 0.07:      # absence
                     continue
-                start_h, start_m = 9, random.randint(0, 40)
-                worked = random.uniform(8.0, 9.5)
-                ci = timezone.make_aware(datetime.combine(day, time(start_h, start_m)))
+
+                start_m = random.randint(0, 40)
+                if day >= self.OVERTIME_FROM:
+                    worked = random.uniform(8.0, 9.5)
+                else:
+                    worked = random.uniform(8.0, 8.5)
+
+                ci = timezone.make_aware(datetime.combine(day, time(9, start_m)))
                 co = ci + timedelta(hours=worked)
                 overtime = D(str(round(max(0.0, worked - 8.5), 2)))
                 Attendance.objects.create(
@@ -425,7 +447,10 @@ class Command(BaseCommand):
                     status=Attendance.OVERTIME if overtime > 0 else Attendance.PRESENT,
                     overtime_hours=overtime)
                 made += 1
-        self.stdout.write(f"  attendance: {made} records across Feb-Mar 2026")
+        self.stdout.write(
+            f"  attendance: {made} records, "
+            f"{self.ATTENDANCE_FROM:%b %Y} - {self.ATTENDANCE_TO:%b %Y} "
+            f"(overtime from {self.OVERTIME_FROM:%b %Y})")
 
     # ---------------------------------------------------------------- payroll
 

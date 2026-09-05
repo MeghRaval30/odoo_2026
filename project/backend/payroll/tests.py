@@ -552,3 +552,65 @@ class PayslipVisibilityTests(PayrollTestCase):
         printed = {l.code for l in self.payslip.visible_lines}
         self.assertNotIn("INTERNAL", printed)
         self.assertIn("BASIC", printed)
+
+
+class ProrationTests(PayrollTestCase):
+    """
+    A mid-period joiner or leaver is paid for the days their contract covers.
+
+    `gather_period_facts` used to measure expected days across the whole
+    period and ignore the contract's own dates, while `evaluate_rule` took a
+    percentage of the full monthly wage — so somebody who joined on the 20th
+    was paid a full month. It is the commonest real payroll case and the one
+    nobody would sign off.
+    """
+
+    FULL_FEB_WORKING_DAYS = Decimal("20")
+
+    def _payslip_for_contract(self, start, end=None, first="Mid", last="Joiner"):
+        employee = Employee.objects.create(
+            first_name=first, last_name=last,
+            work_email=f"{first.lower()}.{last.lower()}@example.com",
+            company=self.company, date_of_joining=start,
+            working_schedule=self.schedule,
+            bank_account_number="1234567890", bank_ifsc="HDFC0001234")
+        Contract.objects.create(
+            employee=employee, start_date=start, end_date=end,
+            wage=Decimal("100000.00"), working_schedule=self.schedule,
+            salary_structure=self.structure, state=Contract.RUNNING)
+        return compute_payslip(self.make_payslip(employee))
+
+    def test_a_full_month_is_not_prorated(self):
+        payslip = self._payslip_for_contract(date(2025, 1, 1))
+        self.assertEqual(payslip.expected_days, self.FULL_FEB_WORKING_DAYS)
+        self.assertEqual(payslip.basic, Decimal("50000.00"))
+
+    def test_a_mid_month_joiner_is_paid_for_part_of_the_month(self):
+        # Joins Mon 16 Feb 2026. February 2026 has 20 working days; the 16th
+        # onward leaves 16-20 and 23-27, so 10 of them.
+        payslip = self._payslip_for_contract(date(2026, 2, 16))
+        self.assertEqual(payslip.expected_days, Decimal("10"))
+        # 50% of a 100,000 wage, halved by the 10/20 factor.
+        self.assertEqual(payslip.basic, Decimal("25000.00"))
+        self.assertLess(payslip.net, Decimal("64000.00"))
+
+    def test_a_mid_month_leaver_is_paid_only_to_their_last_day(self):
+        # Last day Fri 6 Feb 2026: only 2-6 fall inside, so 5 of 20 days.
+        payslip = self._payslip_for_contract(
+            date(2025, 1, 1), end=date(2026, 2, 6), first="Early", last="Leaver")
+        self.assertEqual(payslip.expected_days, Decimal("5"))
+        self.assertEqual(payslip.basic, Decimal("12500.00"))
+
+    def test_derived_rules_inherit_the_proration(self):
+        """HRA is 40% of BASIC, so it must scale once, not twice."""
+        payslip = self._payslip_for_contract(
+            date(2026, 2, 16), first="Derived", last="Case")
+        basic = payslip.basic
+        hra = payslip.lines.get(code="HRA").amount
+        self.assertEqual(hra, (basic * Decimal("0.40")).quantize(Decimal("0.01")))
+
+    def test_gross_and_net_stay_consistent_when_prorated(self):
+        payslip = self._payslip_for_contract(
+            date(2026, 2, 16), first="Consistent", last="Case")
+        self.assertEqual(payslip.gross, payslip.basic + payslip.allowances)
+        self.assertEqual(payslip.net, payslip.gross - payslip.deductions)
