@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 
 from accounts.api import RoleViewSet, UserViewSet, login_view, logout_view, me_view
 from attendance.api import AttendanceViewSet
+from core.api import HolidayViewSet
 from dashboard.api import dashboard_view, filter_options_view
 from employees.api import (CompanyViewSet, ContractViewSet, DepartmentViewSet,
                            EmployeeViewSet, JobPositionViewSet,
@@ -25,6 +26,7 @@ router.register("departments", DepartmentViewSet, basename="department")
 router.register("job-positions", JobPositionViewSet)
 router.register("work-locations", WorkLocationViewSet)
 router.register("companies", CompanyViewSet)
+router.register("holidays", HolidayViewSet)
 
 # Attendance
 router.register("attendance", AttendanceViewSet, basename="attendance")
