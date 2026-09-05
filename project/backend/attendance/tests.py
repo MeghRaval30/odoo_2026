@@ -283,11 +283,17 @@ class AttendanceOwnershipTests(AttendanceFixtureMixin, APITestCase):
         cls.hr_user = cls.build_user("hr@example.com", None, [Role.HR_MANAGER])
 
     def _payload(self, employee, *, day_offset=0):
-        # Anchored to 09:00 *today* rather than "eight hours ago", so the suite
-        # does not fail when it happens to run before 08:00 — an employee may
-        # only record attendance for the current day.
-        check_in = timezone.localtime().replace(
-            hour=9, minute=0, second=0, microsecond=0) + timedelta(days=day_offset)
+        # Two rules bracket this from opposite sides: an employee may only
+        # record attendance for the current day, and attendance may not start
+        # in the future. A fixed 09:00 anchor satisfies the first and breaks
+        # the second whenever the suite runs before 09:00 -- which for a
+        # twenty-four hour build is most of the night.
+        #
+        # So: a minute ago, floored to the start of today. Always in the past,
+        # always the current day, at any hour the suite happens to run.
+        now = timezone.localtime()
+        check_in = max(now.replace(hour=0, minute=0, second=0, microsecond=0),
+                       now - timedelta(minutes=1)) + timedelta(days=day_offset)
         return {
             "employee": employee.pk,
             "check_in": check_in.isoformat(),
