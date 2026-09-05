@@ -4,6 +4,7 @@
 // return bare arrays, so every consumer goes through rows().
 
 import { useCallback, useEffect, useState } from "react";
+import { api } from "../api";
 
 export const rows = (payload) =>
   Array.isArray(payload) ? payload : payload?.results || [];
@@ -18,7 +19,6 @@ export function useResource(path, params) {
     setLoading(true);
     setError(null);
     try {
-      const { api } = await import("../api");
       setData(await api.get(path, JSON.parse(key)));
     } catch (err) {
       setError(err.message);
