@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from accounts import capabilities as caps
 from accounts.models import AuditLog, SecuritySetting, client_ip
-from accounts.permissions import CanManageHR
+from accounts.permissions import RequiresCapability
 from core.formatting import hours_minutes, hours_minutes_compact
 
 from .models import Attendance
@@ -62,7 +62,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
-    permission_classes = [CanManageHR]
+    # Attendance feeds worked days, which feed pay. Reading it is open;
+    # editing anyone's record is a correction, and a separate authority.
+    permission_classes = [RequiresCapability(write=caps.ATTENDANCE_CORRECT)]
     filterset_fields = ["employee", "status", "employee__department"]
     search_fields = ["employee__first_name", "employee__last_name"]
     ordering_fields = ["check_in", "check_out"]
@@ -70,7 +72,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     #: Actions any authenticated employee may perform on their own attendance.
     #: PRD §3.2 grants Employee create-and-read on their own records, and the
     #: check-in widget is explicitly employee-facing — gating these behind
-    #: CanManageHR would make the widget unusable for the people who need it.
+    #: the correction capability would make the widget unusable for the people who need it.
     SELF_SERVICE_ACTIONS = {"status", "check_in", "check_out", "create"}
 
     def get_permissions(self):
@@ -130,7 +132,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         qs = Attendance.objects.select_related(
             "employee", "employee__department", "employee__manager")
         user = self.request.user
-        if not user.can_manage_hr and user.employee_id:
+        if not user.can(caps.ATTENDANCE_READ_ALL) and user.employee_id:
             qs = qs.filter(employee_id=user.employee_id)
         return qs
 

@@ -7,7 +7,7 @@
 // employee with no contract covering it is visible before any record exists.
 
 import { useState } from "react";
-import { api, formatDate, money } from "../api";
+import { api, auth, formatDate, money } from "../api";
 import {
   ErrorBox,
   Field,
@@ -273,9 +273,14 @@ export default function Payruns({ route }) {
   return (
     <div className="page">
       <PageHead title="Payruns" sub={`${payruns.rows.length} records`}>
-        <button className="primary" onClick={() => setWizard(true)}>
-          New Payrun
-        </button>
+        {/* A read-only payroll role opens this screen to check a run, not
+            to start one. Offering a button the server refuses is the same
+            fault as hiding one it allows, only pointing the other way. */}
+        {auth.has("payrun.write") && (
+          <button className="primary" onClick={() => setWizard(true)}>
+            New Payrun
+          </button>
+        )}
       </PageHead>
 
       <ErrorBox error={payruns.error} />

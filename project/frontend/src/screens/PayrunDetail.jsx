@@ -6,7 +6,7 @@
 // can_mark_paid flags rather than by re-deriving the state machine here.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, downloadBlob, formatDate, money } from "../api";
+import { api, auth, downloadBlob, formatDate, money } from "../api";
 import { ErrorBox, Loading, PageHead, StateBadge, rows } from "../components/ui";
 import { href, navigate } from "../lib/router";
 
@@ -65,6 +65,9 @@ export default function PayrunDetail({ id }) {
   };
 
   if (error && !payrun) return <div className="page"><ErrorBox error={error} /></div>;
+  // Enforced server-side either way; this only decides what is offered.
+  const canOperate = auth.has("payrun.write");
+
   if (!payrun) return <div className="page"><Loading /></div>;
 
   const errors = warnings.filter((w) => w.severity === "ERROR");
@@ -97,31 +100,43 @@ export default function PayrunDetail({ id }) {
 
       <div className="card">
         <div className="row">
-          <button
-            className="primary"
-            disabled={!payrun.can_compute || busy}
-            onClick={() => act("compute", "Compute")}
-          >
-            {busy === "compute" ? <span className="spinner" /> : "Compute"}
-          </button>
-          <button
-            disabled={!payrun.can_validate || busy}
-            onClick={() => act("validate", "Validate")}
-          >
-            {busy === "validate" ? <span className="spinner" /> : "Validate"}
-          </button>
-          <button
-            disabled={!payrun.can_mark_paid || busy}
-            onClick={() => act("mark-paid", "Mark paid")}
-          >
-            {busy === "mark-paid" ? <span className="spinner" /> : "Mark Paid"}
-          </button>
-          <button
-            disabled={!slips.length || busy}
-            onClick={() => act("send-payslips", "Send payslips")}
-          >
-            {busy === "send-payslips" ? <span className="spinner" /> : "Send Payslips"}
-          </button>
+          {/* The four buttons that move money. A role without payrun.write
+              reads this screen to check the run and reconcile it; it never
+              advances the state machine, so the controls are absent rather
+              than disabled -- a greyed-out Validate reads as "not yet",
+              which is the wrong story to tell. Export Register below stays:
+              it is a download, and checking is the whole job. */}
+          {canOperate && (
+            <>
+              <button
+                className="primary"
+                disabled={!payrun.can_compute || busy}
+                onClick={() => act("compute", "Compute")}
+              >
+                {busy === "compute" ? <span className="spinner" /> : "Compute"}
+              </button>
+              <button
+                disabled={!payrun.can_validate || busy}
+                onClick={() => act("validate", "Validate")}
+              >
+                {busy === "validate" ? <span className="spinner" /> : "Validate"}
+              </button>
+              <button
+                disabled={!payrun.can_mark_paid || busy}
+                onClick={() => act("mark-paid", "Mark paid")}
+              >
+                {busy === "mark-paid" ? <span className="spinner" /> : "Mark Paid"}
+              </button>
+              <button
+                disabled={!slips.length || busy}
+                onClick={() => act("send-payslips", "Send payslips")}
+              >
+                {busy === "send-payslips"
+                  ? <span className="spinner" />
+                  : "Send Payslips"}
+              </button>
+            </>
+          )}
           <button
             disabled={!slips.length || busy}
             onClick={async () => {

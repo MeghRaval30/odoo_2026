@@ -5,7 +5,8 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import CanManageHR
+from accounts import capabilities as caps
+from accounts.permissions import RequiresCapability
 from core.models import Company, Department, JobPosition, WorkLocation
 
 from .models import Contract, Employee, ScheduleLine, WorkingSchedule
@@ -184,7 +185,11 @@ class EmployeeDetailSerializer(serializers.ModelSerializer):
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    permission_classes = [CanManageHR]
+    # Reads stay open to any signed-in account -- get_queryset narrows a
+    # non-HR user to their own row. Deleting a person is its own
+    # capability: it is irreversible and payroll history hangs off it.
+    permission_classes = [RequiresCapability(write=caps.EMPLOYEE_WRITE,
+                                             delete=caps.EMPLOYEE_DELETE)]
     filterset_fields = ["department", "employee_type", "active", "company",
                         "job_position"]
     search_fields = ["first_name", "last_name", "work_email", "employee_code"]
@@ -203,7 +208,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
               ).order_by("first_name", "last_name"))
         user = self.request.user
         # An employee sees only themselves (PRD §3.2)
-        if not user.can_manage_hr and user.employee_id:
+        if not user.can(caps.EMPLOYEE_READ_ALL) and user.employee_id:
             qs = qs.filter(pk=user.employee_id)
         return qs
 
@@ -225,7 +230,9 @@ class ContractViewSet(viewsets.ModelViewSet):
         "employee", "department", "job_position", "working_schedule",
         "salary_structure")
     serializer_class = ContractSerializer
-    permission_classes = [CanManageHR]
+    # A contract carries the wage. Writing one is deciding what a person
+    # is paid, which is not the same job as processing the payment.
+    permission_classes = [RequiresCapability(write=caps.CONTRACT_WRITE)]
     filterset_fields = ["employee", "state", "salary_structure"]
     search_fields = ["reference", "employee__first_name", "employee__last_name"]
     ordering_fields = ["start_date", "wage", "reference"]
@@ -234,14 +241,14 @@ class ContractViewSet(viewsets.ModelViewSet):
         """
         An employee sees only their own contracts (PRD §3.2).
 
-        CanManageHR grants read to any authenticated user, and this viewset had
+        Reads are open to any authenticated user, and this viewset had
         no queryset scoping — so a plain Employee could list every contract in
         the company, wage column included. Every other personal-data viewset
         already scopes this way; this one was the gap.
         """
         qs = super().get_queryset()
         user = self.request.user
-        if user.can_manage_hr:
+        if user.can(caps.CONTRACT_READ_ALL):
             return qs
         # Fail closed: an account with no linked employee and no HR permission
         # sees nothing, rather than falling through to the full queryset.
@@ -252,14 +259,14 @@ class ContractViewSet(viewsets.ModelViewSet):
 class WorkingScheduleViewSet(viewsets.ModelViewSet):
     queryset = WorkingSchedule.objects.prefetch_related("lines").select_related("company")
     serializer_class = WorkingScheduleSerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.SCHEDULE_WRITE)]
     filterset_fields = ["company", "calendar_type", "active"]
     search_fields = ["name"]
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.REFERENCE_WRITE)]
     filterset_fields = ["company", "active"]
     search_fields = ["name"]
 
@@ -271,17 +278,17 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 class JobPositionViewSet(viewsets.ModelViewSet):
     queryset = JobPosition.objects.select_related("department", "company")
     serializer_class = JobPositionSerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.REFERENCE_WRITE)]
     filterset_fields = ["department", "company", "active"]
 
 
 class WorkLocationViewSet(viewsets.ModelViewSet):
     queryset = WorkLocation.objects.select_related("company")
     serializer_class = WorkLocationSerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.REFERENCE_WRITE)]
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.REFERENCE_WRITE)]

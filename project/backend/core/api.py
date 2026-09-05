@@ -8,7 +8,8 @@ piece nobody could edit.
 
 from rest_framework import serializers, viewsets
 
-from accounts.permissions import CanManageHR
+from accounts import capabilities as caps
+from accounts.permissions import RequiresCapability
 
 from .models import Holiday
 
@@ -36,7 +37,7 @@ class HolidaySerializer(serializers.ModelSerializer):
 class HolidayViewSet(viewsets.ModelViewSet):
     queryset = Holiday.objects.select_related("company")
     serializer_class = HolidaySerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.REFERENCE_WRITE)]
     filterset_fields = ["company"]
     search_fields = ["name"]
     ordering_fields = ["date", "name"]

@@ -46,6 +46,7 @@ CONTRACT_READ_ALL = "contract.read.all"
 CONTRACT_WRITE = "contract.write"
 SCHEDULE_READ = "schedule.read"
 SCHEDULE_WRITE = "schedule.write"
+REFERENCE_READ = "reference.read"        # see the catalogue tabs at all
 REFERENCE_WRITE = "reference.write"      # departments, positions, locations, holidays
 ATTENDANCE_READ_ALL = "attendance.read.all"
 ATTENDANCE_CORRECT = "attendance.correct"    # manual entry or edit for anyone
@@ -94,34 +95,123 @@ BASELINE = frozenset({
 _HR_MANAGER = frozenset({
     EMPLOYEE_READ_ALL, EMPLOYEE_WRITE, EMPLOYEE_DELETE,
     CONTRACT_READ_ALL, CONTRACT_WRITE,
-    SCHEDULE_READ, SCHEDULE_WRITE, REFERENCE_WRITE,
+    SCHEDULE_READ, SCHEDULE_WRITE, REFERENCE_READ, REFERENCE_WRITE,
     ATTENDANCE_READ_ALL, ATTENDANCE_CORRECT,
     TIMEOFF_READ_ALL, TIMEOFF_APPROVE, TIMEOFF_TYPE_WRITE,
     ALLOCATION_READ_ALL, ALLOCATION_WRITE,
     PROFILE_APPROVE, DASHBOARD_HR,
 })
 
-#: "All HR Manager permissions plus Create, Read, and Update access to Payruns
-#: and Payslips. Read-only access to Salary Structures and Salary Rules."
-#: Note what is absent: delete. That is the whole difference from the Manager
-#: row below, and it is deliberate.
-_PAYROLL_USER = _HR_MANAGER | {
-    PAYRUN_READ, PAYRUN_WRITE,
-    PAYSLIP_READ_ALL, PAYSLIP_WRITE,
-    SALARY_CONFIG_READ,
+#: The HR Payroll User is an **observer of payroll, not an operator of it**.
+#:
+#: This is narrower than PRD 3.2, deliberately, and it is the one place this
+#: build departs from the matrix. The PRD gives the role "all HR Manager
+#: permissions plus Create, Read and Update on Payruns and Payslips", which
+#: means one person can raise a wage, approve the leave that offsets it, edit
+#: the attendance behind it, and then compute and validate the payrun that pays
+#: it. Every input to a payslip, and the payslip itself, under a single login.
+#:
+#: Separation of duties says the person who processes pay must not also be the
+#: person who decides it. So this role reads everything it needs to check a
+#: payrun and writes almost none of it:
+#:
+#:   - contracts are readable, never writable  (it does not set wages)
+#:   - attendance is readable, never correctable  (it does not set worked days)
+#:   - leave is readable, never approvable  (it does not set unpaid days)
+#:   - payruns are readable, never created, computed, validated or paid
+#:   - employee records are readable, never edited, added or deleted, and
+#:     neither are the change requests raised against them
+#:   - configuration -- schedules, leave types, leave allocations, salary
+#:     rules, the reference catalogues -- is out of reach entirely, so those
+#:     tabs never render
+#:
+#: The set below is therefore all reads. That is not an accident of trimming:
+#: a role that could still write exactly one thing would be arbitrary, and the
+#: one thing left was leave allocation, which grants the balance that becomes
+#: unpaid days that become a deduction. It belongs with the rest.
+#:
+#: What remains is the whole job of checking payroll: open a run, read every
+#: payslip and warning, reconcile against attendance, leave and contracts, and
+#: report. Acting on what it finds is the Payroll Manager's signature.
+#:
+#: Note that own-scope self service is untouched, because it lives in BASELINE
+#: rather than in any role -- this person still punches their own clock, books
+#: their own leave and reads their own payslip.
+_PAYROLL_USER = frozenset({
+    EMPLOYEE_READ_ALL,
+    CONTRACT_READ_ALL,
+    ATTENDANCE_READ_ALL,
+    TIMEOFF_READ_ALL,
+    ALLOCATION_READ_ALL,
+    DASHBOARD_HR,
+    PAYRUN_READ,
+    PAYSLIP_READ_ALL,
     DASHBOARD_PAYROLL,
-}
+})
 
 #: "All HR Payroll User permissions with full CRUD access to Payruns, Payslips,
 #: Salary Structures, and Salary Rules."
+#:
+#: Also narrower than PRD 3.2, and for the same reason as the row above. The
+#: PRD makes this role a superset of the HR Manager, which hands the person who
+#: signs the payrun the ability to set every input to it. Here the two are
+#: **siblings, not a ladder**:
+#:
+#:   the HR Manager owns people   -- the employee record and the contract on
+#:                                   it, hiring and offboarding, leave
+#:                                   decisions and allocations, attendance
+#:                                   corrections, and the HR configuration
+#:                                   those depend on
+#:   the Payroll Manager runs pay  -- the full lifecycle of a payrun, up to
+#:                                   and including deleting one, and nothing
+#:                                   that feeds into it
+#:
+#: The dividing line is **deciding pay versus processing pay**, and a wage
+#: falls on the deciding side: it lives on a contract, and a contract is part
+#: of the employment relationship HR owns. So this role reads employees and
+#: contracts exactly as the Payroll User does -- it cannot open a contract and
+#: change the number the payrun will multiply.
+#:
+#: What it takes from an employee record is only what it needs to check a run,
+#: so it sees the Employees list and none of the configuration tabs beside it,
+#: again exactly as the Payroll User does.
+#:
+#: Only the Admin holds both sides. That is what makes an Admin an Admin.
+#:
+#: Payrun and payslip deletion stay here deliberately: correcting payroll is
+#: this role's job and sometimes a run genuinely has to be withdrawn before it
+#: is paid. It is also the distinction PRD 3.2 draws between the two payroll
+#: rows, and it is the one worth keeping.
+#: Salary structures and rules are readable and not writable here either. A
+#: rule is the formula that turns a wage into a payslip, so writing one is
+#: deciding pay just as surely as setting the wage is -- and this role would
+#: otherwise be able to add a rule and then run the payrun that applies it.
+#: Reading them stays, because a payrun cannot be checked against rules that
+#: cannot be seen.
+#:
+#: The whole of this role's authority is therefore the payrun itself: create
+#: it, compute it, validate it, pay it, delete it. Every input arrives from
+#: somewhere else.
 _PAYROLL_MANAGER = _PAYROLL_USER | {
-    PAYRUN_DELETE, PAYSLIP_DELETE, SALARY_CONFIG_WRITE,
+    PAYRUN_WRITE, PAYRUN_DELETE,
+    PAYSLIP_WRITE, PAYSLIP_DELETE,
+    SALARY_CONFIG_READ,
 }
 
 #: "Full access to all modules and models across the platform. User management,
 #: role assignment, permission updates, and complete system administration."
-_ADMIN = _PAYROLL_MANAGER | {
+#:
+#: Explicitly the union of the HR Manager and the Payroll Manager, now that
+#: those two are siblings rather than a ladder -- otherwise the Admin would
+#: quietly lose leave approval and attendance correction along with them.
+_ADMIN = _HR_MANAGER | _PAYROLL_MANAGER | {
     USER_MANAGE, SECURITY_MANAGE, AUDIT_READ,
+    # Salary structures and rules are readable by payroll and writable by
+    # nobody below this line. Listed explicitly because it is the one
+    # capability no other role carries -- take it out and the salary rules
+    # become uneditable by anyone, which the ALL_CAPABILITIES check below
+    # would catch but is worth naming here.
+    SALARY_CONFIG_WRITE,
 }
 
 ROLE_CAPABILITIES = {
@@ -135,6 +225,21 @@ ROLE_CAPABILITIES = {
 #: Every capability that exists. Used to validate the matrix and to render the
 #: permission grid on the role screen.
 ALL_CAPABILITIES = frozenset(BASELINE | _ADMIN)
+
+
+def unreachable_capabilities() -> frozenset:
+    """
+    Capabilities no role grants -- a feature nobody in the product can use.
+
+    Narrowing a role by subtraction makes this easy to do by accident: remove
+    a capability from the only role that had it and the button it guards stops
+    working for everyone, silently, with no error anywhere. The test suite
+    asserts this is empty.
+    """
+    granted = set(BASELINE)
+    for held in ROLE_CAPABILITIES.values():
+        granted |= held
+    return frozenset(ALL_CAPABILITIES - granted)
 
 
 def capabilities_for(role_codes) -> frozenset:
@@ -168,10 +273,14 @@ NAVIGATION = [
         "items": [
             {"to": "/employees", "label": "Employees", "cap": EMPLOYEE_READ_ALL},
             {"to": "/schedules", "label": "Working Schedules", "cap": SCHEDULE_READ},
-            {"to": "/departments", "label": "Departments", "cap": EMPLOYEE_READ_ALL},
-            {"to": "/job-positions", "label": "Job Positions", "cap": EMPLOYEE_READ_ALL},
-            {"to": "/work-locations", "label": "Work Locations", "cap": EMPLOYEE_READ_ALL},
-            {"to": "/holidays", "label": "Holidays", "cap": EMPLOYEE_READ_ALL},
+            # The four catalogues below are configuration, not staff data, so
+            # they hang off REFERENCE_READ rather than EMPLOYEE_READ_ALL. A
+            # role that reads employees without configuring the organisation --
+            # the Payroll User -- gets the list and none of the setup tabs.
+            {"to": "/departments", "label": "Departments", "cap": REFERENCE_READ},
+            {"to": "/job-positions", "label": "Job Positions", "cap": REFERENCE_READ},
+            {"to": "/work-locations", "label": "Work Locations", "cap": REFERENCE_READ},
+            {"to": "/holidays", "label": "Holidays", "cap": REFERENCE_READ},
         ],
     },
     {
