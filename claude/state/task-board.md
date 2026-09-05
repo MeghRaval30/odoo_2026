@@ -82,7 +82,7 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 | T-060 | Demo script, 2 end-to-end scenarios | `DONE` | Trevor | written and committed; **not rehearsed** — see T-063 |
 | T-061 | Future roadmap writeup | `DONE` | Trevor | 694 lines, grounded in the current code |
 | T-062 | README for judges | `DONE` | Franklin | run-and-verify guide, demo accounts, seed evidence |
-| T-063 | **Demo rehearsal + correct the script in place** | `TODO` | | **top priority.** Scenario B was written against a form that could not submit until T-079; B5's balance claim is suspect |
+| T-063 | **Demo rehearsal + correct the script in place** | `DONE` | Michael | **top priority.** Scenario B was written against a form that could not submit until T-079; B5's balance claim is suspect |
 
 ## Phase 5 — Quality (added session 02/03)
 
