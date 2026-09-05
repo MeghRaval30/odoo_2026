@@ -1,12 +1,21 @@
-// Attendance list (T-036).
+// Attendance list and correction form (T-036).
 //
 // worked_hours and overtime_hours are derived from check-in/check-out on the
-// server. A row edited by hand is flagged is_manually_edited by the viewset,
-// which is surfaced here rather than hidden.
+// server, so they are shown but never edited. Saving a correction makes the
+// viewset stamp is_manually_edited and record who did it, which is why the
+// Source column exists.
 
-import { useState } from "react";
-import { formatDateTime } from "../api";
-import { ErrorBox, Loading, PageHead, useResource } from "../components/ui";
+import { useEffect, useState } from "react";
+import { api, formatDateTime } from "../api";
+import {
+  ErrorBox,
+  Field,
+  Loading,
+  Modal,
+  PageHead,
+  rows,
+  useResource,
+} from "../components/ui";
 
 const STATUS_TONE = {
   PRESENT: "green",
@@ -15,9 +24,162 @@ const STATUS_TONE = {
   ABSENT: "red",
 };
 
+// <input type="datetime-local"> wants local wall time with no zone suffix.
+const toLocalInput = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+};
+
+function AttendanceForm({ id, onClose, onSaved }) {
+  const [form, setForm] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/api/employees/", { page_size: 200 })
+      .then((e) => setEmployees(rows(e)))
+      .catch(() => setEmployees([]));
+  }, []);
+
+  useEffect(() => {
+    if (!id) {
+      setForm({
+        employee: "",
+        check_in: toLocalInput(new Date()),
+        check_out: "",
+        status: "PRESENT",
+        notes: "",
+      });
+      return;
+    }
+    api
+      .get(`/api/attendance/${id}/`)
+      .then((a) =>
+        setForm({
+          employee: a.employee,
+          check_in: toLocalInput(a.check_in),
+          check_out: toLocalInput(a.check_out),
+          status: a.status,
+          notes: a.notes || "",
+          worked_hours: a.worked_hours,
+          overtime_hours: a.overtime_hours,
+          is_manually_edited: a.is_manually_edited,
+        }),
+      )
+      .catch((err) => setError(err.message));
+  }, [id]);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    const payload = {
+      employee: form.employee,
+      check_in: form.check_in,
+      check_out: form.check_out || null,
+      status: form.status,
+      notes: form.notes,
+    };
+    try {
+      if (id) await api.patch(`/api/attendance/${id}/`, payload);
+      else await api.post("/api/attendance/", payload);
+      onSaved();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!form) return null;
+
+  return (
+    <Modal
+      title={id ? "Attendance Record" : "New Attendance Record"}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary" onClick={save} disabled={busy}>
+            {busy ? <span className="spinner" /> : "Save"}
+          </button>
+        </>
+      }
+    >
+      <ErrorBox error={error} />
+
+      {id && (
+        <div className="smart-row">
+          <div className="smart">
+            <span className="n">{form.worked_hours}</span>
+            <span className="l">Worked hours</span>
+          </div>
+          <div className="smart">
+            <span className="n">{form.overtime_hours}</span>
+            <span className="l">Overtime hours</span>
+          </div>
+          <div className="smart">
+            <span className="n">{form.is_manually_edited ? "Manual" : "System"}</span>
+            <span className="l">Source</span>
+          </div>
+        </div>
+      )}
+
+      <Field label="Employee">
+        <select value={form.employee || ""} onChange={set("employee")}>
+          <option value="">—</option>
+          {employees.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.full_name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <div className="row fill">
+        <Field label="Check in">
+          <input
+            type="datetime-local"
+            value={form.check_in}
+            onChange={set("check_in")}
+          />
+        </Field>
+        <Field label="Check out">
+          <input
+            type="datetime-local"
+            value={form.check_out}
+            onChange={set("check_out")}
+          />
+        </Field>
+      </div>
+
+      <Field label="Status">
+        <select value={form.status} onChange={set("status")}>
+          <option value="PRESENT">Present</option>
+          <option value="OVERTIME">Overtime</option>
+          <option value="HALF_DAY">Half Day</option>
+          <option value="ABSENT">Absent</option>
+        </select>
+      </Field>
+
+      <Field label="Notes">
+        <textarea rows={2} value={form.notes} onChange={set("notes")} />
+      </Field>
+    </Modal>
+  );
+}
+
 export default function Attendance({ route }) {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(undefined);
   const employeeFilter = route?.query?.employee || "";
 
   const records = useResource("/api/attendance/", {
@@ -30,7 +192,11 @@ export default function Attendance({ route }) {
 
   return (
     <div className="page">
-      <PageHead title="Attendance" sub={`${records.rows.length} records`} />
+      <PageHead title="Attendance" sub={`${records.rows.length} records`}>
+        <button className="primary" onClick={() => setEditing(null)}>
+          New Record
+        </button>
+      </PageHead>
 
       <div className="toolbar">
         <input
@@ -74,7 +240,11 @@ export default function Attendance({ route }) {
               </thead>
               <tbody>
                 {records.rows.map((a) => (
-                  <tr key={a.id}>
+                  <tr
+                    key={a.id}
+                    className="clickable"
+                    onClick={() => setEditing(a.id)}
+                  >
                     <td>{a.employee_name}</td>
                     <td className="muted">{a.department_name || "—"}</td>
                     <td className="muted tiny">{formatDateTime(a.check_in)}</td>
@@ -102,6 +272,17 @@ export default function Attendance({ route }) {
           </div>
         )}
       </div>
+
+      {editing !== undefined && (
+        <AttendanceForm
+          id={editing}
+          onClose={() => setEditing(undefined)}
+          onSaved={() => {
+            setEditing(undefined);
+            records.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
