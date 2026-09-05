@@ -3,7 +3,7 @@
 Get from a fresh clone to a running, seeded app. **Verify every command here at
 each MEGATRON LAUNCH** — a stale runbook costs the next session its first hour.
 
-Last verified: **session 07 (Michael), 2026-09-06 00:55 IST.** Every command below
+Last verified: **session 08 (Franklin), 2026-09-06 03:00 IST.** Every command below
 was re-run in that session, including the frontend build and all five harnesses.
 
 > **Do not add `--noreload` to `runserver`** (B-016). Session 04 did, then spent
@@ -13,6 +13,12 @@ was re-run in that session, including the frontend build and all five harnesses.
 ---
 
 ## ⚠️ Before your first command — check which branch you are on
+
+> **The two paragraphs below are machine-specific** (B-035). They describe the
+> checkout one teammate used. Session 08 ran on a different machine, where the
+> repo is at `C:/Users/robo9/OneDrive/Desktop/odoo_2026` and `main` checked
+> out, merged and pushed with no complaint. Read them as "this happened once,
+> on one machine", not as instructions.
 
 The main checkout on the build machine is parked on `test/backend-suite`, seven
 commits behind `main` (B-014). Session 03 worked in a git worktree.
@@ -88,7 +94,7 @@ Serves on `http://127.0.0.1:8000`.
 `manage.py seed --flush` is idempotent and reproducible (`random.seed(360)`).
 It produces **22 employees · 24 contracts · 1731 attendance · 11 leave requests ·
 4 payruns · 61 payslips · 976 lines · 6 warnings**, with December ₹14,73,360,
-January ₹14,82,320 and February ₹15,58,667.87. `core/tests.py` pins all of it, so
+January ₹14,82,320 and February ₹15,58,320.41. `core/tests.py` pins all of it, so
 a change that moves the demo's numbers fails there first.
 
 The fourth payrun is `March 2026 (off-cycle correction)` — one payslip, left at
@@ -130,9 +136,9 @@ Three of the four need nothing but the venv:
 cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py    # 28/28 — the five graded rules
 ./.venv/Scripts/python.exe audit_permissions.py    # role matrix + row scoping
-./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
+./.venv/Scripts/python.exe smoke_api.py       # 53/53 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test     # 231/231 — Django suite, 8 apps
+./.venv/Scripts/python.exe manage.py test     # 236/236 — Django suite, 8 apps
 ```
 
 The fourth drives real HTTP and **needs a live server in another terminal**:
@@ -233,3 +239,29 @@ existing token for a user before issuing a new one, so an account holds exactly
 one live session. Running any harness signs out a browser logged in as one of
 the five demo accounts — which looks exactly like a session timeout and is not
 one. Two people cannot demo from the same account at the same time.
+
+---
+
+## What changed in session 08
+
+`seed --flush` now also clears **`AuditLog` and `LoginAttempt`** (D-050). Two
+consequences worth knowing before a demo:
+
+* The Administration dashboard opens on **"Nothing recorded yet"** and fills as
+  people sign in. That is intended — every row a judge reads is then something
+  that just happened in front of them, rather than harness residue naming
+  accounts that no longer exist.
+* **A lockout can now be cleared.** `LoginAttempt` is what `_recent_failures`
+  counts, so before this a run of failed sign-ins could leave a demo account
+  locked with no supported way out. If an account ever refuses a known-good
+  password, `seed --flush` is the fix.
+
+The register export now downloads with the server's own per-run filename —
+`register-February-2026.csv` rather than `register.csv` for every month (D-052).
+
+The payroll register opens on **February 2026 (20 payslips)**, not the March
+off-cycle correction (D-051).
+
+A leave request raised through the UI is created as **To Approve** and appears
+immediately in HR's queue (D-053). If you are demonstrating the approval flow,
+you no longer need to plant a row by hand.

@@ -674,3 +674,101 @@ seed, start both servers, sign in as `aarav@oxp.com`, and walk demo scenario A
 from A1 to A10 writing down the number actually on screen at each step — the
 script's figures are corrected but it has not been rehearsed since the
 permission model was rebuilt.
+
+---
+
+## Session 08 — Franklin · 2026-09-06 01:15 → 03:10 IST (~1h 55m)
+
+Opened by pulling session 07's handoff, setting the Robo9327study identity, and
+running the baseline before touching anything: **231 tests OK**, then all four
+harnesses green. That mattered, because it established that anything still wrong
+had to be somewhere the harnesses do not look.
+
+The user's brief was "check for bugs and repair it", so the demo rehearsal the
+handoff asked for was overtaken. It got done incidentally and thoroughly anyway.
+
+### What was accomplished
+
+**Five real defects found and fixed, none of them visible to any harness.**
+Three were found by exploration; two were reported by the user from the running
+app.
+
+*Found by exploration:*
+
+* **The audit trail survived `seed --flush`.** `AuditLog` and `LoginAttempt` sit
+  below everything in the dependency graph, so nothing cascaded to them. 10 of 16
+  rows were orphans naming deleted accounts — including harness probe users — and
+  the Admin lands directly on that table. `LoginAttempt` also drives lockout, so
+  a run of failed sign-ins could lock a demo account unclearably (D-050).
+* **The payroll register opened on the wrong run.** `Reports.jsx` took
+  `payruns.rows[0]` under `-period_start` — "the newest run", which is the
+  one-payslip off-cycle correction. Precisely the rule D-034 replaced on the
+  dashboard, in a screen that was missed (D-051).
+* **The register export's filename was never readable.** The server sends a
+  per-run `Content-Disposition`; CORS never exposed the header, so every month
+  downloaded as `register.csv` and collided. The code comment said "the filename
+  comes from the server" and it had never once worked (D-052).
+
+*Reported by the user:*
+
+* **Leave requests were a dead end.** Created as `DRAFT`, and nothing anywhere
+  advanced them — no submit action exists and the screen acts only on
+  `TO_APPROVE`. Every request raised through the UI was unactionable. The seeded
+  rows hid it by setting state directly on the model (D-053).
+* **An employee could self-approve their own leave.** `state` was a writable
+  serializer field, and create is the one write every employee has. `POST
+  {"state": "APPROVED"}` returned 201 APPROVED. Confirmed over HTTP before and
+  after the fix (D-054).
+* **The profile-change queue was both wrong and unfindable.** A reviewer's own
+  request sat in their own "awaiting you" panel behind an Approve button that
+  could only 400; and the queue's only entrance was a tab inside "My profile"
+  (D-055, D-056).
+
+**The demo was rehearsed after all, mechanically.** Criterion 4 was walked
+through the wizard for the first time — `DUPLICATE` on creation, then
+`AC_MISSING` ×2 after Compute: three warnings, two distinct codes, zero errors.
+Scenario B's allocation gate was driven to a real refusal. Every figure the
+script quotes was confirmed on screen.
+
+**All 22 routes were walked as all five roles** with `console.error`,
+`window.onerror`, unhandled rejections and `window.fetch` patched to collect
+`{route, message}`. Zero console errors, zero unexpected responses.
+
+### What was attempted and abandoned
+
+* **A sixth bug was found and deliberately not fixed.** Leave approval has no
+  self-approval guard, unlike profile changes (B-034, T-134). It is not reachable
+  in the demo — Sara holds zero own pending requests and the admin has no
+  employee record — and fixing it in FREEZE would change the seeded approval
+  queue. Reported to the user instead of changed.
+* **T-111 was not resolved.** Ledger's 3.05:1 primary button still needs the
+  user's decision and has now been carried unasked across three sessions.
+* **The probe scripts were not committed**, following session 07's precedent. The
+  findings worth keeping became five real tests in `accounts/tests.py`.
+
+### A note on test quality
+
+Each of the five new tests was **verified to fail against the pre-fix code** by
+stashing the fix and re-running — `'DRAFT' != 'TO_APPROVE'`, `'APPROVED' !=
+'TO_APPROVE'`, and the queue assertion. A regression test that passes either way
+is decoration, and this is cheap to check.
+
+### Verification at close
+
+236 backend tests (from 231), 28/28 rules, 53/53 API, 26/26 forms, permission
+audit clean across every cell, clean frontend build. Demo reseeded to a known
+state: 0 audit rows, 0 login attempts, network enforcement off, three paid
+payruns plus the March off-cycle correction still `Computed` (D-033 intact).
+
+### Handoff
+
+Product code merged to `main` in two `--no-ff` merges before packing —
+**`febce21`** (three exploration findings) and **`026bcc8`** (the two approval
+workflows). The working tree was clean at MEGATRON LAUNCH, so no `wip:` commit
+was needed. Context committed separately and tagged **`handoff-franklin-08`**.
+
+**Next up: Trevor, session 09.** First action is **T-107** — seed, start both
+servers, sign in as `aarav@oxp.com`, and read demo scenario A aloud against the
+screen, fixing the prose. The script's figures are now all verified correct; what
+is stale is its description of menus and roles, which predates the permission
+rebuild.

@@ -949,3 +949,164 @@ outside floating layers. A tinted chip or a glow behind the mark would be louder
 and would spend something the palette reserves for state. The typographic route
 gets the same prominence honestly, follows all six themes, and keeps the bar at
 46px.
+
+---
+
+### D-050 — `seed --flush` resets the audit trail too
+
+**Decided by:** Franklin, session 08 · 2026-09-06
+
+`AuditLog` and `LoginAttempt` are deleted by `seed --flush`, alongside the
+security settings row that D-046 already added.
+
+**Rationale.** Both tables sit below everything else in the dependency graph, so
+nothing cascaded to them and they survived every reseed — the same way the
+settings row used to. `AuditLog` holds its actor with `SET_NULL`, so a flush
+turned every row into an orphan naming an account that no longer existed. The
+Admin lands directly on that table, and its opening state read *"User created —
+admin@oxp.com created perm.probe@oxp.com"*, a refusal counter of 1, and fourteen
+sign-ins nobody made. All harness residue, on the demo's first admin screen.
+
+`LoginAttempt` is not merely cosmetic: it is what `_recent_failures` counts to
+decide a lockout, so a run of failed sign-ins could leave a demo account locked
+with no supported way to clear it.
+
+Both are append-only by design and neither is reconstructible, so they are
+dropped **only here**, where "a known demo state" is the entire purpose of the
+command. The empty table is not a loss: the demo's own sign-ins repopulate it
+within seconds, so every row a judge reads is something that just happened in
+front of them.
+
+---
+
+### D-051 — The register opens on the newest *finished* run, and the server says which
+
+**Decided by:** Franklin, session 08 · 2026-09-06
+
+`Reports.jsx` reads `default_period` from `/api/dashboard/filters/` instead of
+taking `payruns.rows[0]`.
+
+**Rationale.** This is D-034 a second time, in a screen that was missed. The
+rows are ordered `-period_start`, so "the first row" is the newest run — which
+is the off-cycle correction holding a single payslip. The payroll register
+therefore opened on a one-line report instead of February's twenty.
+
+D-034's own general rule applies unchanged: *when a screen and its API both
+decide the same thing, they will eventually decide it differently.* The server
+already names the answer; the screen now reads it, and falls back to the newest
+visible run only if the call fails or names a run this account cannot see.
+
+---
+
+### D-052 — Content-Disposition is exposed to the browser
+
+**Decided by:** Franklin, session 08 · 2026-09-06
+
+`CORS_EXPOSE_HEADERS = ["Content-Disposition"]`.
+
+**Rationale.** The register export builds a per-run filename and sends it as
+`Content-Disposition: attachment; filename="register-February-2026.csv"`.
+`payrunRegister` reads that header to name the download, and its comment says
+so. It had never once succeeded: only the seven CORS-safelisted response headers
+are readable from JavaScript cross-origin, the frontend is a different origin
+from the API, and `Content-Disposition` is not one of them. Every export fell
+through to the `"register.csv"` fallback, so exporting three months produced one
+name three times and the files collided.
+
+The server was right and unheard. Verified in the browser afterwards: three runs,
+three distinct filenames.
+
+---
+
+### D-053 — Submitting a leave request is the act of submitting it
+
+**Decided by:** Franklin, session 08 · 2026-09-06 · *reported by the user*
+
+`TimeOffRequestViewSet.perform_create` saves with `state=TO_APPROVE`. The screen
+treats `DRAFT` and `TO_APPROVE` alike as undecided.
+
+**Rationale.** A request created through the API took the model default `DRAFT`,
+and **nothing anywhere advanced it**: there is no submit or confirm action on the
+viewset, `TO_APPROVE` appeared nowhere in `timeoff/api.py`, and the screen
+offered Approve and Refuse only on `TO_APPROVE`. So every request an employee
+raised landed in a state nobody could act on and the requester could not leave.
+It read as pending and was a dead end.
+
+No harness caught it because the seeded rows set their state directly on the
+model, so they were born `APPROVED` or `TO_APPROVE` and the approval queue looked
+healthy as long as nobody actually submitted anything.
+
+There is no draft-and-send-later flow to preserve — the form's button says
+Submit and the state filter offers no Draft — so creation lands in the queue.
+`DRAFT` stays in `STATES`, and the screen still acts on it, so any row written
+before this remains decidable rather than stranded.
+
+---
+
+### D-054 — A workflow state is not an input field
+
+**Decided by:** Franklin, session 08 · 2026-09-06
+
+`state` is read-only on `TimeOffRequestSerializer`. `Allocation.state` stays
+writable, deliberately.
+
+**Rationale.** `state` was writable, and creating a request is the one write an
+ordinary employee always has. PATCH and the `approve` action were already
+refused to them, so the create payload was the way through: `POST {"state":
+"APPROVED"}` returned 201 with state `APPROVED` — leave granted outright,
+consuming the requester's own allocation and, for an unpaid type, moving their
+own payslip. Confirmed over HTTP before the fix and again after.
+
+The state moves only through `approve()` and `refuse()`, both of which require
+`timeoff.approve`.
+
+The asymmetry with `Allocation` is intentional and worth stating: an allocation
+is a **grant raised by HR** under `allocation.write`, so setting its state is not
+an escalation, and two harnesses create allocations in a chosen state. The
+question is never "is this field writable" but "who writes it, and does writing
+it grant them something".
+
+---
+
+### D-055 — "Awaiting you" means awaiting *you*
+
+**Decided by:** Franklin, session 08 · 2026-09-06 · *reported by the user*
+
+The HR dashboard's queue excludes the viewer's own employee record, and the KPI
+counts the same set.
+
+**Rationale.** `ProfileChangeRequest.approve()` has always refused a reviewer
+deciding a change to their own record — an HR Manager who could approve their own
+bank-account change would make the control decorative. The dashboard was not
+applying the same rule when building its queue, so an HR Manager's own pending
+request appeared in the panel headed *"awaiting you"* beside an Approve button
+whose only possible outcome was a 400.
+
+That is the inverse of PRD-3.1: never offer a control the server will refuse. The
+requests table now says **"Another approver"** on your own row instead of
+offering buttons.
+
+**Excluded from the queue is not hidden.** The full list is untouched — HR still
+reads every request including their own, and sees it sitting there pending.
+
+---
+
+### D-056 — A screen only reachable from inside "My profile" is a screen nobody finds
+
+**Decided by:** Franklin, session 08 · 2026-09-06 · *reported by the user*
+
+**Employees → Change Requests** (`/profile/requests`), gated on `PROFILE_APPROVE`.
+
+**Rationale.** The user reported that HR never received profile-change approvals.
+They did — the queue worked — but its only door was a tab inside **"My profile"**,
+a personal-scope screen that for the admin login opens by announcing there is no
+profile to show. So the two roles that may decide these requests had no way to
+find them, and requests sat pending because nobody knew where to look.
+
+The screen, the route and the capability all already existed. Only the door was
+missing. Adding it to the server-side navigation manifest means the entry appears
+for exactly the roles holding the capability — verified as present for the Admin
+and the HR Manager, absent for both payroll ranks and the Employee.
+
+**The general rule:** a working feature with no entrance is indistinguishable
+from a broken one, and will be reported as broken.

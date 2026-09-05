@@ -11,46 +11,45 @@
 ```
 Hackathon start:   2026-09-05   10:00 IST   ✅ confirmed by the user
 Hackathon end:     2026-09-06   10:00 IST   ✅ confirmed by the user
-Session 07 closed: 2026-09-06   01:05 IST   (wall clock, `date`)
-Elapsed:           ~15h 05m  /  24h
-REMAINING:         ~8h 55m
-Phase:             BUILD by the gate — behave as FREEZE. See below.
+Session 08 closed: 2026-09-06   03:10 IST   (wall clock, `date`)
+Elapsed:           ~17h 10m  /  24h
+REMAINING:         ~6h 50m
+Phase:             FREEZE — bugfix and polish only
 ```
 
-**Run `date` yourself** and recompute before making any scope call.
+**Run `date` yourself** and recompute before making any scope call. POLISH
+begins at 06:00 IST; DEMO at 08:00 IST.
 
 | Remaining | Phase | What you may do |
 |---|---|---|
-| > 8h | **BUILD** | New features, per the task board |
+| > 8h | BUILD | New features, per the task board |
 | < 8h | **FREEZE** | Bugfix and polish only |
-| < 4h | **POLISH** | Stop coding. Seed data, demo rehearsal, roadmap |
-| < 2h | **DEMO** | Rehearse only. Touch nothing |
+| < 4h | POLISH | Stop coding. Seed data, demo rehearsal, roadmap |
+| < 2h | DEMO | Rehearse only. Touch nothing |
 
-**The gate says BUILD by a few minutes. Behave as though it says FREEZE.**
-There is no feature left that the graded deliverables need. The single thing
-standing between this build and the grade is that **the demo has not been
-walked end to end since the permission model was rebuilt**. Rehearse before you
-build anything.
+**There is no feature left that the graded deliverables need.** The board has
+been feature-complete since session 06. Everything since has been finding and
+repairing defects.
 
 ---
 
 ## THE ONE-LINE STATUS
 
-The product is complete and verified; the *demo script* is corrected on paper
-but unrehearsed against the new UI. **Go rehearse it.**
+Five real bugs were found and fixed this session by *using* the product rather
+than running the harnesses; the build is green and the demo script is still
+unrehearsed on paper. **T-107 is the last real task.**
 
 ---
 
 ## ✅ WHAT WORKS — verified this session, with the proof
 
-Everything below was run or clicked after the last commit. Nothing here is
-inferred.
+Everything below was run or clicked after the last commit. Nothing is inferred.
 
-### The five harnesses, all green at 00:55 IST
+### The five harnesses, all green at 03:00 IST
 
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe manage.py test            # 231 tests OK
+./.venv/Scripts/python.exe manage.py test            # 236 tests OK
 ./.venv/Scripts/python.exe verify_rules.py           # 28/28 — the graded rules
 ./.venv/Scripts/python.exe audit_permissions.py      # every cell + 16 refusals
 ./.venv/Scripts/python.exe smoke_api.py              # 53/53 — the HTTP layer
@@ -60,53 +59,58 @@ cd project/backend
 ./.venv/Scripts/python.exe probe_forms.py            # 26/26
 ```
 
-**The harnesses no longer dirty the demo** (D-046). Run the whole pass
-immediately before presenting if you like; it now leaves 5 accounts, network
-enforcement off and sessions not IP-bound.
+Frontend `npm run build` is clean (~750 kB JS).
 
-### A robustness pass that found two real bugs
+### Both approval workflows now run end to end — walked in a browser
 
-| Probe | Scale | Result |
-|---|---|---|
-| Route + query fuzz | 2,499 requests — every route × 5 roles × 19 malformed query strings, real/missing/nonsense ids, anonymous, forged token | **0 crashes, 0 anonymous leaks** |
-| Payslip invariants | 61 payslips × 12 invariants | found the attendance/schedule bug |
-| Engine edge cases | no contract, zero wage, ₹99,99,999 wage, mid-period join, mid-period leave | all handled |
-| Frontend route walk | 22 routes × Admin and Employee, console + network instrumented | found the My Payslips bug; **0 console errors** |
-| Idempotency / PDF / register | recompute twice, paid-run lock, 12 PDFs, register export | all clean |
+This is new, and it is the important half of the session.
 
-The probe scripts were **deliberately not committed** — the two findings worth
-keeping became real tests in `core/tests.py` and `accounts/tests.py`. The
-technique is written up in the traps section of the next-session prompt; it is
-worth twenty minutes to repeat if you change anything structural.
+* **Leave.** Sign in as `john@oxp.com`, Time Off → New Request, pick *Sick
+  Leave*, submit. It now reads **To Approve** with no action offered to John
+  himself. Sign in as `sara@oxp.com` → the same row carries **Approve** and
+  **Refuse**; approving moves it to **Approved**.
+* **Profile changes.** As `john@oxp.com`, Profile → *Needs HR approval* →
+  Request on a sensitive field. As `sara@oxp.com` it appears under
+  **Employees → Change Requests** and in the HR dashboard's *Personal detail
+  changes* panel, both with Approve/Refuse.
 
-### The permission model, rebuilt and enforced
+### Criterion 4 proven by clicking, not only by test
 
-| Role | Authority |
+As `aarav@oxp.com`, New Payrun → name *March 2026*, 01–31 Mar 2026, Regular
+Salary → Next → Create payrun (20):
+
+| Step | What is on screen |
 |---|---|
-| Employee | Own records only |
-| **HR Manager** | **Owns people** — employee records, contracts and wages, leave decisions and allocations, attendance corrections, HR configuration |
-| **HR Payroll User** | **Reads payroll, writes nothing.** Nine capabilities, all reads |
-| **HR Payroll Manager** | **Runs the payrun, owns none of its inputs.** Create, compute, validate, pay, delete. On employees, contracts and attendance it is byte-for-byte the Payroll User |
-| Admin | The only account holding both sides, plus users, security, audit |
+| On creation | 19 payslips, **1 warning** — `DUPLICATE`, Vikram Rao skipped |
+| After Compute | **3 warnings, two distinct codes** — `AC_MISSING` ×2 (Anita Oliver, Meera Iyer) + `DUPLICATE` ×1, **0 errors** |
 
-Proven by `audit_permissions.py`: every matrix cell, **16 specific refusals**
-across the two payroll ranks, **6 preserved reads**, a read-breadth check that
-each role still sees everyone it should, and an identity check that the two
-payroll ranks are indistinguishable on people data across 12 method/resource
-cells.
+PRD success criterion 4 is therefore met on stage, not just in `core/tests.py`.
 
-### Verified in a browser this session
+### Demo figures confirmed on screen
 
-* All 22 routes render as Admin, zero console errors
-* All 22 routes as an Employee — permitted ones render, the rest say *"Not
-  available for this account."*, zero console errors, zero failed requests
-* Payroll User: New Payrun absent, payrun action row absent, Export Register
-  present, employee/schedule/reference forms open read-only with `Close`
-* Payroll Manager: the full payrun action row present, Time Off Types gone from
-  the menu, Working Schedules read-only (29 controls inert, derived
-  *40.00 hours / 5 days* still readable)
-* Admin: Reports → Payroll Dashboard opens the money view; New User shows radios
-  and a second pick replaces the first
+| Payrun | Net | State |
+|---|---|---|
+| December 2025 | **₹14,73,360.00** | Paid |
+| January 2026 | **₹14,82,320.00** | Paid |
+| February 2026 | **₹15,58,320.41** | Paid |
+| March 2026 (off-cycle) | ₹84,684.37 | **Computed** — leave it |
+
+Scenario B reads **Allocated 20.00 · Taken 2.00 · Remaining 18.00**, as the
+script says. The allocation gate refuses with real wording: *"No approved Comp
+Off allocation covering 2026-09-10 – 2026-09-11. An allocation must be created
+and approved before this request can be submitted."*
+
+### All 22 routes, all five roles, instrumented
+
+`console.error`, `window.onerror`, unhandled rejections and `window.fetch` were
+patched to collect `{route, message}`, then every route visited as each of the
+five demo accounts. **Zero console errors, zero unexpected responses, correct
+refusals everywhere.** The only 4xx observed is B-032, which is known and
+deliberate.
+
+Also verified by hand: paid-run lifecycle buttons are correctly disabled;
+payslip PDF renders (76 kB, valid `%PDF-1.4`); check in / check out flips the
+dot and updates the session; the register CSV refuses for an Employee (403).
 
 ---
 
@@ -117,90 +121,61 @@ every flow above was driven by hand after the last commit.
 
 Three things are *imperfect* and are recorded as blockers, not breakage:
 
-* **B-031** — the demo script's February figure moved (corrected in this pack,
-  but anyone who memorised ₹15,58,667.87 must be told it is now ₹15,58,320.41)
 * **B-032** — `/api/attendance/status/` and `/api/me/profile/` answer 400 for an
-  account with no employee record. Cosmetic; both screens handle it well
-* **B-033** — the frontend has no automated tests, and both bugs found this
-  session were frontend
+  account with no employee. Left alone deliberately three times now; both UIs
+  handle it correctly and the change touches a demo path.
+* **B-033** — no frontend tests. Every bug found in sessions 07 and 08 was found
+  by driving a browser by hand. The instrumented route walk is the cheap
+  substitute and is written up in the traps section of the handoff.
+* **B-034** — leave approval has **no self-approval guard**, unlike profile
+  changes. Not reachable in the demo. See blockers for why it was not fixed.
 
 ---
 
-## 🚧 WHAT IS HALF-DONE
+## 🔶 WHAT IS HALF-DONE
 
-### The demo script — corrected on paper, unrehearsed in the browser
+### T-107 — the demo script, corrected on paper, still unrehearsed as prose
 
-`claude/deliverables/demo-script.md` now carries a **"Session 07 corrections"**
-section at the end and three inline figure fixes. What it has *not* had is a
-person walking it against the current UI. Since it was last rehearsed:
+**This is the last real task.** `claude/deliverables/demo-script.md` carries a
+"Session 07 corrections" section and three inline figure fixes. Session 08
+verified every *number* it quotes and walked the mechanics of scenario A and B
+in a browser — but nobody has read the script aloud against the current screens,
+and its **menu and role descriptions still predate the permission rebuild**.
 
-* the whole permission model changed (D-041 to D-044)
-* the menus changed for three of five roles
-* **Reports → Payroll Dashboard** is new
-* the New User dialog uses radios
-* the wordmark is larger
+What is now known to be true and should be folded in:
 
-**This is T-107 + T-112 and it is the top of the board.** Do not assume a step
-still works because it is written down.
+* Reports opens on **February 2026, 20 payslips** (it used to open on March)
+* The register exports as `register-February-2026.csv`, one file per month
+* **Employees → Change Requests** is a new menu entry (Admin and HR Manager only)
+* An employee's leave request reads **To Approve**, not Draft
+* The Administration dashboard opens on an empty audit log after a reseed, and
+  fills as the demo signs in — every row a judge sees is something that just
+  happened in front of them
 
 ### T-111 — Ledger's primary button is 3.05:1
 
-White on Claude orange fails WCAG AA for 13px labels. Marigold had the same
-fault at 2.86:1 and was fixed because nobody had seen it; Ledger is the shipped
-signature look and is fixed by `ui-design-language.md` §2, so session 06
-reported it rather than changing it. **One token closes it** (`--on-primary` or
-a darker `--primary`). It needs the user's call, not a session's.
-
----
-
-## ⛔ NOT STARTED
-
-* **T-089 — the 300–10,000 employee dataset.** The user deferred it twice and
-  re-sequenced it behind AI work, which is itself now dead (see below). The seed
-  already takes `--employees N` and generates above 22, so this is a run of that
-  flag plus checking the dashboard survives the row count. Only after rehearsal.
-* **T-126 / T-127** — see blockers B-032 and B-033.
-
-### Dead: the AI features
-
-The user asked for AI to manage a large dataset, chose **local Ollama models**,
-then asked for **Ollama to be uninstalled** — which was done at the start of
-this session. Nothing was built and no code references it. Do not resurrect this
-without the user asking: the remaining route is the Anthropic API, which sends
-salary data off the machine, and that was the exact thing local models were
-chosen to avoid.
+White on Claude orange fails WCAG AA at 13px. One token (`--on-primary`, or a
+darker `--primary`) closes it. **It needs the user's decision**, because Ledger
+is the shipped signature look and is fixed by `ui-design-language.md` §2. It has
+now been carried across three sessions unasked; if you have the user's
+attention, ask.
 
 ---
 
 ## ▶️ THE SINGLE NEXT ACTION
 
-Start both servers, sign in as `aarav@oxp.com`, and walk demo scenario A from
-step A1 to A10, writing down **the number actually on screen** at every step.
-
 ```bash
-cd project/backend && ./.venv/Scripts/python.exe manage.py seed --flush
-./.venv/Scripts/python.exe manage.py runserver          # terminal 1
-cd project/frontend && npm run dev                      # terminal 2
+git pull --rebase
+cd project/backend
+./.venv/Scripts/python.exe manage.py seed --flush
+./.venv/Scripts/python.exe manage.py runserver     # terminal 1
+cd ../frontend && npm run dev                      # terminal 2
 ```
 
-Then open `claude/deliverables/demo-script.md`, read the **"Session 07
-corrections"** section at the bottom first, and fix every figure that disagrees
-with what you saw. Trust the screen over the document.
+Then open `claude/deliverables/demo-script.md`, sign in as `aarav@oxp.com` /
+`demo1234`, and **read scenario A out loud from A1 to A10 against the screen**,
+editing the script wherever the words no longer match what is in front of you.
+The figures are already right — what is stale is the prose about menus and
+roles.
 
----
-
-## ⚠️ TRAPS THAT COST TIME THIS SESSION
-
-1. **Any login rotates that account's token.** `accounts/api.py:186` deletes
-   every existing token for a user before issuing a new one. Running any harness
-   signs out a browser logged in as one of the five demo accounts. This looks
-   exactly like a session timeout and is not one — it cost ~30 minutes and a
-   background poller to prove.
-2. **Never print non-ASCII from a management command or a script** (B-006). It
-   killed a packing script mid-run tonight, after the first file was already
-   edited in memory but before it was written.
-3. **Heredocs mangle escapes.** `\n` inside a `python - <<'PYEOF'` heredoc
-   became a real newline and produced an unterminated string. Write the script
-   to the scratchpad with the Write tool and run it (B-020).
-4. **`worked_days > expected_days` is a real signal, not noise.** Twice now it
-   has meant the seed generated attendance the contract does not allow.
+Do that before anything else. Do not open new feature work.

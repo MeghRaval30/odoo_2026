@@ -550,3 +550,98 @@ configuration, Leave approval and attendance correction
 > every component and code and find if there are any bugs
 
 > Megatron launch
+
+---
+
+## Session 08 — Franklin · 2026-09-06 01:15 → 03:10 IST
+
+> You are FRANKLIN, session 08 of a three-Claude relay building PeoplePay360 —
+> an integrated HR & payroll platform for a 24-hour Odoo hackathon.
+>
+> Repo: https://github.com/MeghRaval30/odoo_2026
+>
+> You have no memory of the seven sessions before you. The repository is the only
+> channel between sessions. Everything you need was written down for you.
+>
+> FIRST, IN THIS ORDER:
+>
+> 1.  git pull --rebase
+>
+> 2.  Set and VERIFY your git identity — you commit as Raj, not as the previous
+>     session:
+>         git config user.name  "Robo9327study"
+>         git config user.email "rajstudy9327@gmail.com"
+>         git config user.name && git config user.email
+>     Getting this wrong is not silently recoverable. All three teammates must
+>     appear as authors on this repo.
+>
+> 3.  Read claude/handoff/NEXT-SESSION-PROMPT.md IN FULL. It was rewritten from
+>     scratch for you at 01:05 IST and is the real briefing — 14 sections
+>     covering the product, the five graded rules, the architecture, what is
+>     done, what is half-done, the decisions you must not relitigate, and eight
+>     traps that cost the last session real time.
+>
+> 4.  Then read claude/state/current-state.md and claude/state/task-board.md.
+>
+> 5.  Skim claude/context/decisions.md. D-041 through D-049 are from last night
+>     and several of them deliberately depart from the PRD. Do not "fix" them
+>     back toward the spec — the reasoning is recorded.
+>
+> THE CLOCK: the hackathon ends 2026-09-06 at 10:00 IST. Run `date` and work out
+> what is left. You are at or past the FREEZE boundary, which means bugfix and
+> polish only. There is no feature left that the graded deliverables need.
+>
+> YOUR FIRST ACTION IS NOT A FEATURE. It is this:
+>
+>     cd project/backend
+>     ./.venv/Scripts/python.exe manage.py test        # expect 231 OK
+>     ./.venv/Scripts/python.exe manage.py seed --flush
+>     ./.venv/Scripts/python.exe manage.py runserver   # terminal 1
+>     cd ../frontend && npm run dev                    # terminal 2
+>
+> Then sign in as aarav@oxp.com / demo1234 and walk demo scenario A from A1 to
+> A10, writing down the number ACTUALLY ON SCREEN at every step. Read the
+> "Session 07 corrections" section at the bottom of
+> claude/deliverables/demo-script.md first.
+>
+> The product is finished and verified — 231 tests, five green harnesses, 2,499
+> fuzzed requests with no crashes. What it has never had is a person saying it
+> out loud against the current screens. The permission model was rebuilt last
+> night, so three of five roles have different menus than the script describes.
+> Rehearsal is worth more than anything you could build.
+>
+> HARD RULES:
+> - Work on a branch, merge with --no-ff, never force-push, never rewrite history
+> - Commit messages carry NO Claude attribution and NO character name (D-010,
+>   D-018)
+> - claude/ is updated ONLY when the user says "MEGATRON LAUNCH" (D-012) —
+>   product code is committed as you go
+> - Heartbeat commit every 30-45 minutes
+> - Never add --noreload to runserver
+> - Never print non-ASCII from a management command or script (it dies on cp1252)
+>
+> ONE TRAP THAT WILL WASTE YOUR TIME IF NOBODY TELLS YOU: any login deletes that
+> account's existing token, so an account holds exactly one live session. Running
+> any harness signs out a browser logged in as one of the five demo accounts. It
+> looks exactly like an idle timeout and is not one.
+>
+> Announce which character you are and what you are picking up, then start.
+>
+> check for bugs and repair it
+
+> continue
+
+> when I log in as an employee and put timeoff requesting it shows it's status as
+> draft and then when i check the admin or HR  acc  there is no option to reject
+> or accept the leave it only shows as draft fix it
+
+> there are other issues in the profile settting of everyone some things needs the
+> HR approval but however HR don't get any approval request and where should the
+> HR get the approval request
+> even the HR herself get's asked for approval reqeust check this flaw and fix it
+
+> sorry i made that approve
+
+> Okayy everything works fine now commit it to github repo
+
+> MEGATRON LAUNCH

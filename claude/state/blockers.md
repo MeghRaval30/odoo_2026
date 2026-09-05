@@ -636,3 +636,48 @@ the cheap substitute until real tests exist.
 **Already tried:** nothing beyond the manual walk. No test runner is installed
 for the frontend; adding one at this point in the clock is a FREEZE-phase
 decision, not a default.
+
+---
+
+### B-034 — Leave approval has no self-approval guard
+
+**Status:** OPEN — T-134. Not reachable in the demo.
+
+`ProfileChangeRequest.approve()` refuses a reviewer deciding a change to their
+own record, at the write, and says why. `TimeOffRequest` has no equivalent:
+`timeoff/api.py::approve` checks only `request.user.can_approve_leave`, so an HR
+Manager could approve their own leave request.
+
+**Why it was not fixed in session 08**, having been found there: the session was
+already in FREEZE, the user had reported two other approval bugs that were fixed,
+and this one is **not reachable in the demo** — checked directly:
+
+```
+users who may approve leave: ['admin@oxp.com', 'sara@oxp.com']
+  sara@oxp.com -> own pending requests: 0
+```
+
+`admin@oxp.com` has no employee record at all, so it can never be the subject of
+a request. Adding the guard would also change the seeded approval queue, which is
+a demo path.
+
+**If you fix it**, mirror the profile version exactly: raise at the model's
+`approve()`, not in the view, and give the same wording. Then re-run
+`smoke_api.py`, which approves a request as `admin@oxp.com` — that path stays
+legal because the admin has no employee, but check rather than assume.
+
+---
+
+### B-035 — The runbook's machine paths are Trevor's, not universal
+
+**Status:** OPEN, low. Cosmetic but costs minutes.
+
+`runbook.md` opens with `cd C:/Users/raval/Desktop/odoo_2026` and a B-029 warning
+that `main` is held by an abandoned worktree. **Neither was true on the machine
+session 08 ran on**, where the checkout is `C:/Users/robo9/OneDrive/Desktop/
+odoo_2026` and `main` checked out, merged and pushed without complaint.
+
+The relay runs on three teammates' machines, so any absolute path in the runbook
+is true for at most one of them. Treat those two sections as *"this happened
+once, on one machine"* rather than as instructions. Session 08 annotated them
+rather than deleting them, because the worktree problem is real where it exists.

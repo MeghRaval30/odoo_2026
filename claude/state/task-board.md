@@ -181,7 +181,7 @@ running diary is `claude/PROGRESS.md`.
 | T-104 | Users & Roles screen for the capability matrix | `DONE` | Trevor | Mockup's five columns, search, role filter, the Active switch (which was in form state but had no control), Reset password, and the capability grid. Every path driven in a browser |
 | T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `DONE` | Trevor | Last `auth.can()` gone. Create/Save/Approve gated per capability, plus a route guard read off the server's own navigation tree so a typed URL refuses in one clause instead of rendering a broken shell over a 403 |
 | T-106 | Render and check the four unverified themes | `DONE` | Trevor | **None of the six had ever rendered** — a specificity bug made every theme resolve to Ledger. Fixed, all six driven, charts made theme-aware, Marigold's button contrast repaired |
-| T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | **The only task left on the board.** It still describes the old menu, and A3/A5/A7 now quote wrong numbers because of T-090 — the exact corrections are tabulated in `current-state.md` §HALF-DONE |
+| T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | **Still the last real task.** Its *figures* are now all verified correct (session 08) and the mechanics were walked; what is stale is the **prose about menus and roles**, which predates the permission rebuild. Four new facts to fold in are listed in `current-state.md` §HALF-DONE |
 
 ---
 
@@ -193,7 +193,7 @@ running diary is `claude/PROGRESS.md`.
 | T-109 | Route guard for screens reached by URL | `DONE` | Trevor | Reads the navigation tree the server already pruned, so it keeps no second copy of the capability table. Own-scoped detail routes (`/payslips/:id`) stay reachable where the list is not |
 | T-110 | Copy pass on Profile and Security against the design language | `DONE` | Trevor | §5 forbids explaining the system to the user. Rule applied: **state the effect, do not argue for it.** The reasoning moved to the docstrings, where it was actually aimed |
 | T-111 | Decide Ledger's 3.05:1 primary button | `TODO` | | **Needs the user.** White on Claude orange fails WCAG AA for 13px labels. Marigold had the same fault at 2.86:1 and was fixed because nobody had seen it; Ledger is the shipped signature look and is fixed by `ui-design-language.md` §2, so it was reported rather than changed. One token (`--on-primary` or `--primary-dark`) closes it |
-| T-112 | Walk demo steps A3 → A10 in the browser | `TODO` | | The criterion-4 numbers are proven by test and by a direct engine run; the wizard itself was not walked before MEGATRON LAUNCH. Do this **before** editing the demo script, and write down what you see |
+| T-112 | Walk demo steps A3 → A10 in the browser | `DONE` | Franklin | Session 08 built the March payrun through the wizard as `aarav@oxp.com`: `DUPLICATE` on creation (19 payslips), then Compute added `AC_MISSING` ×2 — **3 warnings, two distinct codes, 0 errors**. Criterion 4 is now proven on screen, not only by test. Every figure in scenario A and B confirmed against the UI |
 
 ---
 
@@ -246,3 +246,35 @@ running out of time — it is breaking something that works.**
 
 **T-075** (frontend tests) is superseded by **T-127**: same subject, with real
 evidence behind it now.
+
+
+---
+
+## Session 08 — Franklin · 2026-09-06
+
+Opened on a request to hunt bugs, not to build. Everything here was found by
+*using* the product; all five harnesses were green before this session and are
+green after it, and none of these five defects was visible to any of them.
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-128 | Reset the audit trail on `seed --flush` | `DONE` | Franklin | `AuditLog` and `LoginAttempt` sat below everything in the dependency graph and survived every reseed. 10 of 16 rows were orphans naming deleted accounts, including harness probe users — on the Admin's landing screen. `LoginAttempt` also drives lockout, so a run of failed sign-ins could lock a demo account with no supported way to clear it (D-050) |
+| T-129 | Open the payroll register on a finished run | `DONE` | Franklin | `Reports.jsx` defaulted to `payruns.rows[0]` under `-period_start` — "the newest run", which is the one-payslip off-cycle correction. Exactly the rule D-034 replaced on the dashboard. The screen now reads the server's `default_period` (D-051) |
+| T-130 | Let the browser read the register's filename | `DONE` | Franklin | Server sent `Content-Disposition: filename="register-February-2026.csv"`; CORS never exposed the header, so every export fell through to `register.csv` and three months collided. One settings line (D-052) |
+| T-131 | Make submitted leave requests reachable by approvers | `DONE` | Franklin | Requests were created as `DRAFT` and **nothing anywhere advanced them** — no submit action exists, and the screen acts only on `TO_APPROVE`. Every request raised through the UI was a dead end. Reported by the user (D-053) |
+| T-132 | Stop an employee self-approving via the create payload | `DONE` | Franklin | `state` was a writable serializer field and create is the one write every employee has. `POST {"state": "APPROVED"}` returned 201 APPROVED — self-granted leave, consuming their own allocation and moving their own payslip. Confirmed over HTTP before and after (D-054) |
+| T-133 | Fix and surface the profile-change approval queue | `DONE` | Franklin | A reviewer's own request appeared in their own "awaiting you" panel with an Approve button that could only 400; and the queue's only door was a tab inside "My profile". Both fixed; **Employees → Change Requests** added, gated on `profile.approve` (D-055, D-056) |
+| T-134 | Add a self-approval guard to leave | `TODO` | | B-034. Leave approval checks only `can_approve_leave`, with no self-check — unlike profile changes, which refuse it at the write. Not reachable in the demo (Sara holds zero own pending requests, and she and the admin are the only approvers). Deliberately not fixed in FREEZE: it would change the seeded approval queue |
+
+### Priorities for the time actually remaining (~6h 50m at 03:10)
+
+| Order | What | Why |
+|---|---|---|
+| 1 | **T-107** — read the demo script aloud against the screen and fix the prose | The only graded deliverable still wrong, and the only task left |
+| 2 | **T-111** — put Ledger's button contrast to the user | One token, one question. Carried unasked across three sessions |
+| 3 | T-134 — the leave self-approval guard | Real, small, and unreachable in the demo. Only if the script is finished |
+| 4 | T-089 — the 300–10,000 employee dataset | `seed --employees N` already exists. Deferred by the user three times |
+| 5 | T-126 / T-127 | Cosmetic, and a FREEZE-phase decision respectively |
+
+**Do not open new feature work.** The failure mode from here is breaking
+something that works.
