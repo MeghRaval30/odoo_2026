@@ -275,7 +275,11 @@ def filter_options_view(request):
                             .values("id", "name").order_by("name")),
         "employee_types": [{"value": v, "label": l}
                            for v, l in Employee.EMPLOYEE_TYPES],
-        "companies": list(Employee.objects.values(
+        # order_by() with no arguments clears Employee.Meta.ordering. Without
+        # it Django adds first_name and last_name to the SELECT, distinct()
+        # then sees one row per employee, and the filter returned the single
+        # company 22 times.
+        "companies": list(Employee.objects.order_by().values(
             "company__id", "company__name").distinct()),
         "periods": list(Payrun.objects.values(
             "id", "name", "period_start", "period_end").order_by("-period_start")),
