@@ -129,7 +129,7 @@ function ContractForm({ id, onClose, onSaved }) {
         <Field label="Start date">
           <input type="date" value={form.start_date || ""} onChange={set("start_date")} />
         </Field>
-        <Field label="End date" hint="Blank for an open-ended contract.">
+        <Field label="End date">
           <input type="date" value={form.end_date || ""} onChange={set("end_date")} />
         </Field>
       </div>
@@ -137,7 +137,7 @@ function ContractForm({ id, onClose, onSaved }) {
         <Field label="Monthly wage">
           <input type="number" step="0.01" value={form.wage} onChange={set("wage")} />
         </Field>
-        <Field label="State" hint="Two RUNNING contracts may not overlap.">
+        <Field label="State">
           <select value={form.state} onChange={set("state")}>
             <option value="DRAFT">Draft</option>
             <option value="RUNNING">Running</option>
@@ -195,11 +195,7 @@ export default function Contracts({ route }) {
     <div className="page">
       <PageHead
         title="Contracts"
-        sub={
-          employeeFilter
-            ? "Filtered to one employee"
-            : "Period-scoped — payroll resolves the contract covering the payrun period"
-        }
+        sub={`${contracts.rows.length} records`}
       >
         <button className="primary" onClick={() => setEditing(null)}>
           New Contract

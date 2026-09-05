@@ -41,11 +41,11 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="center mb">
-          <div style={{ fontSize: 21, fontWeight: 700 }}>
-            People<span style={{ color: "var(--accent)" }}>Pay</span>360
+        <div className="mb">
+          <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-0.02em" }}>
+            People<span style={{ color: "var(--primary)" }}>Pay</span>360
           </div>
-          <div className="tiny faint">Integrated HR &amp; Payroll Operations</div>
+          <div className="tiny faint">Sign in to continue</div>
         </div>
 
         <form className="card" onSubmit={submit}>
@@ -96,9 +96,6 @@ export default function Login() {
                 {account.label}
               </button>
             ))}
-          </div>
-          <div className="tiny faint mt">
-            All demo accounts use the password <span className="mono">demo1234</span>.
           </div>
         </div>
       </div>

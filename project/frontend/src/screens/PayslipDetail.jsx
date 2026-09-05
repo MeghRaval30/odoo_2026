@@ -125,10 +125,6 @@ export default function PayslipDetail({ id }) {
               </tr>
             </tbody>
           </table>
-          <div className="tiny faint mt">
-            Resolved by period coverage, not by recency — an expired contract
-            still governs the period it covered.
-          </div>
         </div>
 
         <div className="card">

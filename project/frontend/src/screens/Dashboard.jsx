@@ -26,13 +26,13 @@ import { api, compactMoney, money } from "../api";
 // Recharts needs concrete values rather than CSS custom properties for its
 // internal colour maths, so these mirror index.css by hand.
 const C = {
-  accent: "#4f8cff",
-  green: "#38b26a",
-  amber: "#e0a53d",
-  red: "#e05d5d",
-  purple: "#9b7ede",
-  grid: "#2b3040",
-  dim: "#9aa1b1",
+  accent: "#2f7fe8",
+  green: "#0e9f6e",
+  amber: "#c77700",
+  red: "#d93a45",
+  purple: "#6b4fd8",
+  grid: "#e3e8ee",
+  dim: "#8792a2",
 };
 
 const STATE_COLOR = {
@@ -52,10 +52,12 @@ const STATE_BADGE = {
 };
 
 const tooltipStyle = {
-  background: "#1e222d",
-  border: "1px solid #2b3040",
-  borderRadius: 8,
+  background: "#ffffff",
+  border: "1px solid #e3e8ee",
+  borderRadius: 6,
   fontSize: 12,
+  color: "#1a1f36",
+  boxShadow: "0 4px 16px rgba(22,34,74,0.14)",
 };
 
 function Kpi({ label, value, foot, tone }) {
@@ -129,14 +131,16 @@ export default function Dashboard() {
     <div className="page">
       <div className="page-head">
         <h1>Payroll Dashboard</h1>
-        <span className="sub">
-          Live aggregate over {data?.sources?.length || 6} models
-        </span>
+        {data && (
+          <span className="sub">
+            {data.filters.period_start} to {data.filters.period_end}
+          </span>
+        )}
         <div className="spacer" />
         {loading && <span className="spinner" />}
       </div>
 
-      <div className="toolbar card">
+      <div className="toolbar">
         <div>
           <label htmlFor="f-period">Period</label>
           <select id="f-period" value={filters.period} onChange={set("period")}>
@@ -192,8 +196,8 @@ export default function Dashboard() {
               tone={delta == null ? undefined : delta >= 0 ? "up" : "down"}
               foot={
                 delta == null
-                  ? "No previous period"
-                  : `${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta).toFixed(1)}% vs previous period`
+                  ? "—"
+                  : `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}% vs previous period`
               }
             />
             <Kpi
@@ -261,7 +265,7 @@ export default function Dashboard() {
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    cursor={{ fill: "rgba(79,140,255,0.08)" }}
+                    cursor={{ fill: "rgba(47,127,232,0.06)" }}
                     formatter={(v) => money(v)}
                   />
                   <Bar dataKey="total" fill={C.accent} radius={[4, 4, 0, 0]} />
@@ -425,8 +429,7 @@ export default function Dashboard() {
           </div>
 
           <div className="tiny faint mt">
-            Aggregated live from: {data.sources.join(" · ")} · period{" "}
-            {data.filters.period_start} to {data.filters.period_end}
+            Sources: {data.sources.join(", ")}
           </div>
         </>
       )}

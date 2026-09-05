@@ -210,7 +210,7 @@ function EmployeeForm({ id, onClose, onSaved }) {
         </Field>
       </div>
       <div className="row fill">
-        <Field label="Working schedule" hint="Weekly hours are derived from its day lines.">
+        <Field label="Working schedule">
           <select value={form.working_schedule || ""} onChange={set("working_schedule")}>
             {opts(refs.schedules)}
           </select>
@@ -233,10 +233,7 @@ function EmployeeForm({ id, onClose, onSaved }) {
         </Field>
       </div>
       <div className="row fill">
-        <Field
-          label="Bank account"
-          hint="Missing bank details raise a payroll warning before validation."
-        >
+        <Field label="Bank account">
           <input
             value={form.bank_account_number || ""}
             onChange={set("bank_account_number")}
