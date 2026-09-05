@@ -1,51 +1,66 @@
 /* ==========================================================================
-   PeoplePay360 design system — light.
+   PeoplePay360 design system — warm light.
 
-   Language borrowed from Zoho Payroll and the Razorpay dashboard: white
-   surfaces on a cool grey page, one saturated blue used only for primary
-   action and active state, hairline borders instead of shadows, and tabular
-   numerals everywhere money appears.
+   Palette is Anthropic's: bone and sand grounds, Claude orange as the single
+   action colour, dusty rose carrying the surfaces, and brown rather than grey
+   for text and rules. Pink is not an accent here — it is roughly a quarter of
+   the surface area, in the card grounds, table headers, row hovers and every
+   hairline, so the whole interface sits warm rather than clinical.
 
-   Structure borrowed from Odoo: a persistent top menu bar, a white control bar
-   beneath it carrying the record title and its actions, statusbar pills for
-   state machines, and stat buttons for related-record counts.
+   Type is a classical pairing: Source Serif 4 for anything that is read
+   (titles, figures, the brand) and Inter for anything that is operated
+   (labels, controls, dense table body). Serif numerals in the KPI figures are
+   the point of the pairing — they make money look considered.
 
-   Rules: one accent colour, 4px spacing grid, no gradients, no shadows deeper
-   than 2px, no decorative colour. Colour carries meaning (state, sign) or it
-   is grey.
+   Structure is unchanged and still Odoo's: top menu bar, control bar, status
+   pills, stat buttons.
+
+   Rules: one action colour, colour carries meaning or it is warm neutral,
+   hairlines over shadows, tabular numerals on every figure.
    ========================================================================== */
 
 :root {
-  --navy: #16224a;
-  --navy-2: #1f2f61;
+  /* grounds */
+  --espresso: #3b2e28;
+  --espresso-2: #4a3a32;
+  --bg: #f4efe9;
+  --surface: #fffcf9;
+  --surface-2: #f9ede8;
+  --surface-3: #f2ded7;
 
-  --bg: #f4f6f8;
-  --surface: #ffffff;
-  --surface-2: #f7f9fb;
-  --surface-3: #eef2f6;
+  /* rules */
+  --border: #e7d9d1;
+  --border-2: #d9c5ba;
 
-  --border: #e3e8ee;
-  --border-2: #d5dce5;
+  /* ink */
+  --text: #241e1a;
+  --text-dim: #6b5f55;
+  --text-faint: #9c8f84;
 
-  --text: #1a1f36;
-  --text-dim: #4f566b;
-  --text-faint: #8792a2;
+  /* action */
+  --primary: #d97757;
+  --primary-dark: #bd5c3d;
+  --primary-wash: #fbebe3;
 
-  --primary: #2f7fe8;
-  --primary-dark: #1b64c4;
-  --primary-wash: #eaf2fd;
+  /* meaning */
+  --rose: #c0757b;
+  --rose-wash: #f7e4e5;
+  --green: #5b7d58;
+  --green-wash: #e8efe4;
+  --amber: #a97a24;
+  --amber-wash: #f7ebd6;
+  --red: #b5504a;
+  --red-wash: #f7e2e0;
+  --purple: #856b9c;
+  --purple-wash: #efe8f3;
 
-  --green: #0e9f6e;
-  --green-wash: #e6f6f0;
-  --amber: #c77700;
-  --amber-wash: #fdf3e3;
-  --red: #d93a45;
-  --red-wash: #fdecec;
-  --purple: #6b4fd8;
-  --purple-wash: #f0ecfd;
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, Cambria,
+    "Times New Roman", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 
-  --radius: 6px;
-  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-sm: 5px;
   color-scheme: light;
 }
 
@@ -57,20 +72,24 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--primary); text-decoration: none; }
+a { color: var(--primary-dark); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-h1 { font-size: 18px; }
-h2 { font-size: 15px; }
-h3 { font-size: 13px; }
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+h1 { font-size: 21px; }
+h2 { font-size: 17px; }
+h3 { font-size: 14px; }
 
 /* ---------------------------------------------------------------- layout */
 
@@ -80,29 +99,30 @@ h3 { font-size: 13px; }
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 0 16px;
-  height: 48px;
-  background: var(--navy);
+  padding: 0 18px;
+  height: 50px;
+  background: var(--espresso);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
 .brand {
+  font-family: var(--font-serif);
   font-weight: 600;
-  font-size: 14px;
-  margin-right: 20px;
+  font-size: 16px;
+  margin-right: 22px;
   white-space: nowrap;
-  color: #fff;
+  color: #f6efe8;
   letter-spacing: -0.01em;
 }
-.brand span { color: #7fb2f5; }
+.brand span { color: var(--primary); }
 
 .navitem {
   position: relative;
   padding: 7px 11px;
   border-radius: var(--radius-sm);
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(246, 239, 232, 0.72);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -110,22 +130,22 @@ h3 { font-size: 13px; }
   font-size: 13px;
 }
 .navitem:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(217, 119, 87, 0.22);
   color: #fff;
   text-decoration: none;
 }
-.navitem.active { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.navitem.active { background: var(--primary); color: #fff; }
 
 .dropdown {
   position: absolute;
   top: calc(100% + 5px);
   left: 0;
-  min-width: 196px;
+  min-width: 198px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 4px;
-  box-shadow: 0 4px 16px rgba(22, 34, 74, 0.14);
+  padding: 5px;
+  box-shadow: 0 6px 22px rgba(59, 46, 40, 0.16);
   z-index: 200;
 }
 .dropdown a {
@@ -136,14 +156,13 @@ h3 { font-size: 13px; }
   font-size: 13px;
 }
 .dropdown a:hover {
-  background: var(--surface-3);
+  background: var(--surface-2);
   color: var(--text);
   text-decoration: none;
 }
 
 .spacer { flex: 1; }
 
-/* Control bar — record title and its actions, Odoo's second row. */
 .controlbar {
   display: flex;
   align-items: center;
@@ -155,11 +174,11 @@ h3 { font-size: 13px; }
   flex-wrap: wrap;
 }
 
-.page { padding: 20px 24px 56px; max-width: 1600px; width: 100%; margin: 0 auto; }
+.page { padding: 22px 24px 56px; max-width: 1600px; width: 100%; margin: 0 auto; }
 
 .page-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   margin-bottom: 16px;
   flex-wrap: wrap;
@@ -174,12 +193,12 @@ h3 { font-size: 13px; }
   display: grid; place-items: center;
   cursor: pointer;
   border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(246, 239, 232, 0.16);
   font-size: 13px;
-  color: #fff;
+  color: #f6efe8;
 }
 .attendance-dot.in  { background: var(--green); }
-.attendance-dot.out { background: rgba(255, 255, 255, 0.14); }
+.attendance-dot.out { background: rgba(246, 239, 232, 0.16); }
 
 .popover {
   position: absolute;
@@ -190,7 +209,7 @@ h3 { font-size: 13px; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
-  box-shadow: 0 6px 24px rgba(22, 34, 74, 0.16);
+  box-shadow: 0 8px 28px rgba(59, 46, 40, 0.2);
   z-index: 300;
   color: var(--text);
 }
@@ -205,7 +224,8 @@ h3 { font-size: 13px; }
 }
 .card + .card { margin-top: 14px; }
 .card-title {
-  font-size: 12px;
+  font-family: var(--font-serif);
+  font-size: 13px;
   color: var(--text-dim);
   margin-bottom: 12px;
   font-weight: 600;
@@ -221,17 +241,21 @@ h3 { font-size: 13px; }
   .grid.k5, .grid.k4, .grid.k3, .grid.k2 { grid-template-columns: 1fr; }
 }
 
+/* KPI tiles carry the rose ground — this is most of the pink in the product. */
+.kpi { background: var(--surface-2); }
 .kpi .label {
   font-size: 12px;
-  color: var(--text-faint);
+  color: var(--text-dim);
   font-weight: 500;
 }
 .kpi .value {
-  font-size: 23px;
+  font-family: var(--font-serif);
+  font-size: 25px;
   font-weight: 600;
-  margin: 6px 0 3px;
-  letter-spacing: -0.02em;
+  margin: 5px 0 3px;
+  letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 .kpi .foot { font-size: 12px; color: var(--text-faint); }
 .kpi .foot.up { color: var(--green); }
@@ -242,7 +266,7 @@ h3 { font-size: 13px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   text-align: left;
-  padding: 9px 12px;
+  padding: 10px 12px;
   color: var(--text-dim);
   font-weight: 600;
   font-size: 12px;
@@ -265,15 +289,21 @@ tbody tr.clickable { cursor: pointer; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.card > .table-wrap { margin: -16px; margin-top: 0; border: none; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); }
+.card > .table-wrap {
+  margin: -16px;
+  margin-top: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
 
 /* --------------------------------------------------------------- controls */
 
 button, .btn {
-  font: inherit;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
-  padding: 7px 13px;
+  padding: 7px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-2);
   background: var(--surface);
@@ -283,10 +313,11 @@ button, .btn {
   transition: background 0.12s, border-color 0.12s;
 }
 button:hover:not(:disabled), .btn:hover {
-  background: var(--surface-3);
+  background: var(--surface-2);
+  border-color: var(--primary);
   text-decoration: none;
 }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.primary {
   background: var(--primary);
   border-color: var(--primary);
@@ -297,13 +328,13 @@ button.primary:hover:not(:disabled) {
   border-color: var(--primary-dark);
 }
 button.danger { border-color: var(--red); color: var(--red); }
-button.danger:hover:not(:disabled) { background: var(--red-wash); }
+button.danger:hover:not(:disabled) { background: var(--red-wash); border-color: var(--red); }
 button.ghost { background: transparent; border-color: transparent; }
-button.ghost:hover:not(:disabled) { background: var(--surface-3); }
-button.sm { padding: 4px 9px; font-size: 12px; }
+button.ghost:hover:not(:disabled) { background: var(--surface-2); border-color: transparent; }
+button.sm { padding: 4px 10px; font-size: 12px; }
 
 input, select, textarea {
-  font: inherit;
+  font-family: var(--font-sans);
   font-size: 13px;
   padding: 7px 10px;
   border-radius: var(--radius-sm);
@@ -341,35 +372,36 @@ label {
 
 .badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
-.badge.green  { background: var(--green-wash);  color: var(--green); }
-.badge.amber  { background: var(--amber-wash);  color: var(--amber); }
-.badge.red    { background: var(--red-wash);    color: var(--red); }
+.badge.green  { background: var(--green-wash);   color: var(--green); }
+.badge.amber  { background: var(--amber-wash);   color: var(--amber); }
+.badge.red    { background: var(--red-wash);     color: var(--red); }
 .badge.blue   { background: var(--primary-wash); color: var(--primary-dark); }
-.badge.purple { background: var(--purple-wash); color: var(--purple); }
-.badge.grey   { background: var(--surface-3);   color: var(--text-dim); }
+.badge.purple { background: var(--purple-wash);  color: var(--purple); }
+.badge.grey   { background: var(--surface-3);    color: var(--text-dim); }
 
 /* ------------------------------------------------------------ stat buttons */
 
 .smart-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
 .smart {
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 10px 15px;
   cursor: pointer;
-  min-width: 112px;
+  min-width: 114px;
   text-align: left;
 }
 .smart:hover { border-color: var(--primary); background: var(--primary-wash); }
 .smart .n {
-  font-size: 17px; font-weight: 600; display: block; line-height: 1.25;
+  font-family: var(--font-serif);
+  font-size: 18px; font-weight: 600; display: block; line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 .smart .l { font-size: 11px; color: var(--text-faint); font-weight: 500; }
@@ -391,36 +423,37 @@ label {
   gap: 12px;
   align-items: flex-start;
 }
-.kcard:hover { border-color: var(--primary); }
+.kcard:hover { border-color: var(--primary); background: var(--surface-2); }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%;
-  background: var(--primary-wash); color: var(--primary-dark);
+  background: var(--surface-3); color: var(--primary-dark);
   display: grid; place-items: center;
-  font-weight: 600; font-size: 12px; flex: 0 0 auto;
+  font-family: var(--font-serif);
+  font-weight: 600; font-size: 13px; flex: 0 0 auto;
 }
 
 /* --------------------------------------------------------------- modal */
 
 .backdrop {
   position: fixed; inset: 0;
-  background: rgba(22, 34, 74, 0.42);
+  background: rgba(36, 30, 26, 0.42);
   display: grid; place-items: center;
   z-index: 500;
   padding: 20px;
 }
 .modal {
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 10px;
   width: 100%;
   max-width: 620px;
   max-height: 88vh;
   overflow: auto;
-  box-shadow: 0 12px 40px rgba(22, 34, 74, 0.24);
+  box-shadow: 0 16px 48px rgba(36, 30, 26, 0.28);
 }
 .modal.wide { max-width: 960px; }
 .modal-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 15px 20px; border-bottom: 1px solid var(--border);
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: var(--surface); z-index: 1;
 }
 .modal-body { padding: 20px; }
@@ -442,17 +475,17 @@ label {
 .mb { margin-bottom: 14px; }
 
 .alert {
-  padding: 10px 12px;
+  padding: 10px 13px;
   border-radius: var(--radius-sm);
   font-size: 13px;
   margin-bottom: 10px;
   border: 1px solid transparent;
 }
-.alert.error { background: var(--red-wash);   border-color: #f5c6c9; color: #9c2a32; }
-.alert.ok    { background: var(--green-wash); border-color: #b7e4d2; color: #0a6f4e; }
-.alert.warn  { background: var(--amber-wash); border-color: #f0d9ac; color: #8a5300; }
+.alert.error { background: var(--red-wash);   border-color: #e2b6b2; color: #8d3630; }
+.alert.ok    { background: var(--green-wash); border-color: #bcd0b7; color: #3f5c3c; }
+.alert.warn  { background: var(--amber-wash); border-color: #e0c68f; color: #7d5a15; }
 
-.empty { padding: 36px; text-align: center; color: var(--text-faint); }
+.empty { padding: 38px; text-align: center; color: var(--text-faint); }
 
 .spinner {
   width: 14px; height: 14px;
@@ -465,10 +498,9 @@ label {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Statusbar pills — the record's state machine, Odoo's arrow bar flattened. */
 .steps { display: flex; gap: 6px; align-items: center; margin-bottom: 16px; font-size: 12px; }
 .step {
-  padding: 5px 12px;
+  padding: 5px 13px;
   border-radius: 3px;
   background: var(--surface);
   color: var(--text-faint);
@@ -483,4 +515,4 @@ label {
   display: grid; place-items: center; min-height: 100vh; padding: 20px;
   background: var(--bg);
 }
-.login-card { width: 100%; max-width: 384px; }
+.login-card { width: 100%; max-width: 388px; }

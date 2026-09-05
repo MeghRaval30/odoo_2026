@@ -26,13 +26,14 @@ import { api, compactMoney, money } from "../api";
 // Recharts needs concrete values rather than CSS custom properties for its
 // internal colour maths, so these mirror index.css by hand.
 const C = {
-  accent: "#2f7fe8",
-  green: "#0e9f6e",
-  amber: "#c77700",
-  red: "#d93a45",
-  purple: "#6b4fd8",
-  grid: "#e3e8ee",
-  dim: "#8792a2",
+  accent: "#d97757",
+  green: "#5b7d58",
+  amber: "#a97a24",
+  red: "#b5504a",
+  purple: "#856b9c",
+  rose: "#c0757b",
+  grid: "#e7d9d1",
+  dim: "#9c8f84",
 };
 
 const STATE_COLOR = {
@@ -52,12 +53,13 @@ const STATE_BADGE = {
 };
 
 const tooltipStyle = {
-  background: "#ffffff",
-  border: "1px solid #e3e8ee",
-  borderRadius: 6,
+  background: "#fffcf9",
+  border: "1px solid #e7d9d1",
+  borderRadius: 8,
   fontSize: 12,
-  color: "#1a1f36",
-  boxShadow: "0 4px 16px rgba(22,34,74,0.14)",
+  color: "#241e1a",
+  fontFamily: "Inter, sans-serif",
+  boxShadow: "0 6px 22px rgba(59,46,40,0.16)",
 };
 
 function Kpi({ label, value, foot, tone }) {
@@ -265,7 +267,7 @@ export default function Dashboard() {
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    cursor={{ fill: "rgba(47,127,232,0.06)" }}
+                    cursor={{ fill: "rgba(217,119,87,0.08)" }}
                     formatter={(v) => money(v)}
                   />
                   <Bar dataKey="total" fill={C.accent} radius={[4, 4, 0, 0]} />
