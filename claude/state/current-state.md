@@ -84,6 +84,15 @@ Settled with the user. Do not reopen — see `claude/context/decisions.md`.
 | **Locale** | India — ₹, with PF / ESIC / PT / LWF deduction rules, per the mockup |
 | **Companies** | Single seeded company; `Company` field present and filterable |
 | **Repo** | `https://github.com/MeghRaval30/odoo_2026` (owner: MeghRaval30) |
+| **Git identity** | Each session commits as its own teammate *(D-009)*. Michael = `TheTeam404` / `sohampanchal2229@gmail.com` — **verified** |
+| **Git model** | Feature branches + `--no-ff` merges + version tags *(D-008)*. See `claude/workflow/git-strategy.md` |
+| **Commit attribution** | **No Claude co-author trailer** *(D-010)* |
+
+> ⚠️ **Franklin and Trevor:** your rows in the identity register
+> (`claude/workflow/git-strategy.md` §1) are still `TBC`. Fill in your GitHub
+> username and commit email, set your repo-local git config, and **verify it**
+> before your first commit. Misattributed commits cannot be fixed without
+> rewriting history, which is forbidden.
 
 ---
 

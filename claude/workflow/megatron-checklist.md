@@ -19,20 +19,32 @@ Note the wall-clock time. You need it for the clock block in Step 2.
 
 ---
 
-## Step 1 — Save the code first
+## Step 1 — Save the code first, and merge your branch
 
 Code before context. Losing working code is worse than losing notes.
 
 ```bash
 git add -A
 git commit -m "wip: <one line on where the code actually stands> [<yourname>]"
+git push -u origin <your-branch>
+```
+
+**Then merge into `main`.** Never hand off with work stranded on an unmerged
+branch — the next session may never find it.
+
+```bash
+git checkout main && git pull --rebase
+git merge --no-ff <your-branch> -m "merge: <what> [<yourname>]"
 git push
 ```
 
+If a branch is a genuine dead end, **do not delete it** — push it, leave it, and
+record what failed in `blockers.md`.
+
 If the working tree is genuinely clean, say so and move on. If something is
-broken and uncommitted, **still commit it** — commit it as `wip:` and describe
-the breakage in the message. Never leave uncommitted work behind; the next
-session will never see it.
+broken and uncommitted, **still commit it** as `wip:` and describe the breakage
+in the message. Never leave uncommitted work behind; the next session will never
+see it.
 
 ---
 
