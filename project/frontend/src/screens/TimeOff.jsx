@@ -155,6 +155,8 @@ function RequestForm({ onClose, onSaved }) {
 
 export default function TimeOff({ route }) {
   const [state, setState] = useState("");
+  const [search, setSearch] = useState("");
+  const [myTeam, setMyTeam] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
@@ -162,6 +164,8 @@ export default function TimeOff({ route }) {
 
   const requests = useResource("/api/timeoff-requests/", {
     state,
+    search,
+    my_team: myTeam ? 1 : "",
     employee: employeeFilter,
     ordering: "-date_from",
     page_size: 200,
@@ -189,6 +193,12 @@ export default function TimeOff({ route }) {
       </PageHead>
 
       <div className="toolbar">
+        <input
+          type="search"
+          placeholder="Search employee or reason…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <div>
           <label>Status</label>
           <select value={state} onChange={(e) => setState(e.target.value)}>
@@ -198,6 +208,14 @@ export default function TimeOff({ route }) {
             <option value="REFUSED">Refused</option>
           </select>
         </div>
+        <label className="row" style={{ gap: 6, marginBottom: 0 }}>
+          <input
+            type="checkbox"
+            checked={myTeam}
+            onChange={(e) => setMyTeam(e.target.checked)}
+          />
+          <span>My Team</span>
+        </label>
       </div>
 
       <ErrorBox error={error || requests.error} />

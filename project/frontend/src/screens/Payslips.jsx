@@ -9,7 +9,15 @@ import PayslipDetail from "./PayslipDetail";
 export default function Payslips({ route }) {
   const id = route.parts[1];
   const [search, setSearch] = useState("");
-  const payslips = useResource("/api/payslips/", { search, page_size: 200 });
+  const [department, setDepartment] = useState("");
+  const [state, setState] = useState("");
+  const departments = useResource("/api/departments/");
+  const payslips = useResource("/api/payslips/", {
+    search,
+    state,
+    employee__department: department,
+    page_size: 200,
+  });
 
   if (id) return <PayslipDetail id={id} />;
 
@@ -24,6 +32,25 @@ export default function Payslips({ route }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <div>
+          <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <option value="">All departments</option>
+            {departments.rows.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <select value={state} onChange={(e) => setState(e.target.value)}>
+            <option value="">All states</option>
+            <option value="DRAFT">Draft</option>
+            <option value="VERIFY">Computed</option>
+            <option value="DONE">Validated</option>
+            <option value="PAID">Paid</option>
+          </select>
+        </div>
       </div>
 
       <ErrorBox error={payslips.error} />
