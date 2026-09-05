@@ -304,3 +304,50 @@ class PayrunViewSet(viewsets.ModelViewSet):
     def warnings(self, request, pk=None):
         qs = self.get_object().warnings.select_related("employee")
         return Response(PayslipWarningSerializer(qs, many=True).data)
+
+    @action(detail=True, methods=["get"])
+    def register(self, request, pk=None):
+        """
+        Payroll register as CSV — one row per payslip, one column per rule code.
+
+        Columns are derived from the lines actually present rather than from the
+        structure, so a payrun whose rules changed mid-period still exports
+        every code it really produced.
+        """
+        import csv
+
+        from django.http import HttpResponse
+
+        payrun = self.get_object()
+        payslips = (payrun.payslips
+                    .select_related("employee", "employee__department")
+                    .prefetch_related("lines")
+                    .order_by("employee__first_name", "employee__last_name"))
+
+        codes, seen = [], {}
+        for slip in payslips:
+            for line in slip.lines.all():
+                if line.code not in seen:
+                    seen[line.code] = line.sequence
+        codes = [c for c, _ in sorted(seen.items(), key=lambda kv: kv[1])]
+
+        response = HttpResponse(content_type="text/csv")
+        filename = f"register-{payrun.name.replace(' ', '-')}.csv"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        writer.writerow(["Payslip", "Employee", "Department", "Worked Days",
+                         "LOP Days", "Overtime Hours"] + codes)
+
+        for slip in payslips:
+            amounts = {line.code: line.amount for line in slip.lines.all()}
+            writer.writerow([
+                slip.number,
+                slip.employee.full_name,
+                slip.employee.department.name if slip.employee.department else "",
+                slip.worked_days,
+                slip.lop_days,
+                slip.overtime_hours,
+            ] + [amounts.get(code, "") for code in codes])
+
+        return response

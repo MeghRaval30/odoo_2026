@@ -7,6 +7,7 @@ import Attendance from "./screens/Attendance";
 import Contracts from "./screens/Contracts";
 import Dashboard from "./screens/Dashboard";
 import Employees from "./screens/Employees";
+import Holidays from "./screens/Holidays";
 import Login from "./screens/Login";
 import Payruns from "./screens/Payruns";
 import Payslips from "./screens/Payslips";
@@ -35,6 +36,7 @@ const SCREENS = {
   departments: Departments,
   "job-positions": JobPositions,
   "work-locations": WorkLocations,
+  holidays: Holidays,
   users: Users,
 };
 

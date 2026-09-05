@@ -15,13 +15,17 @@ const MENUS = [
   {
     key: "employees",
     label: "Employees",
-    match: ["employees", "departments", "job-positions", "work-locations", "schedules"],
+    match: [
+      "employees", "departments", "job-positions", "work-locations",
+      "schedules", "holidays",
+    ],
     items: [
       { to: "/employees", label: "Employees" },
       { to: "/schedules", label: "Working Schedules" },
       { to: "/departments", label: "Departments" },
       { to: "/job-positions", label: "Job Positions" },
       { to: "/work-locations", label: "Work Locations" },
+      { to: "/holidays", label: "Holidays" },
     ],
   },
   {

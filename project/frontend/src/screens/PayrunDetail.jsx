@@ -6,7 +6,7 @@
 // can_mark_paid flags rather than by re-deriving the state machine here.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, formatDate, money } from "../api";
+import { api, downloadBlob, formatDate, money } from "../api";
 import { ErrorBox, Loading, PageHead, StateBadge, rows } from "../components/ui";
 import { href, navigate } from "../lib/router";
 
@@ -118,6 +118,23 @@ export default function PayrunDetail({ id }) {
             onClick={() => act("send-payslips", "Send payslips")}
           >
             {busy === "send-payslips" ? <span className="spinner" /> : "Send Payslips"}
+          </button>
+          <button
+            disabled={!slips.length || busy}
+            onClick={async () => {
+              setBusy("register");
+              setError(null);
+              try {
+                const { blob, filename } = await api.payrunRegister(id);
+                downloadBlob(blob, filename);
+              } catch (err) {
+                setError(err.message);
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            {busy === "register" ? <span className="spinner" /> : "Export Register"}
           </button>
           <div className="spacer" />
           <div className="smart-row" style={{ margin: 0 }}>
