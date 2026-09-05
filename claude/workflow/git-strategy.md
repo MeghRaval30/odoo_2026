@@ -37,8 +37,15 @@ other projects.
 | Character | GitHub account | `user.name` | Commit email | Confirmed |
 |---|---|---|---|---|
 | **MICHAEL** | `Soham2256` (Soham Panchal) | `TheTeam404` | `sohampanchal2229@gmail.com` | ✅ verified session 01 |
-| **FRANKLIN** | `MeghRaval30` *(repo owner — confirm)* | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+| **FRANKLIN** | `Robo9327study` | `Robo9327study` | `rajstudy9327@gmail.com` | ✅ verified session 02 |
 | **TREVOR** | ⚠️ TBC | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+
+> **Correction (session 02).** The register guessed Franklin would be
+> `MeghRaval30`. That is wrong: `MeghRaval30` owns the repository, but the
+> account authenticated in Franklin's session is `Robo9327study`. Per the rule
+> at the top of this section — identity follows the session, not the machine and
+> not the repo owner — Franklin commits as `Robo9327study`. **Trevor: do not
+> assume your row either. Check which account is actually logged in.**
 
 > **Note on the two name columns.** GitHub attributes a commit by its **email**,
 > not by `user.name`. Michael's `user.name` is `TheTeam404` but the commits

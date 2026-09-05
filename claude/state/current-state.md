@@ -9,12 +9,21 @@
 ## ⏱ CLOCK
 
 ```
-Hackathon start:  2026-09-05  ~09:00 IST   ⚠️ STILL ASSUMED — CONFIRM
-Now:              2026-09-05   ~13:10 IST
-Elapsed:          ~4h  /  24h
-REMAINING:        ~20h
+Hackathon start:  2026-09-05   10:00 IST   ✅ CONFIRMED BY USER (session 02)
+Hackathon end:    2026-09-06   10:00 IST   ✅ CONFIRMED BY USER (session 02)
+Now:              2026-09-05   11:26 IST
+Elapsed:          ~1h 26m  /  24h
+REMAINING:        ~22h 34m
 Phase:            BUILD
 ```
+
+> **The clock was wrong in both directions and we have MORE time than the
+> handoff claimed, not less.** Session 01 assumed a 09:00 start; the real start
+> is 10:00 IST. Session 01 also recorded the handoff at "~13:15 IST" — which is
+> ahead of the real wall-clock time when session 02 opened the repo (11:26 IST),
+> so that timestamp cannot be right. It was inferred from file timestamps rather
+> than read from a clock. **Do not trust narrative timestamps in the handoff
+> docs; run `date` yourself.** B-001 is now closed.
 
 ### Scope gates — binding
 
@@ -143,8 +152,8 @@ See `claude/context/decisions.md`. Do not reopen.
 
 ## ⚠️ OPEN QUESTIONS FOR THE USER
 
-1. **Exact hackathon start and end time.** Still assumed. Every scope gate
-   depends on it. Ask in your first message.
+1. ~~**Exact hackathon start and end time.**~~ **ANSWERED (session 02):**
+   10:00 IST 2026-09-05 → 10:00 IST 2026-09-06. Clock block above corrected.
 2. Commit `12a632f` carries a Claude co-author trailer (predates D-010). The
    fix requires a force-push, which the settings now deny. Only worth doing
    before anyone else clones — likely already too late, and harmless.
