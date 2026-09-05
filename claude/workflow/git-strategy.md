@@ -34,11 +34,17 @@ other projects.
 
 ### Identity register
 
-| Character | GitHub username | Commit email | Confirmed |
-|---|---|---|---|
-| **MICHAEL** | `TheTeam404` | `sohampanchal2229@gmail.com` | ✅ verified session 01 |
-| **FRANKLIN** | `MeghRaval30` *(repo owner — confirm)* | ⚠️ TBC | ❌ **fill in on first run** |
-| **TREVOR** | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+| Character | GitHub account | `user.name` | Commit email | Confirmed |
+|---|---|---|---|---|
+| **MICHAEL** | `Soham2256` (Soham Panchal) | `TheTeam404` | `sohampanchal2229@gmail.com` | ✅ verified session 01 |
+| **FRANKLIN** | `MeghRaval30` *(repo owner — confirm)* | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+| **TREVOR** | ⚠️ TBC | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+
+> **Note on the two name columns.** GitHub attributes a commit by its **email**,
+> not by `user.name`. Michael's `user.name` is `TheTeam404` but the commits
+> correctly attribute to the GitHub account `Soham2256`, because that account
+> owns `sohampanchal2229@gmail.com`. What matters for contribution credit is that
+> **the email is one GitHub knows about**. Verify the email, not the display name.
 
 > **Franklin and Trevor:** the first thing you do is fill in your row above, set
 > your git config, and commit that change. Ask the user for the email your
