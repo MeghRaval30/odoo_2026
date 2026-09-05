@@ -3,6 +3,8 @@ Payroll API — structures, rules, the two-step payrun wizard, and the
 Compute / Validate / Mark Paid / Send Payslips action bar.
 """
 
+from decimal import Decimal
+
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -305,31 +307,79 @@ class PayrunViewSet(viewsets.ModelViewSet):
         qs = self.get_object().warnings.select_related("employee")
         return Response(PayslipWarningSerializer(qs, many=True).data)
 
-    @action(detail=True, methods=["get"])
-    def register(self, request, pk=None):
+    def _register_rows(self, payrun):
         """
-        Payroll register as CSV — one row per payslip, one column per rule code.
+        Shared shape behind the register: one row per payslip, one column per
+        rule code.
 
-        Columns are derived from the lines actually present rather than from the
-        structure, so a payrun whose rules changed mid-period still exports
+        Codes come from the lines actually present rather than from the
+        structure, so a payrun whose rules changed mid-period still reports
         every code it really produced.
         """
-        import csv
-
-        from django.http import HttpResponse
-
-        payrun = self.get_object()
         payslips = (payrun.payslips
                     .select_related("employee", "employee__department")
                     .prefetch_related("lines")
                     .order_by("employee__first_name", "employee__last_name"))
 
-        codes, seen = [], {}
+        seen = {}
         for slip in payslips:
             for line in slip.lines.all():
-                if line.code not in seen:
-                    seen[line.code] = line.sequence
+                seen.setdefault(line.code, line.sequence)
         codes = [c for c, _ in sorted(seen.items(), key=lambda kv: kv[1])]
+
+        rows = []
+        for slip in payslips:
+            amounts = {line.code: line.amount for line in slip.lines.all()}
+            rows.append({
+                "payslip_id": slip.id,
+                "number": slip.number,
+                "employee": slip.employee.full_name,
+                "department": (slip.employee.department.name
+                               if slip.employee.department else ""),
+                "worked_days": slip.worked_days,
+                "lop_days": slip.lop_days,
+                "overtime_hours": slip.overtime_hours,
+                "amounts": {code: amounts.get(code) for code in codes},
+            })
+        return codes, rows
+
+    @action(detail=True, methods=["get"], url_path="register-data")
+    def register_data(self, request, pk=None):
+        """
+        The register as JSON, for the on-screen report.
+
+        Decimals are rendered as strings, matching every serializer-backed
+        endpoint. A raw dict bypasses DRF's COERCE_DECIMAL_TO_STRING, so
+        returning the Decimals directly would emit JSON floats — inconsistent
+        with the rest of the API and lossy once the sums get large.
+        """
+        codes, rows = self._register_rows(self.get_object())
+
+        totals = {}
+        for code in codes:
+            total = sum((r["amounts"][code] for r in rows
+                         if r["amounts"][code] is not None), Decimal("0.00"))
+            totals[code] = str(total)
+
+        for row in rows:
+            for key in ("worked_days", "lop_days", "overtime_hours"):
+                row[key] = str(row[key])
+            row["amounts"] = {
+                code: (None if value is None else str(value))
+                for code, value in row["amounts"].items()
+            }
+
+        return Response({"codes": codes, "rows": rows, "totals": totals})
+
+    @action(detail=True, methods=["get"])
+    def register(self, request, pk=None):
+        """Payroll register as CSV."""
+        import csv
+
+        from django.http import HttpResponse
+
+        payrun = self.get_object()
+        codes, rows = self._register_rows(payrun)
 
         response = HttpResponse(content_type="text/csv")
         filename = f"register-{payrun.name.replace(' ', '-')}.csv"
@@ -339,15 +389,15 @@ class PayrunViewSet(viewsets.ModelViewSet):
         writer.writerow(["Payslip", "Employee", "Department", "Worked Days",
                          "LOP Days", "Overtime Hours"] + codes)
 
-        for slip in payslips:
-            amounts = {line.code: line.amount for line in slip.lines.all()}
+        for row in rows:
             writer.writerow([
-                slip.number,
-                slip.employee.full_name,
-                slip.employee.department.name if slip.employee.department else "",
-                slip.worked_days,
-                slip.lop_days,
-                slip.overtime_hours,
-            ] + [amounts.get(code, "") for code in codes])
+                row["number"],
+                row["employee"],
+                row["department"],
+                row["worked_days"],
+                row["lop_days"],
+                row["overtime_hours"],
+            ] + [row["amounts"][code] if row["amounts"][code] is not None else ""
+                 for code in codes])
 
         return response
