@@ -68,7 +68,20 @@ class TimeOffRequestSerializer(serializers.ModelSerializer):
                   "date_from", "date_to", "duration", "half_day", "state",
                   "state_display", "reason", "approver", "approver_email",
                   "approved_at"]
-        read_only_fields = ["allocation_used", "approver", "approved_at"]
+        # `state` is workflow, not input. It was writable, and creating a
+        # request is the one write an ordinary employee always has, so an
+        # employee could POST {"state": "APPROVED"} and grant themselves the
+        # leave -- consuming their own allocation and, for an unpaid type,
+        # moving their own payslip. PATCH and the approve action were already
+        # refused to them; create was the way through. It moves only via
+        # approve() and refuse(), both of which need timeoff.approve.
+        #
+        # Allocation's state stays writable on purpose: a grant is raised by
+        # HR under allocation.write, so setting its state is not an
+        # escalation, and the demo harnesses create allocations in a chosen
+        # state.
+        read_only_fields = ["allocation_used", "approver", "approved_at",
+                            "state"]
 
     def validate(self, attrs):
         """
@@ -183,6 +196,24 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,
                         headers=headers)
+
+    def perform_create(self, serializer):
+        """
+        A submitted request is submitted -- it lands in the approval queue.
+
+        The model default is DRAFT, and nothing ever moved a request out of
+        it: there is no submit or confirm action on this viewset, and the
+        screen offers Approve and Refuse only on TO_APPROVE. So every request
+        raised through the UI arrived as a draft that no one could act on and
+        the requester could not advance -- a dead end that looked like a
+        pending request. The seeded rows hid it by setting their state
+        directly on the model, which is why the approval queue looked healthy.
+
+        There is no draft-and-send-later flow to preserve: the form's button
+        says Submit and the state filter offers no Draft. DRAFT stays in
+        STATES for rows that predate this.
+        """
+        serializer.save(state=TimeOffRequest.TO_APPROVE)
 
     def get_queryset(self):
         qs = TimeOffRequest.objects.select_related(

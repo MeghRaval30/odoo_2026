@@ -197,6 +197,14 @@ function RequestForm({ onClose, onSaved }) {
   );
 }
 
+// Both states mean "nobody has decided this yet", so both are actionable by
+// someone who may decide. Gating on TO_APPROVE alone left every request the UI
+// created — all of which were DRAFT — showing a state badge and a dash where
+// Approve and Refuse belonged. New requests are now created as TO_APPROVE, and
+// DRAFT stays here so any row written before that fix is still decidable
+// rather than stranded.
+const UNDECIDED = new Set(["DRAFT", "TO_APPROVE"]);
+
 export default function TimeOff({ route }) {
   const [state, setState] = useState("");
   const [search, setSearch] = useState("");
@@ -303,7 +311,7 @@ export default function TimeOff({ route }) {
                       <StateBadge state={r.state} label={r.state_display} />
                     </td>
                     <td className="right">
-                      {r.state === "TO_APPROVE" && canApprove ? (
+                      {UNDECIDED.has(r.state) && canApprove ? (
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                           <button
                             className="sm"

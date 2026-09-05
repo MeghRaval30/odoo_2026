@@ -336,6 +336,9 @@ function RequestsTab() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const canApprove = auth.has("profile.approve");
+  // Null for an account with no employee record — the admin login — which can
+  // never match a request's employee, so every row stays decidable for them.
+  const myEmployeeId = auth.user?.employee_id ?? null;
 
   const load = async () => {
     try {
@@ -424,19 +427,26 @@ function RequestsTab() {
                   </td>
                   {canApprove && (
                     <td className="right nowrap">
-                      {row.state === "PENDING" && (
-                        <>
-                          <button className="sm" onClick={() => decide(row, "approve")}>
-                            Approve
-                          </button>{" "}
-                          <button
-                            className="sm danger"
-                            onClick={() => decide(row, "refuse")}
-                          >
-                            Refuse
-                          </button>
-                        </>
-                      )}
+                      {row.state === "PENDING" &&
+                        (row.employee === myEmployeeId ? (
+                          // Approving your own record is refused at the write,
+                          // so offering the button here would only produce a
+                          // 400 on your own bank details. Say who decides
+                          // instead of advertising a control that cannot work.
+                          <span className="tiny faint">Another approver</span>
+                        ) : (
+                          <>
+                            <button className="sm" onClick={() => decide(row, "approve")}>
+                              Approve
+                            </button>{" "}
+                            <button
+                              className="sm danger"
+                              onClick={() => decide(row, "refuse")}
+                            >
+                              Refuse
+                            </button>
+                          </>
+                        ))}
                     </td>
                   )}
                 </tr>
