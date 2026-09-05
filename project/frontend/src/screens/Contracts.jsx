@@ -35,7 +35,9 @@ const BLANK = {
   working_schedule: "",
   department: "",
   job_position: "",
-  structure_type: "",
+  // The model defaults this and does not allow blank, so an empty string is a
+  // 400 rather than "use the default".
+  structure_type: "Employee Salary",
   state: "DRAFT",
   notes: "",
 };
