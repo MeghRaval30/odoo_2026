@@ -437,3 +437,51 @@ screen.
 **Next up:** TREVOR — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`. His
 first action is to re-run the full test suite, then finish the screen-by-screen
 pass starting at `project/frontend/src/screens/Login.jsx`.
+
+---
+
+## Session 06 — MICHAEL
+
+**Opened 2026-09-05 21:45 IST.** Identity set and verified as `TheTeam404` /
+`sohampanchal2229@gmail.com` before the first commit.
+
+> **Rotation note.** Session 05 handed off to Trevor, but the account
+> authenticated in this chat is Soham's, which the identity register maps to
+> Michael. `git-strategy.md` §1 says identity follows the session rather than the
+> nominal order, so this session runs as Michael and Trevor's turn moves to 07.
+> Raised with the user rather than settled silently.
+
+### Boot
+
+`git pull --rebase` hit a conflict: this checkout still carried the local
+session-04 docs commit `f3040bf` ("fold the permission audit into the handoff"),
+while `origin/main` had since packed session 05 over the same four files. The
+*code* it documented (`c08fa5f`, the payroll merge) was already on the remote, so
+only the prose collided.
+
+Resolved by taking upstream for `current-state.md`, `task-board.md`,
+`decisions.md` and `NEXT-SESSION-PROMPT.md` — session 05's pack is the later,
+authoritative rewrite — and keeping the one hunk that merged cleanly and was not
+superseded: `runbook.md` gaining `audit_permissions.py` as the fifth harness.
+Rebased commit is `a7c4d3d`, pushed.
+
+Note for whoever reconciles the boards: session 04 and session 05 both minted
+**T-091 and T-092** for different work. Upstream's meanings (capability matrix,
+self-service) are the ones now in `task-board.md`.
+
+### Startup verification — the app is up
+
+| Step | Result |
+|---|---|
+| `manage.py migrate` | applied `accounts.0003` and `accounts.0004` — this checkout had not seen them |
+| `manage.py seed --flush` | 22 employees, 24 contracts, 1746 attendance, 3 payruns, 60 payslips, 960 lines, 6 warnings — byte-identical to the pinned demo shape |
+| `manage.py test` | **216/216 OK** in 39.8 s |
+| `runserver 8000` | up; `POST /api/auth/login/` returns a token and the full capability list for `admin@oxp.com` |
+| `npm run dev` | up on 5173, Vite 8.2.2, ready in 1.1 s (it re-optimised deps once, config had changed) |
+| Browser | signed in as Admin. Administration dashboard renders live: 5 accounts, 1 live session, 2 sign-ins/24h, audit log, security posture, accounts-by-role. All eight menu groups present |
+
+Ports were clear beforehand — no repeat of B-021.
+
+The stale-screen list in `current-state.md` is confirmed from the browser:
+`Login.jsx` still reads "Sign in to continue" and still carries the five demo
+chips, exactly as the handoff describes.
