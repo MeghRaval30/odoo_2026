@@ -15,6 +15,8 @@ from core.api import HolidayViewSet
 from dashboard.api import dashboard_view, filter_options_view
 from dashboard.role_views import (admin_dashboard_view, hr_dashboard_view,
                                  my_dashboard_view)
+from intelligence.api import (ImportRunViewSet, ImportSourceViewSet,
+                              fields_view, health_view)
 from employees.api import (CompanyViewSet, ContractViewSet, DepartmentViewSet,
                            EmployeeViewSet, JobPositionViewSet,
                            WorkLocationViewSet, WorkingScheduleViewSet)
@@ -50,6 +52,10 @@ router.register("salary-rules", SalaryRuleViewSet)
 router.register("payruns", PayrunViewSet)
 router.register("payslips", PayslipViewSet, basename="payslip")
 
+# Data migration -- the import studio
+router.register("intel/sources", ImportSourceViewSet, basename="importsource")
+router.register("intel/runs", ImportRunViewSet, basename="importrun")
+
 # Administration
 router.register("users", UserViewSet)
 router.register("roles", RoleViewSet)
@@ -75,6 +81,9 @@ urlpatterns = [
 
     # Security administration
     path("api/security/settings/", security_settings_view, name="security-settings"),
+
+    path("api/intel/health/", health_view, name="intel-health"),
+    path("api/intel/fields/", fields_view, name="intel-fields"),
 
     path("api/dashboard/", dashboard_view, name="dashboard"),
     path("api/dashboard/filters/", filter_options_view, name="dashboard-filters"),
