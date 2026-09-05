@@ -1,0 +1,107 @@
+// Shared UI primitives.
+//
+// DRF paginates list endpoints (PAGE_SIZE 50) but the custom @action endpoints
+// return bare arrays, so every consumer goes through rows().
+
+import { useCallback, useEffect, useState } from "react";
+
+export const rows = (payload) =>
+  Array.isArray(payload) ? payload : payload?.results || [];
+
+export function useResource(path, params) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const key = JSON.stringify(params || {});
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { api } = await import("../api");
+      setData(await api.get(path, JSON.parse(key)));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [path, key]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { data, rows: rows(data), loading, error, reload, setData };
+}
+
+export function Modal({ title, children, footer, onClose, wide }) {
+  useEffect(() => {
+    const onEsc = (e) => e.key === "Escape" && onClose?.();
+    document.addEventListener("keydown", onEsc);
+    return () => document.removeEventListener("keydown", onEsc);
+  }, [onClose]);
+
+  return (
+    <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+      <div className={`modal${wide ? " wide" : ""}`}>
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button className="ghost sm" onClick={onClose}>
+            &#10005;
+          </button>
+        </div>
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-foot">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+export function Field({ label, children, hint }) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      {children}
+      {hint && <div className="tiny faint">{hint}</div>}
+    </div>
+  );
+}
+
+const STATE_TONE = {
+  DRAFT: "grey",
+  TO_APPROVE: "amber",
+  VERIFY: "amber",
+  CONFIRM: "amber",
+  RUNNING: "green",
+  APPROVED: "green",
+  VALIDATED: "green",
+  DONE: "blue",
+  PAID: "green",
+  EXPIRED: "grey",
+  REFUSED: "red",
+  CANCELLED: "red",
+  NEW: "grey",
+};
+
+export function StateBadge({ state, label }) {
+  if (!state) return <span className="faint">—</span>;
+  return (
+    <span className={`badge ${STATE_TONE[state] || "grey"}`}>{label || state}</span>
+  );
+}
+
+export const Loading = () => <div className="empty"><span className="spinner" /></div>;
+
+export const ErrorBox = ({ error }) =>
+  error ? <div className="alert error">{error}</div> : null;
+
+export function PageHead({ title, sub, children }) {
+  return (
+    <div className="page-head">
+      <h1>{title}</h1>
+      {sub && <span className="sub">{sub}</span>}
+      <div className="spacer" />
+      {children}
+    </div>
+  );
+}
