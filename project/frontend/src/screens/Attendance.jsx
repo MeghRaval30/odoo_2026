@@ -8,7 +8,7 @@
 // Source column exists.
 
 import { useEffect, useState } from "react";
-import { api, formatDateTime } from "../api";
+import { api, auth, formatDateTime } from "../api";
 import {
   ErrorBox,
   Field,
@@ -197,9 +197,11 @@ export default function Attendance({ route }) {
   return (
     <div className="page">
       <PageHead title="Attendance" sub={`${records.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Record
-        </button>
+        {auth.has("attendance.correct") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Record
+          </button>
+        )}
       </PageHead>
 
       <div className="toolbar">

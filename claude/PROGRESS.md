@@ -320,3 +320,48 @@ sentence), and the escalation guard — unticking Admin on your own account
 surfaces **"You cannot change your own roles. Ask another administrator to do
 it."** and changes nothing. Rahul's password was reset back to `demo1234`, so
 every demo account still signs in. `npm run build` clean.
+
+### 22:45 — T-105 controls follow capabilities, and a route guard
+The last `auth.can()` in the codebase is gone. Create and Save buttons now read
+`auth.has("<capability>")`: `employee.write`, `contract.write`,
+`attendance.correct`, `schedule.write`, `reference.write`,
+`timeoff.type.write`, `allocation.write`, `salaryconfig.write`.
+
+The worst one found by walking it: **an employee looking at their own pending
+leave request was shown Approve and Refuse buttons on it.** The server refuses
+(`timeoff.approve`), so nothing could be approved — but a screen that offers
+someone the power to approve their own leave is making a claim about the system
+that is exactly backwards. Now gated; HR still sees ten of them across eleven
+requests.
+
+Also closed a whole class of the same problem. Typing `#/payroll` as an HR
+Manager rendered the Payruns screen — empty table, "0 records", a permission
+error underneath. It looked broken rather than refused. There is now one route
+guard in `App.jsx`, and it does **not** keep a second copy of the capability
+table: it reads the navigation tree `/api/auth/me/` already pruned for this
+account. A menu the account cannot use is absent (D-028), so a route absent from
+that tree is a route it may not open — typed, bookmarked, or otherwise. Refused
+routes say *"Not available for this account."* and nothing else.
+
+Verified by walking every route as all five accounts:
+
+| Signed in as | Result |
+|---|---|
+| `john@oxp.com` Employee | Menu is Dashboard · Attendance · Time Off · My Payslips. `/employees`, `/payroll`, `/users`, `/security`, `/salary-rules` all refuse. Attendance shows his own 80 rows and no New Record; Allocations shows his one row and no New Allocation |
+| `sara@oxp.com` HR Manager | Every payroll and admin route refuses. All 13 of her own routes render |
+| `rahul@oxp.com` Payroll User | Reaches payroll; `/users`, `/security`, `/audit` refuse. Salary Rules opens **read-only** — no New Rule, and the rule form offers Close with no Save, which is exactly the PDF's "read-only access to Salary Structures and Salary Rules" |
+| `aarav@oxp.com` Payroll Manager | Same screen, New Rule present and Save present |
+| `admin@oxp.com` Admin | All 18 routes render |
+
+One copy fix on the way past: the HR dashboard's subtitle read "live from
+Employee, Contract, Attendance, Time Off". The design language forbids narrating
+the architecture to the user (§5) — the period alone is the honest sub-heading.
+
+**A trap worth recording (new, B-026).** Two writes to the same `.jsx` inside
+one second left Vite serving a transform from *between* them: the JSX referenced
+`canApprove` and the declaration was missing, so the screen threw
+"canApprove is not defined" and survived a hard browser reload, because the
+stale copy was on the **server** side of the module graph. `curl
+localhost:5173/src/screens/TimeOff.jsx` showed the truth in one command, and
+`touch` on the file fixed it. Same shape as B-021: the thing serving you is not
+the thing you edited.

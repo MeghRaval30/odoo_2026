@@ -5,7 +5,7 @@
 // compute.
 
 import { useEffect, useState } from "react";
-import { api, formatDate } from "../api";
+import { api, auth, formatDate } from "../api";
 import {
   ErrorBox,
   Field,
@@ -130,9 +130,11 @@ export default function Holidays() {
   return (
     <div className="page">
       <PageHead title="Holidays" sub={`${holidays.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Holiday
-        </button>
+        {auth.has("reference.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Holiday
+          </button>
+        )}
       </PageHead>
 
       <ErrorBox error={holidays.error} />

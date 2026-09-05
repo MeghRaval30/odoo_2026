@@ -5,7 +5,7 @@
 // times.
 
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, auth } from "../api";
 import {
   ErrorBox,
   Field,
@@ -124,9 +124,11 @@ function ReferenceList({ title, singular, path, columns, fields }) {
   return (
     <div className="page">
       <PageHead title={title} sub={`${records.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New {singular}
-        </button>
+        {auth.has("reference.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New {singular}
+          </button>
+        )}
       </PageHead>
       <ErrorBox error={records.error} />
       <div className="card">

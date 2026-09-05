@@ -6,7 +6,7 @@
 // rows on the client.
 
 import { useEffect, useState } from "react";
-import { api, formatDate } from "../api";
+import { api, auth, formatDate } from "../api";
 import {
   ErrorBox,
   Field,
@@ -344,9 +344,11 @@ export default function Employees() {
   return (
     <div className="page">
       <PageHead title="Employees" sub={`${employees.rows.length} shown`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Employee
-        </button>
+        {auth.has("employee.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Employee
+          </button>
+        )}
       </PageHead>
 
       <div className="toolbar">

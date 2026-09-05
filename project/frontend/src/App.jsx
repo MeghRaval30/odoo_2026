@@ -49,6 +49,35 @@ const SCREENS = {
   audit: AuditLog,
 };
 
+// Routes reachable from the profile menu rather than the top bar, plus the
+// dashboard every account has. Everything else is judged against the
+// navigation tree the server built for this account.
+const ALWAYS = new Set(["dashboard", "profile", "my-payslips"]);
+
+/**
+ * Is this account allowed to open this screen?
+ *
+ * The answer is read off the navigation `/api/auth/me/` already pruned, rather
+ * than from a second copy of the capability table kept here — a second copy is
+ * how a menu and a screen drift apart. A menu the account cannot use is absent
+ * (D-028), so a route that is absent from the tree is a route it may not open,
+ * whether it was reached by typing the URL or by a stale bookmark.
+ *
+ * This is presentation, not enforcement: the server 403s regardless. What it
+ * buys is that a refused screen says so in one clause instead of rendering an
+ * empty payroll table above a permission error.
+ */
+function reachable(head) {
+  if (ALWAYS.has(head)) return true;
+  const nav = auth.user?.navigation || [];
+  const paths = new Set();
+  for (const group of nav) {
+    if (group.to) paths.add(group.to.replace(/^\//, ""));
+    for (const item of group.items || []) paths.add(item.to.replace(/^\//, ""));
+  }
+  return paths.has(head);
+}
+
 export default function App() {
   const route = useHashRoute();
   const signedIn = Boolean(auth.token);
@@ -96,14 +125,20 @@ export default function App() {
 
   return (
     <Shell route={route}>
-      {Screen ? (
-        <Screen route={route} />
-      ) : (
+      {!Screen ? (
         <div className="page">
           <div className="card">
             <div className="empty">
               Not found. <a href="#/dashboard">Go to dashboard</a>
             </div>
+          </div>
+        </div>
+      ) : reachable(head) ? (
+        <Screen route={route} />
+      ) : (
+        <div className="page">
+          <div className="card">
+            <div className="empty">Not available for this account.</div>
           </div>
         </div>
       )}

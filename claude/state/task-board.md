@@ -174,11 +174,11 @@ running diary is `claude/PROGRESS.md`.
 | T-097 | Role-aware navigation + profile menu + theme switcher | `DONE` | Franklin | Menu built server-side; verified for Employee, HR, Admin |
 | T-098 | Four role dashboards behind four endpoints | `DONE` | Franklin | Employee and HR verified in a browser; Admin verified by API |
 | T-099 | New screens: Profile, Security, Audit, My Payslips | `IN PROGRESS` | Franklin | Written and building; **none has been clicked** |
-| T-100 | **Screen-by-screen pass over the pre-existing screens** | `TODO` | | The remaining ~30% of the commission. File-by-file list in `current-state.md` §HALF-DONE |
+| T-100 | **Screen-by-screen pass over the pre-existing screens** | `DONE` | Trevor | T-101 to T-105 all closed and driven in a browser as all five roles |
 | T-101 | Login screen to the mockup's exact copy | `DONE` | Trevor | Mockup copy verbatim + "Accounts are created by an administrator." Demo chips now compile out of a production build |
 | T-102 | Attendance list + widget to hours-and-minutes | `DONE` | Trevor | List reads `8h 46m` / `16m`, widget reads `6h56`. Widget also surfaces `punch_blocked_reason` and disables the button — verified by planting a policy that excludes 127.0.0.1 |
 | T-103 | Payroll dashboard overtime tile | `DONE` | Trevor | Reads **124h 38m carried by 22 employees** plus average day 8h 43m. The count survives as "Days with overtime", where a count is the right unit |
 | T-104 | Users & Roles screen for the capability matrix | `DONE` | Trevor | Mockup's five columns, search, role filter, the Active switch (which was in form state but had no control), Reset password, and the capability grid. Every path driven in a browser |
-| T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `TODO` | | `auth.has("payrun.delete")` etc. Server already enforces; this is the UI catching up |
+| T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `DONE` | Trevor | Last `auth.can()` gone. Create/Save/Approve gated per capability, plus a route guard read off the server's own navigation tree so a typed URL refuses in one clause instead of rendering a broken shell over a 403 |
 | T-106 | Render and check the four unverified themes | `TODO` | | Atrium, Blueprint, Marigold, Graphite |
 | T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | It still describes the old menu and mentions no roles or themes |

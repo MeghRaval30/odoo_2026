@@ -6,7 +6,7 @@
 // on the row.
 
 import { useEffect, useState } from "react";
-import { api, formatDate } from "../api";
+import { api, auth, formatDate } from "../api";
 import {
   ErrorBox,
   Field,
@@ -131,6 +131,8 @@ export default function Allocations({ route }) {
     page_size: 200,
   });
 
+  const canDecide = auth.has("allocation.write");
+
   const act = async (id, verb) => {
     setBusy(id);
     setError(null);
@@ -147,9 +149,11 @@ export default function Allocations({ route }) {
   return (
     <div className="page">
       <PageHead title="Allocations" sub={`${allocations.rows.length} records`}>
-        <button className="primary" onClick={() => setCreating(true)}>
-          New Allocation
-        </button>
+        {canDecide && (
+          <button className="primary" onClick={() => setCreating(true)}>
+            New Allocation
+          </button>
+        )}
       </PageHead>
 
       <ErrorBox error={error || allocations.error} />
@@ -193,7 +197,7 @@ export default function Allocations({ route }) {
                       <StateBadge state={a.state} label={a.state_display} />
                     </td>
                     <td className="right">
-                      {a.state !== "APPROVED" ? (
+                      {a.state !== "APPROVED" && canDecide ? (
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                           <button
                             className="sm"

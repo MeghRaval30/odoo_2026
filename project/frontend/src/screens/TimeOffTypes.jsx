@@ -4,7 +4,7 @@
 // refuses requests that no approved allocation covers.
 
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, auth } from "../api";
 import {
   ErrorBox,
   Field,
@@ -128,9 +128,11 @@ export default function TimeOffTypes() {
   return (
     <div className="page">
       <PageHead title="Time Off Types" sub={`${types.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Type
-        </button>
+        {auth.has("timeoff.type.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Type
+          </button>
+        )}
       </PageHead>
 
       <ErrorBox error={types.error} />
