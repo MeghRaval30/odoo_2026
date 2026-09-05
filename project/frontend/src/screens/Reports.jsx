@@ -26,10 +26,27 @@ export default function Reports() {
 
   const payruns = useResource("/api/payruns/", { ordering: "-period_start" });
 
+  // Which run to open on is decided by the server, not by "the first row"
+  // (D-034). The newest payrun is the off-cycle correction holding a single
+  // payslip, so a register defaulting to it opens on a one-line report; the
+  // newest *paid* run is the one an officer actually reconciles. The dashboard
+  // already reads this same value, which is the point of naming it once.
   useEffect(() => {
-    if (!payrunId && payruns.rows.length) {
-      setPayrunId(String(payruns.rows[0].id));
-    }
+    if (payrunId || !payruns.rows.length) return;
+    let cancelled = false;
+    (async () => {
+      let preferred = null;
+      try {
+        const opts = await api.get("/api/dashboard/filters/");
+        preferred = opts.default_period;
+      } catch {
+        preferred = null;      // fall through to the newest run
+      }
+      if (cancelled) return;
+      const known = payruns.rows.some((p) => String(p.id) === String(preferred));
+      setPayrunId(String(known ? preferred : payruns.rows[0].id));
+    })();
+    return () => { cancelled = true; };
   }, [payruns.rows, payrunId]);
 
   const load = useCallback(async () => {
