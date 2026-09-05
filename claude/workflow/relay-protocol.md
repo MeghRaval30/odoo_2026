@@ -131,17 +131,34 @@ cannot possibly finish.
 
 ## 5. Git conventions
 
-The relay is sequential, so no branching complexity is needed. Everyone works
-`main`.
+> **Full model: `claude/workflow/git-strategy.md`. Read it before your first
+> commit.** This section is the summary only.
+
+Two requirements shape the git model, and both are non-negotiable:
+
+**Each character commits under their own teammate's GitHub account.** All three
+must appear as authors on the repository. Identity follows the session, not the
+machine, so set and **verify** repo-local `user.name` and `user.email` at boot.
+Misattributed commits can only be fixed by rewriting history, which is forbidden
+here — so check before you commit, not after.
+
+**The history must show real collaborative development** — feature branches,
+experimental spikes, merges and version tags, not a flat line of commits on
+`main`. This is a presentational requirement and it is deliberate.
 
 - `git pull --rebase` before the first edit of every session. No exceptions.
+- Work on `feat/` `fix/` `exp/` `docs/` `chore/` branches. `main` stays working.
+- **Merge with `--no-ff` always.** A fast-forward erases the branch from the
+  graph, which defeats the point.
 - **Never force-push. Never rewrite history.** Someone else's only copy of their
   work may be in the commits you would destroy.
-- Commit message prefixes: `feat:` `fix:` `chore(claude):` `docs:` `test:`
-- Identify yourself in commits touching product code:
-  `feat(payroll): compute payslip lines [michael]`
-- Tag each handoff so the next session can diff exactly what changed:
-  `git tag handoff-michael-01 && git push --tags`
+- Keep abandoned `exp/` branches. They are evidence of real exploration, and they
+  stop a later session repeating a failed attempt.
+- Commit format: `<type>(<scope>): <subject> [<character>]`
+- Tag milestones (`v0.4-payroll-engine`) and every handoff (`handoff-michael-01`).
+- **Merge into `main` before packing at MEGATRON LAUNCH.** Never hand off with
+  work stranded on an unmerged branch.
+- Check the contribution split with `git shortlog -sne --all` at each handoff.
 
 ---
 

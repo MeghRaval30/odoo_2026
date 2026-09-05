@@ -72,7 +72,8 @@ Read these in sequence. Do not skip ahead — later files assume the earlier one
 | 5 | `claude/context/prd.md` | The product requirements. What "done" means. |
 | 6 | `claude/context/data-model.md` | Entities, fields, relationships, constraints. |
 | 7 | `claude/state/runbook.md` | How to install, run, seed and test. Get the app running before you write code. |
-| 8 | `claude/deliverables/demo-script.md` | The 5-minute walkthrough. Anything not in here is optional. |
+| 8 | `claude/workflow/git-strategy.md` | **Identity and branching. Read before your first commit.** |
+| 9 | `claude/deliverables/demo-script.md` | The 5-minute walkthrough. Anything not in here is optional. |
 
 If a full briefing from the previous session exists, read
 `claude/handoff/NEXT-SESSION-PROMPT.md` instead of items 1–8 — it is written to

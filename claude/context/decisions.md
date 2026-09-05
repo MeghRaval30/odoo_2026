@@ -124,3 +124,77 @@ Branching would add merge overhead and a real risk of a session's work being
 stranded on a branch nobody remembers to merge. The force-push ban matters
 because someone else's only copy of their work may live in the commits it would
 destroy.
+
+---
+
+## D-008 — REVERSES D-007. Feature branches, merges and version tags are required.
+
+**Decided by:** user, session 01 (Michael) · 2026-09-05
+
+D-007 said all sessions commit directly to `main` with no branching. **That is
+now overruled.** Work happens on `feat/` `fix/` `exp/` `docs/` `chore/` branches,
+merges into `main` are always `--no-ff`, and meaningful milestones are tagged.
+
+**Rationale.** D-007 reasoned that branches were unnecessary because the relay is
+strictly sequential, so there is no coordination problem for branches to solve.
+That reasoning was technically sound but missed the actual requirement: the user
+wants the repository history to *look like* real collaborative development,
+showing experimental branches, versions and merges. The requirement is
+presentational, not technical, so it is worth the extra ceremony regardless of
+whether branches are needed for coordination.
+
+Abandoned experimental branches are **kept, not deleted** — they are evidence of
+genuine engineering exploration, and they stop a later session repeating a failed
+attempt.
+
+Full model in `claude/workflow/git-strategy.md`.
+
+---
+
+## D-009 — Each session commits under its own teammate's GitHub account
+
+**Decided by:** user, session 01 (Michael) · 2026-09-05
+
+Git identity follows the session, not the machine. Whichever teammate's GitHub
+account is authenticated in the current Claude Code chat is the account that
+commits from that chat. Every session sets repo-local `user.name` and
+`user.email` at boot and **verifies** them before its first commit.
+
+**Rationale.** All three teammates need to appear as commit authors. A repository
+where every commit is authored by one person does not reflect that three people
+built it, and for a hackathon submission that misrepresents the team's
+contribution.
+
+This is not silently recoverable: commits attributed to the wrong person can only
+be fixed by rewriting history, which the relay protocol forbids because it can
+destroy another session's only copy of their work. Hence verification before the
+first commit rather than a check afterwards.
+
+The identity register lives in `claude/workflow/git-strategy.md` §1. Michael's
+row is confirmed; **Franklin and Trevor must fill in their own rows on first
+run.**
+
+---
+
+## D-010 — No Claude attribution in commit messages
+
+**Decided by:** user, session 01 (Michael) · 2026-09-05
+
+Commits must not carry `Co-Authored-By: Claude ...` or any other machine
+attribution trailer. Each commit is authored by the teammate whose session it is,
+and nothing else. The `claude/` folder itself **is** committed — it is the relay's
+only channel — but the commits that carry it are the teammate's.
+
+**Rationale.** This follows directly from D-009. The three teammates commit under
+their own GitHub accounts specifically so the repository shows three people
+building the project together. A machine co-author trailer on every commit
+visibly contradicts that, and for a hackathon submission it changes how the
+team's contribution reads.
+
+This overrides the default habit of appending such a trailer. Settled — do not
+reintroduce it.
+
+**Note:** commit `12a632f` (the initial scaffold) was made before this decision
+and does contain the trailer. It was left as-is rather than amended, because
+rewriting pushed history is forbidden under D-008. Every commit from this point
+forward is clean.
