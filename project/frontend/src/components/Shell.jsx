@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { auth, api } from "../api";
 import { href, navigate } from "../lib/router";
+import AttendanceWidget from "./AttendanceWidget";
 
 const MENUS = [
   {
@@ -44,7 +45,15 @@ const MENUS = [
       { to: "/timeoff-types", label: "Time Off Types", perm: "is_admin" },
     ],
   },
-  { key: "payroll", label: "Payroll", to: "/payroll", match: ["payroll", "payslips"] },
+  {
+    key: "payroll",
+    label: "Payroll",
+    match: ["payroll", "payslips"],
+    items: [
+      { to: "/payroll", label: "Payruns", perm: "can_run_payroll" },
+      { to: "/payslips", label: "Payslips", perm: "can_run_payroll" },
+    ],
+  },
   { key: "reports", label: "Reports", to: "/dashboard", match: ["dashboard"] },
 ];
 
@@ -149,6 +158,8 @@ export default function Shell({ route, children }) {
         })}
 
         <div className="spacer" />
+
+        <AttendanceWidget />
 
         <div
           className="navitem"
