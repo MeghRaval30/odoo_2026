@@ -154,7 +154,7 @@ refactoring.
 | T-087 | Seed attendance across Dec–Mar, skip holidays | `DONE` | Michael | Dec/Jan payslips read 0 worked days |
 | T-088 | Full browser QA of all 18 routes and both flows | `DONE` | Michael | zero failed requests; state machine verified |
 | T-089 | **Build a 200–300 employee dataset** | `DONE` | Franklin | `seed --employees N`. 250 seeds in 40s; payrun of 233 computes in 5.7s. Default 22-person seed byte-identical, pinned by `core/tests.py` |
-| T-090 | Close PRD criterion 4 (two distinct warnings) | `IN PROGRESS` | Franklin | **Met on `--employees 250`** (NO_CONTRACT + AC_MISSING). Still only `AC_MISSING` on the 22-person demo seed. Every fix damages the rehearsed demo — options and the reasoning are in `current-state.md` §"THE OPEN QUESTION". **Needs the user.** |
+| T-090 | Close PRD criterion 4 (two distinct warnings) | `DONE` | Trevor | **Met on the demo seed.** Seed leaves an off-cycle March payslip for Vikram Rao, so the operator's March run raises `AC_MISSING` x2 + `DUPLICATE` x1 — two distinct codes, all WARNING severity, `can_validate` still True. Dashboard now opens on the newest **paid** period so the correction run cannot hijack it. Three tests guard it. User was asked and said "decide urself"; option 1 chosen for the smallest blast radius on the rehearsed demo |
 
 ---
 

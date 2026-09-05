@@ -38,8 +38,11 @@ class SeedDefaultTests(TestCase):
         self.assertEqual(Employee.objects.count(), 22)
         self.assertEqual(Contract.objects.count(), 24)
         self.assertEqual(Attendance.objects.count(), 1746)
-        self.assertEqual(Payrun.objects.count(), 3)
-        self.assertEqual(Payslip.objects.count(), 60)
+        # Three paid months plus the off-cycle March correction, which exists so
+        # that the payrun the operator creates during the demo has a DUPLICATE
+        # to find. 60 monthly payslips plus that one.
+        self.assertEqual(Payrun.objects.count(), 4)
+        self.assertEqual(Payslip.objects.count(), 61)
 
     def test_the_named_demo_people_are_present_and_unchanged(self):
         john = Employee.objects.get(work_email="john@oxp.com")
@@ -56,6 +59,56 @@ class SeedDefaultTests(TestCase):
         without_bank = sorted(e.full_name for e in Employee.objects.all()
                               if not e.has_bank_details)
         self.assertEqual(without_bank, ["Anita Oliver", "Meera Iyer"])
+
+    def test_the_march_payrun_the_demo_creates_raises_two_distinct_warnings(self):
+        """
+        PRD success criterion 4, on the roster the demo actually runs on.
+
+        The generated roster meets this through leavers raising NO_CONTRACT, but
+        the 22 people the demo uses have no leaver — and could not have one,
+        because NO_CONTRACT is ERROR severity and an errored payrun cannot be
+        validated, which would break the demo two steps after the warning is
+        read out. So the seed leaves an off-cycle March payslip instead, and the
+        run the operator creates finds it.
+
+        Both assertions matter. Two distinct codes is the criterion; every
+        warning being WARNING severity is what keeps `[Validate]` available at
+        demo step A8.
+        """
+        start, end = date(2026, 3, 1), date(2026, 3, 31)
+        regular = SalaryStructure.objects.get(code="REGULAR")
+        run = Payrun.objects.create(
+            name="March 2026", company=regular.company,
+            salary_structure=regular, period_start=start, period_end=end)
+
+        eligible = [e for e in Employee.objects.filter(active=True)
+                    if e.contract_for_period(start, end) is not None]
+        engine.create_payrun_payslips(run, eligible)
+        engine.compute_payrun(run)
+
+        codes = set(run.warnings.values_list("code", flat=True))
+        self.assertIn(PayslipWarning.AC_MISSING, codes)
+        self.assertIn(PayslipWarning.DUPLICATE, codes)
+        self.assertGreaterEqual(len(codes), 2)
+
+        self.assertEqual(run.error_count, 0)
+        run.refresh_from_db()
+        self.assertTrue(run.can_validate)
+
+    def test_the_off_cycle_run_does_not_become_the_dashboard_default(self):
+        """
+        The correction run is the newest period and the worst one to open on:
+        it holds a single payslip, so every KPI would read as a collapse. The
+        dashboard opens on the newest *paid* period instead.
+        """
+        from dashboard.api import _default_period_id
+
+        newest = Payrun.objects.order_by("-period_start").first()
+        self.assertIn("off-cycle", newest.name)
+
+        default = Payrun.objects.get(pk=_default_period_id())
+        self.assertEqual(default.name, "February 2026")
+        self.assertEqual(default.state, Payrun.PAID)
 
     def test_the_three_seeded_payruns_are_paid_and_hold_their_totals(self):
         expected = {"December 2025": Decimal("1473360.00"),
@@ -113,11 +166,18 @@ class SeedGeneratedRosterTests(TestCase):
         A joiner or leaver with no contract for the period would raise a
         NO_CONTRACT error, and an errored payrun cannot be validated — the
         seeded history would sit at Computed instead of Paid.
+
+        The off-cycle correction is the one run left at Computed *on purpose*,
+        so it is excluded from the state check and not from the error check —
+        an off-cycle run that errored would still be a bug.
         """
         for run in Payrun.objects.all():
             with self.subTest(payrun=run.name):
-                self.assertEqual(run.state, Payrun.PAID)
                 self.assertEqual(run.error_count, 0)
+                if "off-cycle" in run.name:
+                    self.assertEqual(run.state, Payrun.COMPUTED)
+                    continue
+                self.assertEqual(run.state, Payrun.PAID)
 
     def test_a_march_payrun_surfaces_two_distinct_warnings(self):
         """

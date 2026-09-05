@@ -540,3 +540,85 @@ actually written for.
 
 216/216, 28/28, 51/51, 26/26 all still green afterwards, seed reset to the pinned
 demo figures.
+
+### 22:45 — T-090 PRD success criterion 4, on the demo seed
+
+The user was asked to choose between three options and answered "decide urself",
+so: **option 1, the off-cycle correction run.** It has the smallest blast radius
+on a rehearsed demo and it demonstrates the problem statement's own named
+example.
+
+**The problem.** Criterion 4 wants at least two distinct warning codes before
+validation. The 22-person demo roster raised only `AC_MISSING`, twice. Every
+other code needs a shape those 22 do not have, and the three that would fit —
+`NO_CONTRACT`, `NEGATIVE_NET`, `NO_STRUCTURE` — are **ERROR** severity, which
+blocks Validate and would break demo steps A8 and A9 two beats after the warning
+is read out.
+
+`DUPLICATE` is the exception: warning severity, so Validate still proceeds, and
+it needs nothing but a payslip that already covers the period.
+
+**What changed.** The seed now leaves one — `March 2026 (off-cycle correction)`,
+a single payslip for **Vikram Rao**, computed and deliberately **not paid**,
+exactly as a real correction run sits mid-month. Vikram is chosen because he
+appears nowhere in the demo script, so the three warnings name three different
+people. When the operator runs March for everybody, he is skipped with a reason.
+
+Measured on the default seed:
+
+```
+eligible for March on Regular Salary: 20
+payslips created: 19
+distinct codes: 2  {'AC_MISSING': 2, 'DUPLICATE': 1}
+severities: {'WARNING': 3}
+can_validate: True
+  - AC_MISSING  Anita Oliver has no bank account on file.
+  - AC_MISSING  Meera Iyer has no bank account on file.
+  - DUPLICATE   Vikram Rao already has a payslip for this period and was skipped.
+```
+
+**Criterion 4 is met on the roster the demo actually runs on**, and `[Validate]`
+is still available.
+
+**The second half, which is the part that would have gone wrong.** The dashboard
+defaulted to the newest payrun by `period_start`. The correction run is the
+newest period and holds one payslip, so the payroll dashboard would have opened
+on it with every KPI reading as a collapse — and demo step C1 opens that screen.
+It now opens on the newest **paid** period, which is the better default anyway:
+paid means finished, and finished is what a dashboard should show.
+
+There were **two** places deciding this, not one. `_filters` picks the period
+when none is passed, and `Dashboard.jsx` separately seeded its own filter state
+from `periods[0]` — the newest, not the newest paid. Fixing only the backend
+would have left the screen requesting the off-cycle period anyway. So
+`/api/dashboard/filters/` now names its choice as `default_period`, both the
+backend fallback and the frontend read that one value, and the two cannot drift.
+Confirmed live: `default_period -> February 2026` while `periods[0] -> March
+2026 (off-cycle correction)`.
+
+**Cost to the rehearsed demo**, stated plainly so the next session does not
+discover it on stage:
+
+| Step | Was | Is |
+|---|---|---|
+| A3 | "Three payruns, all paid" | Four — three paid, one off-cycle correction in Computed |
+| A5 | "Twenty payslip shells" | Nineteen. The button still reads **Create payrun (20)**: twenty are selected, one is skipped |
+| A7 | "0 error(s), 2 warning(s)" | **0 error(s), 3 warning(s)** — and now two *kinds*, which is the point |
+| C1 | Opens on March | Unchanged. After A9 the demo's March run is paid, so the newest paid period is March |
+
+A8, A9, A10, all of Scenario B and C2/C3 are untouched. December ₹14,73,360,
+January ₹14,82,320 and February ₹15,58,667.87 are unchanged and still pinned.
+
+**Three tests carry this**, because a number in a document is not a guarantee:
+
+* `test_the_march_payrun_the_demo_creates_raises_two_distinct_warnings` — asserts
+  both codes *and* that every warning is WARNING severity, which is what keeps
+  `[Validate]` available at A8.
+* `test_the_off_cycle_run_does_not_become_the_dashboard_default` — asserts the
+  newest run is the off-cycle one and the nominated default is February, Paid.
+* `test_the_seeded_history_still_validates` now excludes the correction run from
+  the Paid check and **not** from the error check — an off-cycle run that errored
+  would still be a bug.
+
+Suite **218/218**, verify_rules 28/28, smoke_api 51/51, probe_forms 26/26,
+`npm run build` clean.

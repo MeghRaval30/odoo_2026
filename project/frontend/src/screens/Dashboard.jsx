@@ -84,9 +84,14 @@ export default function Dashboard() {
       .get("/api/dashboard/filters/")
       .then((opts) => {
         setOptions(opts);
-        // Default to the most recent payroll period so the page opens on data.
-        if (opts.periods?.length) {
-          setFilters((f) => ({ ...f, period: String(opts.periods[0].id) }));
+        // Open on the period the server nominates, not on `periods[0]`. They
+        // differ the moment an unfinished run exists — an off-cycle correction
+        // is the newest period and the worst possible thing to open on, because
+        // it holds one payslip and every KPI reads as a collapse.
+        const fallback = opts.periods?.length ? opts.periods[0].id : null;
+        const chosen = opts.default_period ?? fallback;
+        if (chosen != null) {
+          setFilters((f) => ({ ...f, period: String(chosen) }));
         }
       })
       .catch((err) => setError(err.message));

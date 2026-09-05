@@ -82,6 +82,7 @@ class Command(BaseCommand):
         self._timeoff(employees)
         self._attendance(employees)
         self._payroll_history(company, structures["regular"], employees)
+        self._off_cycle_correction(company, structures["regular"], employees)
 
         self._summary()
 
@@ -727,6 +728,52 @@ class Command(BaseCommand):
                 f"net INR {payrun.total_net:,.2f}, "
                 f"{payrun.warning_count} warnings, state={payrun.state}, "
                 f"computed in {elapsed:.2f}s")
+
+    #: One person paid off-cycle in March, before the operator runs March
+    #: properly. This is the seed's reason for existing beyond history.
+    #:
+    #: PRD success criterion 4 asks for at least two distinct warning codes
+    #: before validation. `AC_MISSING` fires twice on the demo roster and
+    #: nothing else does — every other code needs a shape the fixed 22 do not
+    #: have, and the three that would fit are ERROR severity, which blocks
+    #: Validate and would break the demo two steps later.
+    #:
+    #: `DUPLICATE` is the exception, and it is the problem statement's own named
+    #: example: warning severity, so Validate still proceeds, and it needs
+    #: nothing but a payslip that already covers the period. So the seed leaves
+    #: one — a correction run for a single employee, computed but deliberately
+    #: not paid, exactly as a real one would sit mid-month. When the operator
+    #: then runs March for everybody, that employee is skipped with a reason.
+    #:
+    #: Vikram Rao is chosen because he appears nowhere in the demo script: not
+    #: the protagonist, not one of the two without bank details, and not in the
+    #: leave scenario. The warnings therefore name three different people.
+    OFF_CYCLE_EMPLOYEE = ("Vikram", "Rao")
+    OFF_CYCLE_PERIOD = (date(2026, 3, 1), date(2026, 3, 31))
+
+    def _off_cycle_correction(self, company, structure, employees):
+        first, last = self.OFF_CYCLE_EMPLOYEE
+        subject = next((e for e in employees
+                        if e.first_name == first and e.last_name == last), None)
+        start, end = self.OFF_CYCLE_PERIOD
+        if subject is None or subject.contract_for_period(start, end) is None:
+            return
+
+        payrun, created = Payrun.objects.get_or_create(
+            name="March 2026 (off-cycle correction)", company=company,
+            defaults={"salary_structure": structure,
+                      "period_start": start, "period_end": end})
+        if not created:
+            return
+
+        engine.create_payrun_payslips(payrun, [subject])
+        engine.compute_payrun(payrun)
+        # Left at Computed on purpose. Paying it would make it the newest paid
+        # payrun, and the dashboard opens on that.
+        self.stdout.write(
+            f"  payrun {payrun.name}: {payrun.payslip_count} payslip for "
+            f"{subject.full_name}, state={payrun.state} "
+            f"(leaves a DUPLICATE for the March run to find)")
 
     # ----------------------------------------------------------------- report
 
