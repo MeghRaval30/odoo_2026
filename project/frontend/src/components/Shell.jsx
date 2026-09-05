@@ -58,7 +58,15 @@ const MENUS = [
       { to: "/payslips", label: "Payslips", perm: "can_run_payroll" },
     ],
   },
-  { key: "reports", label: "Reports", to: "/dashboard", match: ["dashboard"] },
+  {
+    key: "reports",
+    label: "Reports",
+    match: ["dashboard", "reports"],
+    items: [
+      { to: "/dashboard", label: "Payroll Dashboard" },
+      { to: "/reports", label: "Payroll Register", perm: "can_run_payroll" },
+    ],
+  },
 ];
 
 function initials(user) {
