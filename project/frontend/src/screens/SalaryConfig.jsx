@@ -5,7 +5,7 @@
 // other order would misrepresent the computation.
 
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, auth } from "../api";
 import {
   ErrorBox,
   Field,
@@ -204,10 +204,18 @@ function RuleForm({ id, onClose, onSaved }) {
       onClose={onClose}
       footer={
         <>
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={save} disabled={busy}>
-            {busy ? <span className="spinner" /> : "Save"}
-          </button>
+          <button onClick={onClose}>Close</button>
+          {/*
+            The PDF gives the HR Payroll User read-only access to salary
+            structures and rules, and full CRUD only to the Payroll Manager.
+            Read-only means the rule opens and reads — it does not mean a Save
+            button that returns 403.
+          */}
+          {auth.has("salaryconfig.write") && (
+            <button className="primary" onClick={save} disabled={busy}>
+              {busy ? <span className="spinner" /> : "Save"}
+            </button>
+          )}
         </>
       }
     >
@@ -336,9 +344,11 @@ export function SalaryRules() {
   return (
     <div className="page">
       <PageHead title="Salary Rules" sub={`${rules.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Rule
-        </button>
+        {auth.has("salaryconfig.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Rule
+          </button>
+        )}
       </PageHead>
 
       <div className="toolbar">

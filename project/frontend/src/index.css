@@ -630,6 +630,55 @@ label {
   color: var(--on-primary);
 }
 
+/* ---------------------------------------------- checkboxes and matrix */
+
+.check-list { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  cursor: pointer;
+}
+.check input { margin: 0; }
+
+/* The capability grid is long and narrow: a sticky first column keeps the
+   capability name beside its ticks while the role columns scroll. */
+.matrix td:first-child, .matrix th:first-child { min-width: 220px; }
+.matrix .group-row td {
+  background: var(--surface-2);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 6px 12px;
+}
+.matrix .tick { color: var(--green); font-weight: 600; }
+
+/* ------------------------------------------------ attendance headline */
+
+.attendance-headline {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: var(--border-width) solid var(--border);
+}
+.attendance-headline-value {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 19px;
+  letter-spacing: var(--display-tracking);
+  margin: 2px 0 1px;
+}
+
 /* ----------------------------------------------------------------- login */
 
 .login-wrap {
@@ -637,6 +686,26 @@ label {
   background: var(--bg);
 }
 .login-card { width: 100%; max-width: 396px; }
+.login-brand {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  margin-bottom: 14px;
+}
+.login-head { margin-bottom: 3px; }
+.login-sub { margin-bottom: 18px; }
+.login-label-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.login-note {
+  margin-top: 12px; text-align: center;
+}
+.linky {
+  background: none; border: none; padding: 0; box-shadow: none;
+  color: var(--primary); cursor: pointer; font-weight: 500;
+}
+.linky:hover { color: var(--primary-dark); text-decoration: underline; }
 
 /* ------------------------------------------------------- theme switcher */
 

@@ -154,7 +154,7 @@ refactoring.
 | T-087 | Seed attendance across Dec–Mar, skip holidays | `DONE` | Michael | Dec/Jan payslips read 0 worked days |
 | T-088 | Full browser QA of all 18 routes and both flows | `DONE` | Michael | zero failed requests; state machine verified |
 | T-089 | **Build a 200–300 employee dataset** | `DONE` | Franklin | `seed --employees N`. 250 seeds in 40s; payrun of 233 computes in 5.7s. Default 22-person seed byte-identical, pinned by `core/tests.py` |
-| T-090 | Close PRD criterion 4 (two distinct warnings) | `IN PROGRESS` | Franklin | **Met on `--employees 250`** (NO_CONTRACT + AC_MISSING). Still only `AC_MISSING` on the 22-person demo seed. Every fix damages the rehearsed demo — options and the reasoning are in `current-state.md` §"THE OPEN QUESTION". **Needs the user.** |
+| T-090 | Close PRD criterion 4 (two distinct warnings) | `DONE` | Trevor | **Met on the demo seed.** Seed leaves an off-cycle March payslip for Vikram Rao, so the operator's March run raises `AC_MISSING` x2 + `DUPLICATE` x1 — two distinct codes, all WARNING severity, `can_validate` still True. Dashboard now opens on the newest **paid** period so the correction run cannot hijack it. Three tests guard it. User was asked and said "decide urself"; option 1 chosen for the smallest blast radius on the rehearsed demo |
 
 ---
 
@@ -173,12 +173,12 @@ running diary is `claude/PROGRESS.md`.
 | T-096 | Six design languages | `DONE` | Franklin | `themes.css`. **Only Ledger and Console rendered — four unverified** |
 | T-097 | Role-aware navigation + profile menu + theme switcher | `DONE` | Franklin | Menu built server-side; verified for Employee, HR, Admin |
 | T-098 | Four role dashboards behind four endpoints | `DONE` | Franklin | Employee and HR verified in a browser; Admin verified by API |
-| T-099 | New screens: Profile, Security, Audit, My Payslips | `IN PROGRESS` | Franklin | Written and building; **none has been clicked** |
-| T-100 | **Screen-by-screen pass over the pre-existing screens** | `TODO` | | The remaining ~30% of the commission. File-by-file list in `current-state.md` §HALF-DONE |
-| T-101 | Login screen to the mockup's exact copy | `TODO` | | "Welcome back / Sign in to continue to your workspace / Work Email / Forgot password?" |
-| T-102 | Attendance list + widget to hours-and-minutes | `TODO` | | API already serves it; the screens still print decimals |
-| T-103 | Payroll dashboard overtime tile | `TODO` | | Still a count. Endpoint already returns `total_overtime_hm` and `overtime_employees` |
-| T-104 | Users & Roles screen for the capability matrix | `TODO` | | Multi-role checkboxes, reset-password action, capability grid endpoint exists |
-| T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `TODO` | | `auth.has("payrun.delete")` etc. Server already enforces; this is the UI catching up |
-| T-106 | Render and check the four unverified themes | `TODO` | | Atrium, Blueprint, Marigold, Graphite |
+| T-099 | New screens: Profile, Security, Audit, My Payslips | `DONE` | Trevor | All walked, every flow driven. Five defects found and fixed — a refused security toggle that reverted silently, a missing `expected_days`, a route-guard regression on the employee's own payslip, two more decimal-hour renders, and a bank-specific hint shown on every field |
+| T-100 | **Screen-by-screen pass over the pre-existing screens** | `DONE` | Trevor | T-101 to T-105 all closed and driven in a browser as all five roles |
+| T-101 | Login screen to the mockup's exact copy | `DONE` | Trevor | Mockup copy verbatim + "Accounts are created by an administrator." Demo chips now compile out of a production build |
+| T-102 | Attendance list + widget to hours-and-minutes | `DONE` | Trevor | List reads `8h 46m` / `16m`, widget reads `6h56`. Widget also surfaces `punch_blocked_reason` and disables the button — verified by planting a policy that excludes 127.0.0.1 |
+| T-103 | Payroll dashboard overtime tile | `DONE` | Trevor | Reads **124h 38m carried by 22 employees** plus average day 8h 43m. The count survives as "Days with overtime", where a count is the right unit |
+| T-104 | Users & Roles screen for the capability matrix | `DONE` | Trevor | Mockup's five columns, search, role filter, the Active switch (which was in form state but had no control), Reset password, and the capability grid. Every path driven in a browser |
+| T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `DONE` | Trevor | Last `auth.can()` gone. Create/Save/Approve gated per capability, plus a route guard read off the server's own navigation tree so a typed URL refuses in one clause instead of rendering a broken shell over a 403 |
+| T-106 | Render and check the four unverified themes | `DONE` | Trevor | **None of the six had ever rendered** — a specificity bug made every theme resolve to Ledger. Fixed, all six driven, charts made theme-aware, Marigold's button contrast repaired |
 | T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | It still describes the old menu and mentions no roles or themes |

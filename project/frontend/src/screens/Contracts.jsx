@@ -6,7 +6,7 @@
 // than re-implementing the check here.
 
 import { useEffect, useState } from "react";
-import { api, formatDate, money } from "../api";
+import { api, auth, formatDate, money } from "../api";
 import {
   ErrorBox,
   Field,
@@ -308,9 +308,11 @@ export default function Contracts({ route }) {
         sub={`${contracts.rows.length} records`}
       >
         <button onClick={() => setProbing(true)}>Resolve by period</button>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Contract
-        </button>
+        {auth.has("contract.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Contract
+          </button>
+        )}
       </PageHead>
 
       <div className="toolbar">

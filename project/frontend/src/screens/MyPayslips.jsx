@@ -72,14 +72,14 @@ export default function MyPayslips() {
                     <td className="nowrap">
                       {formatDate(slip.period_start)} – {formatDate(slip.period_end)}
                     </td>
-                    <td className="num">
+                    <td className="num mono">
                       {slip.worked_days} / {slip.expected_days}
                     </td>
-                    <td className="num">{money(slip.gross)}</td>
-                    <td className="num">
+                    <td className="num mono">{money(slip.gross)}</td>
+                    <td className="num mono">
                       {money(Number(slip.gross || 0) - Number(slip.net || 0))}
                     </td>
-                    <td className="num">
+                    <td className="num mono">
                       <strong>{money(slip.net)}</strong>
                     </td>
                     <td>

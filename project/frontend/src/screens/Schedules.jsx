@@ -5,7 +5,7 @@
 // weekly-hours input -- editing a line and saving is what moves the total.
 
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, auth } from "../api";
 import {
   ErrorBox,
   Field,
@@ -227,9 +227,11 @@ export default function Schedules() {
   return (
     <div className="page">
       <PageHead title="Working Schedules" sub={`${schedules.rows.length} records`}>
-        <button className="primary" onClick={() => setEditing(null)}>
-          New Schedule
-        </button>
+        {auth.has("schedule.write") && (
+          <button className="primary" onClick={() => setEditing(null)}>
+            New Schedule
+          </button>
+        )}
       </PageHead>
 
       <ErrorBox error={schedules.error} />

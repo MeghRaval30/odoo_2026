@@ -446,3 +446,53 @@ month of the employee's most recent record and labels which month is on screen.
 `dashboard/api.py::_filters` already falls back to the newest payrun's period,
 which is why the payroll and HR dashboards were unaffected — but any new panel
 that windows on "this month" will be empty on the demo machine.
+
+### B-026 — Vite served a transform from *between* two writes to one file
+**Severity:** medium · **hit and diagnosed** this session (06)
+
+A screen died with `canApprove is not defined` while the file on disk plainly
+declared `canApprove` twenty lines above the use. It survived a hard browser
+reload, which is what makes it worth writing down: **the stale copy was on the
+server side of the module graph, not in the browser cache.**
+
+The cause: two `write_text` calls to the same `.jsx` inside the same second.
+Vite's transform cache keys on mtime, the second write did not advance it past
+the first at the resolution being compared, and the module it kept was the
+intermediate one — JSX already referencing the new binding, with the
+declaration not yet added.
+
+**Diagnosis in one command.** Ask the dev server what it is actually serving,
+rather than reading the file yourself:
+
+```bash
+curl -s http://localhost:5173/src/screens/TimeOff.jsx | grep -n canApprove
+```
+
+If that disagrees with the file on disk, this is the bug. `touch <file>` fixes
+it; there is no need to restart Vite.
+
+**Avoid it** by making one write per file per edit — build the whole new
+content, then write once. And note the family resemblance to B-021: in both
+cases the thing answering you is not the thing you edited, and the symptom is
+indistinguishable from "my change did not apply". The general move is to ask the
+server what it is serving before doubting your own edit.
+
+### B-027 — A stale dev server from *another worktree* held the frontend port
+**Severity:** medium · hit at the start of session 06
+
+B-021 says to check port 8000 before debugging a change that did not take
+effect. Session 06 booted to a clean 8000 and a **busy 5173** — held by a Vite
+belonging to `.claude/worktrees/frontend-routing-setup-e9a159`, a different
+checkout of this repository. Had it gone unnoticed, `http://localhost:5173`
+would have served an older frontend against the correct backend: the worst
+possible version of this failure, because the app works, just not the way the
+code says it should.
+
+```bash
+netstat -ano | grep -E ":(8000|5173).*LISTENING"
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter 'ProcessId=<pid>' | Select CommandLine"
+```
+
+The second command is the one that matters — the pid alone does not tell you
+*which checkout* it is serving, and on a machine with several worktrees that is
+the only question worth asking.

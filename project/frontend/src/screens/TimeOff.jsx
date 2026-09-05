@@ -37,7 +37,7 @@ const BLANK = {
 // and shown read-only instead. HR keeps the picker -- they file on behalf of
 // other people, which is the whole reason the field exists.
 const selfService = () =>
-  !auth.can("can_manage_hr") && Boolean(auth.user?.employee_id);
+  !auth.has("timeoff.read.all") && Boolean(auth.user?.employee_id);
 
 function RequestForm({ onClose, onSaved }) {
   const ownRequest = selfService();
@@ -216,6 +216,11 @@ export default function TimeOff({ route }) {
     page_size: 200,
   });
 
+  // An employee sees their own pending request here. Offering them Approve
+  // and Refuse on it would advertise a power the server refuses — and on their
+  // own leave, of all things. The capability, not the screen, decides.
+  const canApprove = auth.has("timeoff.approve");
+
   const act = async (id, verb) => {
     setBusy(id);
     setError(null);
@@ -298,7 +303,7 @@ export default function TimeOff({ route }) {
                       <StateBadge state={r.state} label={r.state_display} />
                     </td>
                     <td className="right">
-                      {r.state === "TO_APPROVE" ? (
+                      {r.state === "TO_APPROVE" && canApprove ? (
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                           <button
                             className="sm"

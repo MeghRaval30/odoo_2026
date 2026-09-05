@@ -89,10 +89,13 @@ class PayslipListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payslip
+        # `expected_days` rides along with `worked_days` because the pair is the
+        # figure — "18 of 20" is information and a bare "18" is not. It is a
+        # stored column, so this costs no extra query.
         fields = ["id", "number", "employee", "employee_name",
                   "department_name", "payrun", "period_start", "period_end",
-                  "worked_days", "basic", "gross", "net", "state",
-                  "warning_codes"]
+                  "worked_days", "expected_days", "basic", "gross", "net",
+                  "state", "warning_codes"]
 
     def get_warning_codes(self, obj):
         return [w.code for w in obj.warnings.all()]

@@ -42,7 +42,7 @@ export default function HRDashboard() {
     <div className="page">
       <PageHead
         title="Workforce"
-        sub={`${formatDate(data.filters.period_start)} – ${formatDate(data.filters.period_end)} · live from Employee, Contract, Attendance, Time Off`}
+        sub={`${formatDate(data.filters.period_start)} – ${formatDate(data.filters.period_end)}`}
       />
 
       <div className="grid k5 mb">

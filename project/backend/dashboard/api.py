@@ -47,9 +47,16 @@ def _filters(request):
     period_start = _parse(request.query_params.get("period_start"), default_start)
     period_end = _parse(request.query_params.get("period_end"), default_end)
 
-    # If nothing is passed, fall back to the most recent period that has data
+    # If nothing is passed, fall back to the most recent period that has data.
+    #
+    # The newest *paid* run, not simply the newest. A run that is still being
+    # worked on — an off-cycle correction, a month half-computed — is a period
+    # nobody wants the payroll dashboard to open on: it holds one or two
+    # payslips and every KPI reads as a collapse. Paid means finished, and
+    # finished is what a dashboard should default to. If nothing has been paid
+    # yet, any run is better than an empty screen.
     if not request.query_params.get("period_start"):
-        latest = Payrun.objects.order_by("-period_start").first()
+        latest = Payrun.objects.filter(pk=_default_period_id()).first()
         if latest:
             period_start, period_end = latest.period_start, latest.period_end
 
@@ -317,4 +324,17 @@ def filter_options_view(request):
             "company__id", "company__name").distinct()),
         "periods": list(Payrun.objects.values(
             "id", "name", "period_start", "period_end").order_by("-period_start")),
+        # Which of those the screen should open on, said explicitly rather than
+        # left as "the first one". They are not the same once an unfinished run
+        # exists: the newest run may be an off-cycle correction holding a single
+        # payslip, and the dashboard should open on the newest *paid* period —
+        # the same rule `_filters` applies when no period is passed. Two places
+        # deciding this by different means is how a screen and its data drift.
+        "default_period": _default_period_id(),
     })
+
+
+def _default_period_id():
+    runs = Payrun.objects.order_by("-period_start")
+    latest = runs.filter(state=Payrun.PAID).first() or runs.first()
+    return latest.id if latest else None

@@ -8,7 +8,7 @@
 // structure, so a run whose rules changed mid-period still reconciles.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, downloadBlob, money } from "../api";
+import { api, downloadBlob, hoursMinutes, money } from "../api";
 import { ErrorBox, Loading, PageHead, useResource } from "../components/ui";
 
 const CATEGORY_HINT = {
@@ -127,7 +127,7 @@ export default function Reports() {
                   <th>Department</th>
                   <th className="num">Worked</th>
                   <th className="num">LOP</th>
-                  <th className="num">OT hrs</th>
+                  <th className="num">Overtime</th>
                   {data.codes.map((code) => (
                     <th key={code} className="num">
                       {code}
@@ -142,7 +142,7 @@ export default function Reports() {
                     <td className="muted">{row.department || "—"}</td>
                     <td className="num mono">{row.worked_days}</td>
                     <td className="num mono">{row.lop_days}</td>
-                    <td className="num mono">{row.overtime_hours}</td>
+                    <td className="num mono">{hoursMinutes(row.overtime_hours)}</td>
                     {data.codes.map((code) => (
                       <td
                         key={code}

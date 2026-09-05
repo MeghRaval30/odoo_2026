@@ -6,7 +6,7 @@
 // (the admin login) get no widget rather than a permanent error.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, auth } from "../api";
+import { api, auth, hoursMinutesCompact } from "../api";
 
 // Module scope on purpose: the widget remounts on every navigation, and an
 // account with no linked employee (the admin login) would otherwise re-probe
@@ -14,12 +14,11 @@ import { api, auth } from "../api";
 // re-probes rather than inheriting the previous account's answer.
 let noEmployeeForToken = null;
 
-function elapsedLabel(hours) {
-  const total = Math.max(0, Number(hours || 0));
-  const h = Math.floor(total);
-  const m = Math.round((total - h) * 60);
-  return `${h}h${String(m).padStart(2, "0")}`;
-}
+// `/api/attendance/status/` sends `elapsed_hm` and `total_today_hm` already
+// formatted as the mockup shows them — `6h56`. The decimal fields are still on
+// the payload for payroll; they are never what a person reads. The fallback is
+// only for a payload from an older server.
+const hm = (formatted, decimal) => formatted ?? hoursMinutesCompact(decimal);
 
 export default function AttendanceWidget() {
   const [status, setStatus] = useState(null);
@@ -74,6 +73,11 @@ export default function AttendanceWidget() {
   };
 
   const checkedIn = Boolean(status?.checked_in);
+  // A punch refused by the network policy must say so. A disabled button with
+  // no reason reads as a broken widget, and the server's refusal is the only
+  // wording that is guaranteed to match what it actually enforced.
+  const blocked = status ? status.can_punch === false : false;
+  const blockedReason = status?.punch_blocked_reason || "Punching is not allowed from this network.";
 
   return (
     <div className="navitem" style={{ position: "relative" }} ref={ref}>
@@ -99,19 +103,21 @@ export default function AttendanceWidget() {
           {checkedIn && (
             <div className="row mb" style={{ justifyContent: "space-between" }}>
               <span className="tiny faint">Current session</span>
-              <span className="mono">{elapsedLabel(status.elapsed_hours)}</span>
+              <span className="mono">{hm(status.elapsed_hm, status.elapsed_hours)}</span>
             </div>
           )}
 
           <div className="row mb" style={{ justifyContent: "space-between" }}>
             <span className="tiny faint">Today</span>
-            <span className="mono">{elapsedLabel(status?.total_today)}</span>
+            <span className="mono">{hm(status?.total_today_hm, status?.total_today)}</span>
           </div>
+
+          {blocked && <div className="alert warn tiny">{blockedReason}</div>}
 
           <button
             className={checkedIn ? "danger" : "primary"}
             style={{ width: "100%" }}
-            disabled={busy}
+            disabled={busy || blocked}
             onClick={() => act(checkedIn ? "check_out" : "check_in")}
           >
             {busy ? <span className="spinner" /> : checkedIn ? "Check Out" : "Check In"}

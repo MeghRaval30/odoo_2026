@@ -230,3 +230,395 @@ briefing §8.1.
 Four of the six themes have never been rendered. That is written down twice, in
 capitals, because "six themes" is the kind of claim that is easy to inherit and
 repeat without checking.
+
+---
+
+## Session 06 — Trevor — finishing the commission
+
+### 21:45 — booted, harnesses re-run before touching anything
+Inherited checkout proven green from a cold start: `manage.py test` **216/216**,
+`verify_rules.py` **28/28**, `smoke_api.py` **51/51**, `probe_forms.py` **26/26**,
+seed reproduces the pinned demo figures (22 employees, 60 payslips, December
+INR 14,73,360 / January 14,82,320 / February 15,58,667.87).
+
+B-021 caught something on the way in. Port 8000 was clear, but **port 5173 was
+held by a Vite from a different worktree** (`frontend-routing-setup-e9a159`),
+which would have served an older frontend under the right URL — the exact
+failure mode the blocker describes, one directory over. Killed it and started
+this worktree's own pair. Worth writing down: the check is worth running on the
+frontend port too, not just 8000.
+
+### 21:50 — T-101 login screen to the mockup's copy
+Branch `feat/ui-screen-pass`. "Welcome back", "Sign in to continue to your
+workspace", **Work Email** with a `name@company.com` placeholder, **Sign In**,
+and the access note the mockup carries: *Accounts are created by an
+administrator.*
+
+Two judgement calls:
+
+* **Forgot password?** — the mockup has the link and there is no anonymous reset
+  endpoint, deliberately: `POST /api/users/{id}/reset-password/` is admin-only
+  because the mockup's access note says accounts are administered. So the link
+  says the true thing in one clause rather than pretending at a flow that does
+  not exist.
+* **The five demo chips** are gated on `import.meta.env.DEV`. They are the
+  fastest way to switch persona in a live demo and wrong in a shipped product;
+  `npm run dev` keeps them, `npm run build` compiles them out. The email/password
+  prefill is gated the same way, so a production build opens on empty fields.
+
+### 21:55 — T-102 attendance in hours and minutes, T-103 the overtime tile
+The API had served both forms since session 05; these two screens were still
+printing the decimal. Now:
+
+* **Attendance list** — `8h 46m` worked, `16m` overtime, straight off the
+  serializer's `worked_hm` / `overtime_hm`. The decimal stays on the payload
+  because payroll multiplies it.
+* **Check-in widget** — `elapsed_hm` and `total_today_hm`, the mockup's `6h56`.
+  It also surfaces `punch_blocked_reason` and disables the button when
+  `can_punch` is false. Proven by planting a policy for `10.20.30.0/24`,
+  switching `enforce_network_on_punch` on, and watching the widget refuse from
+  127.0.0.1 with the server's own sentence. Both the policy and the settings
+  flag were reverted afterwards, and the punch made during the test deleted —
+  attendance is back to the seeded 1,746 rows.
+* **Payroll dashboard, Attendance Overview** — the tile the user called out.
+  It read `Overtime  262` and `Overtime hours  124.63`. It now leads with
+  **124h 38m carried by 22 employees** and **average day worked 8h 43m**, the
+  same phrasing the HR dashboard already used. The count is not deleted, it is
+  relabelled **Days with overtime**, where a count is the honest unit — ten
+  six-minute overruns and one nine-hour one are the same count and a very
+  different payroll problem, which is exactly why the bare count was useless.
+
+One server-side copy fix went with it: a punch refused by the network policy
+said *"Sign-in from 127.0.0.1 is not permitted"*, which reads as though the
+session is about to be cut. `network_allows` now names the action it actually
+refused. `accounts` + `attendance` 119/119 still green.
+
+### 22:15 — T-104 Users & Roles
+The screen pre-dated the matrix. It now carries the mockup's five columns —
+**User · Employee · Work Email · Role · Status** — a search box and a role
+filter, and three things it was missing:
+
+* **The account-status switch.** `is_active` was already in the form's state and
+  posted on every save, but nothing rendered it, so an administrator could not
+  actually deactivate anyone from this screen. That is now a checkbox.
+* **Reset password.** `POST /api/users/{id}/reset-password/` sets a temporary
+  password and ends every session that account holds. It is a separate action
+  from Save rather than a field on the form, because it is not an edit — it
+  logs the person out everywhere and writes to the audit log.
+* **The capability grid**, from `GET /api/users/capability-matrix/`, grouped by
+  resource. It is served from the same module the permission classes enforce
+  with, so the grid an administrator reads cannot drift from what the server
+  does — which is the whole reason it is worth showing.
+
+`UserSerializer` gained `employee_code` and `employee_work_email`, because the
+mockup gives the sign-in address and the employee's work address two separate
+columns and the interesting rows are the ones where they differ.
+
+Driven in the browser, all four paths: role filter 5 → 1, search "rahul" → 1,
+reset password (accepted at 8 characters, refused at 3 with the server's own
+sentence), and the escalation guard — unticking Admin on your own account
+surfaces **"You cannot change your own roles. Ask another administrator to do
+it."** and changes nothing. Rahul's password was reset back to `demo1234`, so
+every demo account still signs in. `npm run build` clean.
+
+### 22:45 — T-105 controls follow capabilities, and a route guard
+The last `auth.can()` in the codebase is gone. Create and Save buttons now read
+`auth.has("<capability>")`: `employee.write`, `contract.write`,
+`attendance.correct`, `schedule.write`, `reference.write`,
+`timeoff.type.write`, `allocation.write`, `salaryconfig.write`.
+
+The worst one found by walking it: **an employee looking at their own pending
+leave request was shown Approve and Refuse buttons on it.** The server refuses
+(`timeoff.approve`), so nothing could be approved — but a screen that offers
+someone the power to approve their own leave is making a claim about the system
+that is exactly backwards. Now gated; HR still sees ten of them across eleven
+requests.
+
+Also closed a whole class of the same problem. Typing `#/payroll` as an HR
+Manager rendered the Payruns screen — empty table, "0 records", a permission
+error underneath. It looked broken rather than refused. There is now one route
+guard in `App.jsx`, and it does **not** keep a second copy of the capability
+table: it reads the navigation tree `/api/auth/me/` already pruned for this
+account. A menu the account cannot use is absent (D-028), so a route absent from
+that tree is a route it may not open — typed, bookmarked, or otherwise. Refused
+routes say *"Not available for this account."* and nothing else.
+
+Verified by walking every route as all five accounts:
+
+| Signed in as | Result |
+|---|---|
+| `john@oxp.com` Employee | Menu is Dashboard · Attendance · Time Off · My Payslips. `/employees`, `/payroll`, `/users`, `/security`, `/salary-rules` all refuse. Attendance shows his own 80 rows and no New Record; Allocations shows his one row and no New Allocation |
+| `sara@oxp.com` HR Manager | Every payroll and admin route refuses. All 13 of her own routes render |
+| `rahul@oxp.com` Payroll User | Reaches payroll; `/users`, `/security`, `/audit` refuse. Salary Rules opens **read-only** — no New Rule, and the rule form offers Close with no Save, which is exactly the PDF's "read-only access to Salary Structures and Salary Rules" |
+| `aarav@oxp.com` Payroll Manager | Same screen, New Rule present and Save present |
+| `admin@oxp.com` Admin | All 18 routes render |
+
+One copy fix on the way past: the HR dashboard's subtitle read "live from
+Employee, Contract, Attendance, Time Off". The design language forbids narrating
+the architecture to the user (§5) — the period alone is the honest sub-heading.
+
+**A trap worth recording (new, B-026).** Two writes to the same `.jsx` inside
+one second left Vite serving a transform from *between* them: the JSX referenced
+`canApprove` and the declaration was missing, so the screen threw
+"canApprove is not defined" and survived a hard browser reload, because the
+stale copy was on the **server** side of the module graph. `curl
+localhost:5173/src/screens/TimeOff.jsx` showed the truth in one command, and
+`touch` on the file fixed it. Same shape as B-021: the thing serving you is not
+the thing you edited.
+
+### 23:20 — T-106 the six themes, and the reason none of them worked
+
+The briefing said four themes had never been rendered. The truth was worse:
+**not one of the six had ever rendered.** Every theme resolved to Ledger.
+
+`index.css` must `@import "./themes.css"` at the top — CSS allows `@import`
+nowhere else — and then declares the Ledger defaults on a bare `:root`, as a
+graceful fallback for a theme that forgets a token. But `:root` and
+`[data-theme="x"]` have **identical specificity** (0,1,0), so the later
+declaration wins, and the later declaration is always the fallback. The
+attribute was being set on `<html>`, the choice was being stored, the swatch was
+highlighting — and not one token changed. Measured, before the fix:
+
+```
+ledger    bg #f4efe9  primary #d97757  radius 8px
+console   bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+atrium    bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+blueprint bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+marigold  bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+graphite  bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+```
+
+The fix is one character class per selector: `[data-theme="x"]` →
+`:root[data-theme="x"]`, which is (0,2,0) and beats the fallback. That is the
+behaviour the fallback was always meant to have, and the reasoning is now
+written into the top of `themes.css` so nobody re-flattens it.
+
+This is worth dwelling on for a moment. Session 05 wrote in capitals, twice,
+that four themes were unverified — and that instinct was right. But the two it
+believed *were* verified were verified by looking at a switcher that highlighted
+the right swatch. **A control that visibly responds is not evidence that
+anything downstream of it happened.** The check that actually settles it is four
+lines of `getComputedStyle`, and it now exists as a habit rather than a
+screenshot.
+
+Then all six were driven for real — the payroll dashboard, a kanban, a table and
+a modal in each:
+
+| Theme | Verified |
+|---|---|
+| **Ledger** | Warm paper, terracotta, hairlines, serif figures |
+| **Console** | Dark slate, teal, JetBrains Mono, caps labels |
+| **Atrium** | White topbar, indigo, 14px radius, soft shadows, Outfit |
+| **Blueprint** | Square corners, 2px rules, electric blue on white, IBM Plex. The contracts table holds up — **no layout break at `--radius: 0`** |
+| **Marigold** | Cream and cocoa, Fraunces, rounded |
+| **Graphite** | Neutral dark, amber, Space Grotesk |
+
+No horizontal page overflow in any of the six, measured rather than eyeballed.
+
+**Two real defects fell out of finally seeing them.**
+
+**The charts belonged to one theme.** Recharts cannot read CSS custom
+properties, so its palette was a hand copy of Ledger's tokens at the top of
+`Dashboard.jsx`. Harmless with one theme; wrong with six. On Blueprint it drew a
+terracotta line across electric blue, and on both dark themes the axes were a
+light-theme grey that disappeared into the card — the trend line was effectively
+invisible. `lib/theme.js` now exposes `chartPalette()` and a `useChartPalette()`
+hook that reads the tokens back out of the document, with a `MutationObserver`
+on `data-theme` so the charts re-colour **live** when the theme is switched with
+a dashboard open, which is exactly what a demo does. Confirmed: switching
+Marigold → Console repaints the trend line `#d98324` → `#3fd0c9` without a
+reload.
+
+**Marigold's buttons failed contrast.** Cream `#fffdf8` on marigold `#d98324`
+measures **2.86:1** — below WCAG AA for 13px labels and below even the 3:1
+large-text floor. Now cocoa `#2e2317` at **5.28:1**, which also suits the
+theme's printed feel better.
+
+Contrast was measured across all six for text, dim text, faint text, primary,
+button labels and the topbar. Everything else clears AA, with one **inherited**
+exception worth flagging rather than silently changing: Ledger's white-on-
+terracotta button is **3.05:1**, the same failure Marigold had. That colour pair
+is fixed by `ui-design-language.md` §2 and is the product's signature look, so
+it is being reported rather than altered at hour 13 — see the note in
+`current-state.md`.
+
+### 23:35 — T-099 the four screens nobody had clicked
+
+Profile, Security, Audit log, My Payslips and the Admin dashboard were written
+and building at the end of session 05; none had been driven. Every flow in the
+briefing was walked, plus the ones that were not listed. **Five real defects,
+all found by clicking rather than by reading.**
+
+**1. A refused security toggle flipped back in silence.** The single best control
+on the Security screen is the guard that refuses to switch network enforcement on
+while no active policy covers the address you are connected from — it stops an
+administrator locking the whole company out with one checkbox. The server refuses
+with a precise, actionable sentence. The screen threw it away: `patch()` set the
+error and then called `load()` to put the switch back, and `load()` cleared the
+error on success. So the switch flipped back with **no message at all** — the
+best feature on the page, rendered as a broken checkbox. `load({ keepError:
+true })` now leaves the refusal on screen. Verified: the message appears, the
+switch stays off, and following its advice (add a policy covering 127.0.0.0/8,
+then enforce) succeeds.
+
+**2. My Payslips printed `18.00 /` with nothing after the slash.** The screen
+reads the *list* endpoint and `expected_days` was on the *detail* serializer
+only, so the denominator was `undefined`. It is a stored column, so adding it to
+the list costs no query. Reads `18.00 / 20.00` now — and "18 of 20" is the
+figure, where a bare 18 is not.
+
+**3. My own route guard broke the employee's Open link.** The guard added an hour
+earlier judged `#/payslips/68` by its head, `payslips`, which is the payroll
+operator's index and gated on `payslip.read.all`. So the Open button on My
+Payslips — the one screen built for employees — refused the employee. Fixed with
+a rule rather than an exception: a *detail* route can be reachable where its
+*list* is not, when the server scopes the resource to the caller. Confirmed all
+three ways: John opens his own slip, `/payslips` still refuses him, and
+`/payslips/3` (someone else's) returns the server's own **"No Payslip matches the
+given query"** — enforcement, not hiding.
+
+**4. Overtime was still decimal in two more places** — `PayslipDetail` ("0.00
+Overtime hrs") and the payroll register ("5.49"). Both now read hours and
+minutes, and the register column is "Overtime" rather than "OT hrs". Grep
+confirms there is no longer a single decimal-hour render anywhere in the
+frontend. The CSV export keeps the decimal, deliberately: a spreadsheet is the
+one reader that wants it.
+
+**5. The request-a-change dialog gave bank advice about every field.** Asking to
+correct a date of birth was met with "a bank change without a reason will usually
+be queried".
+
+Everything else worked. Proven end to end, with the state restored afterwards
+each time:
+
+* **Direct field change** — work phone edited and saved, then restored.
+* **Approval round trip** — John requests a bank-account change, Sara approves
+  it, and the value lands on the employee record. A second request (date of
+  birth) refused, and it does not. Both cleared and the bank number restored.
+* **Nobody decides their own** — Sara raises a request against her own record and
+  is refused with "You cannot approve a change to your own record."
+* **Password change** — refuses a password identical to the current one, then
+  changes it, rotates the token, stores the new one and **keeps the session
+  alive**; an `/api/employees/` call on the rotated token succeeds. Changed back,
+  and all five demo accounts still sign in with `demo1234`.
+* **Audit log** — captured every action taken during this walk, including the
+  policy adds and the enforcement change. Action filter and free-text search both
+  work. (The briefing's "AuditLog export" is the JS named export, not a download
+  — nothing is missing.)
+* **Admin dashboard** — 5 accounts, live sessions, 24h sign-in counts, security
+  posture in sentences, audit tail. The refused-sign-ins tile switches from
+  "nothing unusual" to "worth a look" above ten.
+* **Payslip PDF** — 76 KB, magic bytes `%PDF-1.4`, served for the employee's own
+  slip and 404 for anyone else's.
+
+**One behaviour that is not a bug, and the demo needs to know about it.** Every
+sign-in deletes that account's existing token and issues a fresh one, on purpose,
+so `token.created` is the start of *this* session and the expiry means what it
+says. The consequence: **one account cannot hold two live sessions.** Signing in
+as `admin@oxp.com` in a second tab silently kills the first, which lands on the
+login screen at the worst possible moment. It caught me twice while driving the
+app. Use different accounts per tab, or one tab. Written into the demo script.
+
+### 23:45 — a copy pass over Profile and Security
+
+`ui-design-language.md` §5 is binding and blunt: write labels, not explanations;
+no reassurance; no narrating the system to the user. Both screens argued with the
+reader. The test applied was **state the effect, do not argue for it** — which
+keeps every fact a user cannot otherwise know, and drops the justification:
+
+| Was | Is |
+|---|---|
+| "These apply immediately. They affect how you are contacted, and nothing else." | "Applied immediately." |
+| "These change your identity or where you are paid, so somebody in HR has to confirm them. Nobody — including HR — can approve a change to their own record." | "Decided by HR. Nobody decides a change to their own record." |
+| "Your current password is required even though you are signed in — an unlocked laptop should not become a permanent account takeover. Changing it signs out every other session." | "Your current password is required. Changing it signs out every other session." |
+| "Checked on every request, not only at sign-in — otherwise you could authenticate at the office and use the session from anywhere." | "Checked on every request, not only at sign-in." |
+| "Separate switch, because a clock you can punch from your sofa is not attendance." | "A separate switch from sign-in." |
+
+The reasoning that was cut is not lost — it is where it belongs, in the
+docstrings of `accounts/security.py` and `capabilities.py`, which is who it was
+actually written for.
+
+216/216, 28/28, 51/51, 26/26 all still green afterwards, seed reset to the pinned
+demo figures.
+
+### 22:45 — T-090 PRD success criterion 4, on the demo seed
+
+The user was asked to choose between three options and answered "decide urself",
+so: **option 1, the off-cycle correction run.** It has the smallest blast radius
+on a rehearsed demo and it demonstrates the problem statement's own named
+example.
+
+**The problem.** Criterion 4 wants at least two distinct warning codes before
+validation. The 22-person demo roster raised only `AC_MISSING`, twice. Every
+other code needs a shape those 22 do not have, and the three that would fit —
+`NO_CONTRACT`, `NEGATIVE_NET`, `NO_STRUCTURE` — are **ERROR** severity, which
+blocks Validate and would break demo steps A8 and A9 two beats after the warning
+is read out.
+
+`DUPLICATE` is the exception: warning severity, so Validate still proceeds, and
+it needs nothing but a payslip that already covers the period.
+
+**What changed.** The seed now leaves one — `March 2026 (off-cycle correction)`,
+a single payslip for **Vikram Rao**, computed and deliberately **not paid**,
+exactly as a real correction run sits mid-month. Vikram is chosen because he
+appears nowhere in the demo script, so the three warnings name three different
+people. When the operator runs March for everybody, he is skipped with a reason.
+
+Measured on the default seed:
+
+```
+eligible for March on Regular Salary: 20
+payslips created: 19
+distinct codes: 2  {'AC_MISSING': 2, 'DUPLICATE': 1}
+severities: {'WARNING': 3}
+can_validate: True
+  - AC_MISSING  Anita Oliver has no bank account on file.
+  - AC_MISSING  Meera Iyer has no bank account on file.
+  - DUPLICATE   Vikram Rao already has a payslip for this period and was skipped.
+```
+
+**Criterion 4 is met on the roster the demo actually runs on**, and `[Validate]`
+is still available.
+
+**The second half, which is the part that would have gone wrong.** The dashboard
+defaulted to the newest payrun by `period_start`. The correction run is the
+newest period and holds one payslip, so the payroll dashboard would have opened
+on it with every KPI reading as a collapse — and demo step C1 opens that screen.
+It now opens on the newest **paid** period, which is the better default anyway:
+paid means finished, and finished is what a dashboard should show.
+
+There were **two** places deciding this, not one. `_filters` picks the period
+when none is passed, and `Dashboard.jsx` separately seeded its own filter state
+from `periods[0]` — the newest, not the newest paid. Fixing only the backend
+would have left the screen requesting the off-cycle period anyway. So
+`/api/dashboard/filters/` now names its choice as `default_period`, both the
+backend fallback and the frontend read that one value, and the two cannot drift.
+Confirmed live: `default_period -> February 2026` while `periods[0] -> March
+2026 (off-cycle correction)`.
+
+**Cost to the rehearsed demo**, stated plainly so the next session does not
+discover it on stage:
+
+| Step | Was | Is |
+|---|---|---|
+| A3 | "Three payruns, all paid" | Four — three paid, one off-cycle correction in Computed |
+| A5 | "Twenty payslip shells" | Nineteen. The button still reads **Create payrun (20)**: twenty are selected, one is skipped |
+| A7 | "0 error(s), 2 warning(s)" | **0 error(s), 3 warning(s)** — and now two *kinds*, which is the point |
+| C1 | Opens on March | Unchanged. After A9 the demo's March run is paid, so the newest paid period is March |
+
+A8, A9, A10, all of Scenario B and C2/C3 are untouched. December ₹14,73,360,
+January ₹14,82,320 and February ₹15,58,667.87 are unchanged and still pinned.
+
+**Three tests carry this**, because a number in a document is not a guarantee:
+
+* `test_the_march_payrun_the_demo_creates_raises_two_distinct_warnings` — asserts
+  both codes *and* that every warning is WARNING severity, which is what keeps
+  `[Validate]` available at A8.
+* `test_the_off_cycle_run_does_not_become_the_dashboard_default` — asserts the
+  newest run is the off-cycle one and the nominated default is February, Paid.
+* `test_the_seeded_history_still_validates` now excludes the correction run from
+  the Paid check and **not** from the error check — an off-cycle run that errored
+  would still be a bug.
+
+Suite **218/218**, verify_rules 28/28, smoke_api 51/51, probe_forms 26/26,
+`npm run build` clean.
