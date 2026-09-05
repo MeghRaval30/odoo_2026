@@ -17,9 +17,9 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 | T-002 | Parse Excalidraw mockup, extract all fields | `DONE` | Michael | 3,459 text elements parsed |
 | T-003 | Design relay context system | `DONE` | Michael | |
 | T-004 | Scaffold `claude/` folder + `CLAUDE.md` | `DONE` | Michael | |
-| T-005 | Write the PRD | `IN PROGRESS` | Michael | `claude/context/prd.md` |
-| T-006 | Write the data model / schema | `TODO` | | `claude/context/data-model.md` |
-| T-007 | `git init`, connect remote, first push | `TODO` | Michael | needs user browser login |
+| T-005 | Write the PRD | `DONE` | Michael | `claude/context/prd.md` v1.0 |
+| T-006 | Write the data model / schema | `DONE` | Michael | `claude/context/data-model.md` v1.0 |
+| T-007 | `git init`, connect remote, first push | `DONE` | Michael | pushed; branching model live |
 | T-008 | Confirm hackathon start/end time with user | `TODO` | | blocks accurate scope gates |
 
 ## Phase 1 — Backend foundation
