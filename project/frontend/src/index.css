@@ -134,13 +134,23 @@ h3 { font-size: 15px; }
   z-index: 200;
 }
 
+/* The wordmark is identity, not navigation, so it is the one thing in the bar
+   allowed to outweigh the menu: three points larger than a nav item, heavier
+   than the display weight the headings use, and fenced off by a hairline so
+   the eye reads it as a mark rather than the first item of the menu.
+
+   A tinted chip behind it would read louder still and would be decoration,
+   which the palette does not allow (design language, rule 2). Size, weight
+   and a rule do the same work honestly. */
 .brand {
   font-family: var(--font-display);
-  font-weight: var(--display-weight);
+  font-weight: 700;
   letter-spacing: var(--display-tracking);
-  font-size: 15px;
-  margin-right: 14px;
-  padding-left: 4px;
+  font-size: 18px;
+  line-height: 1;
+  margin-right: 12px;
+  padding: 5px 14px 5px 4px;
+  border-right: var(--border-width) solid var(--topbar-border);
   white-space: nowrap;
 }
 .brand span { color: var(--primary); }
