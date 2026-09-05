@@ -10,13 +10,64 @@ negative information is the most valuable thing in this file.
 
 ## OPEN BLOCKERS
 
-### B-001 — Hackathon start time is assumed, not confirmed
-**Severity:** medium · **Opened:** session 01 (Michael)
+**No blocker is stopping work.** The three items still marked open below are
+accepted risks or environment facts, not obstacles:
 
-The clock in `current-state.md` assumes a 2026-09-05 09:00 IST start. It was
-inferred from file modification timestamps, not told to us. Every scope gate
-depends on it. Ask the user to confirm the real start and end times, then correct
-`current-state.md`.
+| | |
+|---|---|
+| **B-009** | Large fan-out subagent workflows can exhaust the account session limit. Check capacity first |
+| **B-011** | The formula sandbox blocks tokens, not capabilities. Accepted — rule authoring is Payroll-Manager-only |
+| **B-014** | The main checkout is parked on a stale branch. **Read this before your first command** |
+
+The one open *question* — whether a deployed demo is required — is in
+`current-state.md`, not here, because it needs the user rather than a fix.
+
+### B-001 — Hackathon start time — **RESOLVED**
+**Status:** resolved · session 02 (Franklin), confirmed by user
+
+Start **10:00 IST 2026-09-05**, end **10:00 IST 2026-09-06**. Session 01 had
+inferred 09:00 from file timestamps; that was an hour early. The clock block in
+`current-state.md` is correct and every scope gate now derives from a confirmed
+time. Nothing further to do.
+
+---
+
+## OPEN — session 03
+
+### B-014 — The main checkout is parked on `test/backend-suite`, behind `main`
+**Severity:** high if unnoticed · **Opened:** session 03 (Trevor)
+
+`C:\Users\raval\Desktop\odoo_2026` — the main working copy on the build machine —
+is checked out on branch `test/backend-suite` at `b8b65ca`. That branch is fully
+merged into `main`, but it is **seven commits behind it** and does not contain
+any of session 03's bug fixes.
+
+Session 03's second half ran in a git worktree at
+`.claude/worktrees/frontend-routing-setup-e9a159`, which is why the main checkout
+was never switched back.
+
+**Before doing anything in the main checkout:**
+
+```bash
+cd C:/Users/raval/Desktop/odoo_2026
+git checkout main && git pull
+git log --oneline -1     # expect the session-03 handoff commit
+```
+
+If you skip this you will read stale source, "rediscover" bugs that are already
+fixed, and possibly commit on top of a merged branch. Do not delete
+`test/backend-suite` — it is merged history and the tag chain refers to it.
+
+**Note also:** `project/backend/.venv` and `db.sqlite3` live in the main checkout
+only, and are gitignored. A fresh worktree has neither. Session 03 ran the
+worktree's code against the main checkout's interpreter by absolute path, which
+works because a venv's `site-packages` are absolute:
+
+```bash
+cd <worktree>/project/backend
+PY="C:/Users/raval/Desktop/odoo_2026/project/backend/.venv/Scripts/python.exe"
+"$PY" manage.py migrate && "$PY" manage.py seed --flush
+```
 
 ---
 
@@ -176,3 +227,61 @@ Payroll Manager or Admin, so this is a privileged configuration feature by
 design rather than a user-input surface. Recording it so nobody claims the
 sandbox is airtight, and so a future session that opens rule authoring to a
 lower role knows to fix it first.
+
+---
+
+## RESOLVED / TRAPS — session 03
+
+### B-012 — `probe_forms.py` needs a live server; the failure looks like a crash
+**Status:** documented · session 03 (Trevor)
+
+`smoke_api.py` uses Django's test client and needs no server. `probe_forms.py`
+drives real HTTP with `urllib` against `http://127.0.0.1:8000` and **requires
+`manage.py runserver` in another terminal**. Without one it does not print a
+friendly message — it dies with a raw traceback ending in:
+
+```
+urllib.error.URLError: <urlopen error [WinError 10061] No connection could be
+made because the target machine actively refused it>
+```
+
+That reads like a broken harness. It is a missing server. Start one and re-run.
+
+### B-013 — The probe's `first()` silently swallows query strings
+**Status:** fixed · session 03 (Trevor)
+
+`first(path)` appends its own `?page_size=1`. Passing a path that already carries
+a query — `first("/api/timeoff-types/?requires_allocation=false")` — produces
+`...?requires_allocation=false?page_size=1`. The filter value becomes garbage,
+django-filter drops it, and you get the *unfiltered* first row while believing
+the filter applied. This cost a debugging cycle: the probe picked an
+allocation-gated leave type and failed on the allocation gate rather than on the
+payload shape it was meant to test.
+
+**Fixed** by adding an `every()` helper that fetches `?page_size=200` and lets
+the caller pick a row in Python. Filter in Python, not in a query string appended
+to a helper that appends its own.
+
+### B-015 — A form field whose type disagrees with the model field
+**Status:** fixed, but the *class* of bug is worth remembering · session 03
+
+`TimeOff.jsx` seeded `half_day: false` — a boolean — for
+`half_day = models.CharField(choices=[FIRST, SECOND], blank=True)`. DRF's
+`ChoiceField` reported `"False" is not a valid choice` and rejected **every**
+submission with a 400, for every role, from the day the screen was written. No
+control for the field was rendered at all, so there was no way to correct it from
+the UI.
+
+Two things let it survive to hour 3 of a 24-hour build:
+
+1. **It was the one create form `probe_forms.py` did not cover** (now D-020).
+2. It was never clicked. Every prior report describing this screen as working was
+   written from source, not from a browser.
+
+**The lesson, stated generally:** a field present in the payload but absent from
+the rendered form can never be corrected by a human, so its default value is
+load-bearing — and nothing type-checks it against the model. When adding a field
+to a form's blank state, render a control for it or leave it out of the payload.
+
+**The other lesson:** open the screen. Three sessions read this file; one clicked
+it, and that is when it fell over.

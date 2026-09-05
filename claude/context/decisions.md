@@ -309,3 +309,105 @@ layer and `claude/state/`.
 It worked — Trevor confirmed zero overlapping paths — but it only worked because
 the ownership list was written down first. **Do not start a parallel session
 without one.**
+
+---
+
+## D-016 — Time-off ownership is substituted *before* validation, not in `perform_create`
+
+**Decided by:** Trevor, session 03 · 2026-09-05
+
+`AttendanceViewSet` implements employee self-service by forcing the employee in
+`perform_create` (`serializer.save(employee_id=user.employee_id)`).
+`TimeOffRequestViewSet` deliberately does **not** copy that pattern. It overrides
+`create()` and substitutes the employee into the payload before
+`is_valid()` runs.
+
+**Rationale.** `TimeOffRequestSerializer.validate()` runs the allocation gate —
+graded rule #3 — against the employee **in the payload**, and resolves
+`allocation_used` from that employee's approved allocations. If the employee were
+overridden afterwards, an account could post a colleague's id, clear the gate on
+the colleague's balance, and have the row saved under its own name still pointing
+at the colleague's allocation. That defeats the gate *and* corrupts the
+colleague's derived `remaining`, because `taken`/`remaining` are computed over
+approved requests referencing the allocation.
+
+The attendance pattern is safe only because nothing in attendance validation
+depends on who the employee is. The difference is real, not stylistic.
+`accounts/tests.py::test_the_allocation_gate_runs_against_the_requester_not_the_payload`
+fails under the `perform_create` approach — it exists to keep this decision
+from being "simplified" back.
+
+---
+
+## D-017 — Payrun DELETE is gated on `can_configure_payroll`, not a new property
+
+**Decided by:** Trevor, session 03 · 2026-09-05
+
+`CanRunPayroll` now checks `DELETE` separately, against `can_configure_payroll`.
+
+**Rationale.** The spec's role matrix gives the HR Payroll User
+"Create / Read / Update" and the HR Payroll Manager "Full CRUD" — delete is the
+entire difference between the two rows, and collapsing every unsafe method into
+one `can_run_payroll` check erased it. `can_configure_payroll` is named for
+salary structures and rules, but it resolves to exactly the set required here:
+Payroll Manager or Admin. Adding a near-duplicate `is_payroll_manager` property
+would give the model two names for one predicate. The permission class docstring
+says why the name reads oddly, since the name alone does not.
+
+---
+
+## D-018 — Commit subjects carry no character name
+
+**Decided by:** user, session 03 · 2026-09-05
+
+Commits are authored under each teammate's own git identity (D-009) and the
+subject line carries **no** `[michael]` / `[franklin]` / `[trevor]` tag. This
+supersedes the tagging convention used in sessions 01 and 02.
+
+**Rationale.** The user asked for it directly: *"keep commiting what u do from
+megh raval 30, dont write the charcater names in commit names pls."* The author
+field already records who did the work, and it is the field GitHub attributes by.
+The tag was duplicating that into prose where it read as noise.
+
+Existing tagged commits are left alone — rewriting them needs a force-push, which
+is forbidden here.
+
+---
+
+## D-019 — A test that documents an open bug is reversed when fixed, never deleted
+
+**Decided by:** Trevor, session 03 · 2026-09-05
+
+Session 03's first half wrote tests that asserted **broken** behaviour on
+purpose, each under a `# PRODUCT BUG:` comment naming the fix. When those bugs
+were closed, the tests were rewritten to assert the correct behaviour and kept,
+with the comment rewritten to explain what the guard is for.
+
+**Rationale.** Three of these existed and all three are now closed. Deleting them
+would have thrown away both the discovery and the protection — these are exactly
+the regressions most likely to reappear, because each was a plausible-looking
+omission rather than a typo. Reversing the assertion costs three lines and leaves
+a test that says *why* it exists.
+
+It also produces a useful signal in a relay: the contract-leak test failed **by
+succeeding** when session 03's branch met Franklin's fix on `main`. A red test
+was how the two sessions discovered they had converged on the same bug.
+
+---
+
+## D-020 — Every frontend create form must be covered by `probe_forms.py`
+
+**Decided by:** Trevor, session 03 · 2026-09-05
+
+`probe_forms.py` covered twelve create forms. The one it did not cover — the New
+Time Off Request form — had been returning 400 to every submission since the
+screen was written, and no harness noticed.
+
+**Rationale.** The probe's value is entirely in mirroring the payload the UI
+actually builds; a form outside it is a form nobody is checking. The rule is now:
+if a screen POSTs to an endpoint, that endpoint has a probe case. The only
+permitted exception is the payrun wizard's two endpoints, which `smoke_api.py`
+drives end to end as part of the state-machine run.
+
+Concretely: uncovered surface is worse than untested surface, because a green
+harness on an incomplete list reads as proof.

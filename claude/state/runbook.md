@@ -3,14 +3,37 @@
 Get from a fresh clone to a running, seeded app. **Verify every command here at
 each MEGATRON LAUNCH** — a stale runbook costs the next session its first hour.
 
-Last verified: session 01 (Michael), 2026-09-05. All commands below were run.
+Last verified: **session 03 (Trevor), 2026-09-05 13:35 IST.** Every command below
+was run in that session, including the frontend build and all four harnesses.
+
+---
+
+## ⚠️ Before your first command — check which branch you are on
+
+The main checkout on the build machine is parked on `test/backend-suite`, seven
+commits behind `main` (B-014). Session 03 worked in a git worktree.
+
+```bash
+cd C:/Users/raval/Desktop/odoo_2026
+git checkout main && git pull
+git log --oneline -1
+```
+
+`.venv` and `db.sqlite3` live in the main checkout only and are gitignored, so a
+fresh worktree or clone has neither. To run a worktree's code against the main
+checkout's interpreter, use an absolute path — a venv's `site-packages` are
+absolute, so this works:
+
+```bash
+PY="C:/Users/raval/Desktop/odoo_2026/project/backend/.venv/Scripts/python.exe"
+```
 
 ---
 
 ## Prerequisites
 
 - Python 3.11+ (built and verified on 3.14.6)
-- Node 18+ (verified on 24.19.0)
+- Node 18+ (**verified on v24.18.0, npm 11.16.0**)
 - Git
 
 **No database server needed.** The project runs on SQLite (D-011). PostgreSQL is
@@ -51,30 +74,68 @@ Serves on `http://127.0.0.1:8000`.
 
 ```bash
 cd project/frontend
-npm install
+npm ci            # or npm install
 npm run dev
 ```
 
-Serves on `http://localhost:5173`. CORS for that origin is already configured.
+Serves on `http://localhost:5173`. CORS for that origin is already configured in
+`config/settings.py`. `npm run build` is also clean (613 modules, ~6s) and is
+worth running before a handoff.
 
-> **As of the session-01 handoff the frontend renders nothing** — only
-> `src/api.js` and `src/index.css` exist. `src/App.jsx` is still the Vite demo.
+> **The frontend is complete** — 18 screens, all reachable from the six-menu top
+> bar. Sign in with any account below; the login card has one-click role chips.
+
+> **Do not pipe `npm run dev` into `tail`.** The pipe buffers Vite's output, so
+> the server looks like it failed to start when it is actually running. Session
+> 03 lost a few minutes to this.
 
 ---
 
 ## Verification harnesses — run these before trusting anything
 
+Three of the four need nothing but the venv:
+
 ```bash
 cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py    # 28/28 — the five graded rules
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
+./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
+./.venv/Scripts/python.exe manage.py test     # 158/158 — Django suite, 7 apps
 ```
 
-Both exit non-zero on failure, so they work in a pipeline. `smoke_api.py` cleans
-up its own previous run, so it is safe to run repeatedly.
+The fourth drives real HTTP and **needs a live server in another terminal**:
 
-**If either goes red, fix that before writing new code.** They are the only
-proof the graded rules still hold.
+```bash
+./.venv/Scripts/python.exe manage.py runserver    # terminal 1
+./.venv/Scripts/python.exe probe_forms.py         # terminal 2 — 26/26
+```
+
+Without a server, `probe_forms.py` dies with a raw
+`urllib.error.URLError: <urlopen error [WinError 10061] …>` traceback. That is a
+missing server, not a broken harness (B-012).
+
+**`smoke_api.py` writes to the development database** (B-010) — it leaves an
+`April 2026 (smoke)` payrun that the dashboard then opens on, because it is the
+most recent. Always `manage.py seed --flush` after running it, and before any
+demo. `manage.py test` does **not** have this problem: it uses `TestCase`, so it
+runs against a throwaway database.
+
+All harnesses exit non-zero on failure, so they work in a pipeline.
+
+**If any goes red, fix that before writing new code.** They are the only proof the
+graded rules still hold.
+
+### What each one is actually for
+
+| Harness | Covers | Blind to |
+|---|---|---|
+| `verify_rules.py` | the five graded rules, at model level | anything HTTP |
+| `smoke_api.py` | the HTTP layer, with payloads it builds itself | a form sending the wrong shape |
+| `probe_forms.py` | the payload each **UI form** actually sends | anything with no probe case (D-020) |
+| `manage.py test` | roles, derivations, gating, idempotence | the browser |
+
+None of them clicks a button. Session 03 found a completely broken screen that
+all four were green over — so **open the app too**.
 
 ---
 

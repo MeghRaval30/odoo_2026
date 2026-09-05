@@ -11,9 +11,9 @@
 ```
 Hackathon start:  2026-09-05   10:00 IST   ✅ CONFIRMED BY USER (session 02)
 Hackathon end:    2026-09-06   10:00 IST   ✅ CONFIRMED BY USER
-Now:              2026-09-05   13:00 IST
-Elapsed:          ~3h  /  24h
-REMAINING:        ~21h
+Now:              2026-09-05   13:40 IST   (wall clock, `date`, not narrative)
+Elapsed:          ~3h 40m  /  24h
+REMAINING:        ~20h 20m
 Phase:            BUILD
 ```
 
@@ -26,94 +26,96 @@ Phase:            BUILD
 | < 4h | **POLISH** | Stop coding. Seed data, demo rehearsal, roadmap |
 | < 2h | **DEMO** | Rehearse only. Touch nothing |
 
-> **Do not trust narrative timestamps in handoff prose — run `date` yourself.**
-> Session 01 assumed a 09:00 start and recorded its handoff at "13:15 IST",
-> which was ahead of the real wall clock when session 02 opened the repo.
+> **Run `date` yourself.** Session 01 recorded a handoff at "13:15 IST" that was
+> ahead of the real wall clock. Session 03 (this one) opened the repo at 13:06
+> and closed at 13:40. There is a great deal of time left — do not rush into
+> freeze behaviour.
 
 ---
 
 ## WHERE WE ARE
 
-**Backend complete and verified. Frontend complete and verified. Both demo
-scenarios are clickable end to end.** That is the whole picture in one line.
+**Backend and frontend are both complete and verified. Four harnesses are green.
+Three documented product bugs were closed this session, and one screen that had
+never worked at all was found and fixed.**
 
-Sessions 01 (Michael) and 02 (Franklin) are done. Session 03 (Trevor) has been
-running in parallel on a separate file set since roughly 12:30 and is mid-flight.
+The remaining work is deliverables, rehearsal and optional polish — not features.
 
-The remaining work is deliverables and polish, not features.
+Sessions: 01 Michael (backend), 02 Franklin (frontend), 03 Trevor (tests,
+deliverables, and this bug-fix pass).
 
 ---
 
 ## ✅ WHAT WORKS — verified, with the command or click-path that proves it
 
-### Backend — three harnesses, all green
+### Backend — four harnesses, all green as of 13:35 IST
 
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe verify_rules.py   # 28/28 — business rules
-./.venv/Scripts/python.exe smoke_api.py      # 51/51 — HTTP layer
-./.venv/Scripts/python.exe probe_forms.py    # 24/24 — every UI create + update payload
+./.venv/Scripts/python.exe verify_rules.py   # 28/28 — the five graded rules
+./.venv/Scripts/python.exe smoke_api.py      # 51/51 — the HTTP layer
+./.venv/Scripts/python.exe manage.py test    # 158/158 — Django suite, 7 apps
+# probe_forms.py needs a server running in another terminal:
+./.venv/Scripts/python.exe manage.py runserver
+./.venv/Scripts/python.exe probe_forms.py    # 26/26 — every UI create + update
 ```
 
-`probe_forms.py` is new in session 02. It posts the **exact body each frontend
-form builds**, rather than an idealised one. That distinction found four bugs the
-other two harnesses were structurally blind to, because they construct their own
-correct payloads.
+**`probe_forms.py` needs a live server on :8000.** It drives real HTTP with
+`urllib`, unlike `smoke_api.py` which uses Django's test client. Running it
+without a server gives a `WinError 10061` traceback, not a clean message.
 
-Plus Trevor's Django test suite on `test/backend-suite` (unmerged, see below):
+**Always `manage.py seed --flush` after `smoke_api.py`** — it writes an
+`April 2026 (smoke)` payrun into the dev database and the dashboard then opens on
+it (B-010).
 
-```bash
-./.venv/Scripts/python.exe manage.py test   # 75 tests, employees + timeoff + payroll
-```
+### Frontend — verified by clicking, not by reading
 
-### Frontend — every top-bar entry reaches a real screen
-
-Run it:
+Both servers, in two terminals:
 
 ```bash
 cd project/backend  && ./.venv/Scripts/python.exe manage.py runserver
-cd project/frontend && npm run dev          # http://localhost:5173
+cd project/frontend && npm install && npm run dev      # http://localhost:5173
 ```
 
-Sign in `admin@oxp.com` / `demo1234`. The login screen has one-click chips for
-all five roles.
+`npm run build` is clean (613 modules, ~5.8s). Sign in `admin@oxp.com` /
+`demo1234`; the login card has one-click chips for all five roles.
 
-| Screen | Route | Verified by |
-|---|---|---|
-| Payroll Dashboard | `#/dashboard` | Filters re-drive every card; charts render |
-| Employees | `#/employees` | Kanban + list toggle, both open the same form, 3 tabs, smart buttons |
-| Contracts | `#/contracts` | List + form + **Resolve by period** probe |
-| Working Schedules | `#/schedules` | List + day-line form, derived weekly hours |
-| Attendance | `#/attendance` | List + correction form; check-in widget in the top bar |
-| Time Off | `#/timeoff` | Requests, approve/refuse, balance shown on the form |
-| Allocations | `#/allocations` | List, approve/refuse, Allocated/Taken/Remaining |
-| Time Off Types | `#/timeoff-types` | List + form |
-| Payruns | `#/payroll` | List + two-step wizard + action bar |
-| Payslips | `#/payslips` | List + detail with sequence-ordered computation + PDF |
-| Payroll Register | `#/reports` | On-screen register + CSV export |
-| Salary Structures / Rules | `#/salary-structures`, `#/salary-rules` | Lists + rule form |
-| Holidays | `#/holidays` | List + form (new in session 02) |
-| Departments / Positions / Locations | `#/departments` etc. | Lists + forms |
-| User Management | `#/users` | Admin only, role assignment |
+**Payrun flow, driven end to end in a browser this session** (as admin, creating
+a fresh March 2026 payrun):
 
-### Demo path proven live in a browser, not just by tests
+| Step | Observed |
+|---|---|
+| Wizard step 1 | Scope only — no record created |
+| Wizard step 2 | 20 employees, each with the contract **resolved for that period** — Aarav Mehta on his 01 Jan 2026 contract at ₹85,000 |
+| Create Payrun | 20 payslips, Draft, all zeros |
+| Compute | Gross ₹16,85,299.68 · Net ₹15,79,019.68 |
+| Pre-validation | **0 errors, 2 warnings** — Anita Oliver and Meera Iyer, bank account missing — shown **before** Validate |
+| Validate → Mark Paid | State machine advances; at PAID every action button is disabled |
+| Payslip detail | "Contract resolved for this period" card (CON/2026/0001, ₹85,000) and "Salary computation — evaluated in sequence order" (seq 1, 10, 20, 30…) |
 
-Payrun wizard step 1 creates nothing → step 2 previews 20 employees with the
-contract resolved **for that period** → Create Payrun → Compute → two
-`Bank account missing` warnings appear **before** Validate → Validate unlocks →
-Mark Paid. Payslip PDF returns a valid `%PDF-1.4`. Send Payslips returns
-`20 sent, 0 skipped`. Check-in flips the widget green. Signing in as the Employee
-removes the Payroll menu because the API refuses it.
+**Time Off self-service, driven as `john@oxp.com` (Employee):** the Payroll menu
+is absent, the request list and attendance list are scoped to him alone, the New
+Request form fills his name in read-only, the balance table loads on type
+selection (Allocated 20 / Taken 2 / Remaining 18), a two-day Paid Time Off
+request saves as Draft with duration **2.00**, and a same-day First-half Sick
+Leave request saves with duration **0.50**.
 
 ### The five graded rules
 
-All five built, proven by `verify_rules.py` and by Trevor's 75 tests. Rule #1 is
-now also directly demonstrable in the UI: **Contracts → Resolve by period**.
-December 2025 puts Aarav Mehta on his 01 Jul 2025 contract at ₹78,000; March 2026
-puts him on the Jan 2026 one at ₹85,000 — same employee, resolved by period
-rather than by recency.
+All five are proven by `verify_rules.py` and the Django suite, and all five are
+now visible in the UI:
 
-### Seed evidence — the numbers are live, not hardcoded
+1. **Period-based contract resolution** — payrun wizard step 2, the payslip's
+   "Contract resolved for this period" card, and `Contracts → Resolve by period`.
+2. **Derived weekly hours** — Working Schedules, no weekly-hours input exists.
+3. **Allocation-gated leave** — the balance table on the request form, and the
+   server's own refusal text when no allocation covers the request.
+4. **Sequenced salary rules** — the payslip's computation table, ordered by
+   sequence, gross and net derived from the lines.
+5. **Pre-finalization warnings** — the payrun's pre-validation panel, populated
+   before Validate is available.
+
+### Seed evidence — live, not hardcoded
 
 | Payrun | Net | Why it matters |
 |---|---|---|
@@ -130,57 +132,59 @@ Counts: 22 employees, 24 contracts, 859 attendance, 11 leave requests, 3 payruns
 
 ## ❌ WHAT IS BROKEN
 
-**Nothing known.** All three harnesses green, frontend builds clean, browser
-console clean apart from one expected 400 (the attendance widget probing an
-account with no linked employee, which then hides itself).
+**Nothing known.** All four harnesses green, `npm run build` clean, and the two
+flows above were driven by hand in a browser after the last commit.
 
 ---
 
 ## 🚧 WHAT IS HALF-DONE
 
-**All of it is Trevor's, and it is in flight right now — do not mark it done.**
+**Nothing is half-done in the code.** The working tree is clean, every branch is
+merged into `main`, and `main` is pushed.
 
-| Work | Where | State |
-|---|---|---|
-| `project/backend/attendance/tests.py` | Trevor's working tree | Written (~421 lines), **not verified green, not committed** |
-| `project/backend/accounts/tests.py` | Trevor's working tree | **Not written** — still a 3-line stub |
-| `claude/deliverables/demo-script.md` | repo | **Not rewritten** — still the 68-line outline with no click paths |
-| `claude/deliverables/roadmap.md` | repo | **Not rewritten** — still 64 lines |
+What is *unfinished* is rehearsal, and one specific risk:
 
-Branch `test/backend-suite` is **pushed and deliberately unmerged**. It carries 75
-passing tests across employees, timeoff and payroll. **Do not delete it and do
-not force over it.** Trevor merges it `--no-ff` after the handoff is confirmed.
+### ⚠ The demo script has never been rehearsed against a running app
 
-Franklin verified there is **no merge conflict**: the files on that branch and
-the files changed on `main` since `ed09eca` are completely disjoint.
+`claude/deliverables/demo-script.md` was written by session 03 partly from
+source. **Scenario B steps B2–B3 are built on the New Time Off Request form,
+which could not submit at all until this session fixed it** — the script's line
+*"Submit, and it saves"* would have failed live on stage with
+`half_day: "False" is not a valid choice`.
+
+The form works now, and the fix is verified. But the script itself has not been
+walked through, and two things in it are worth checking against the app:
+
+- The form now has a **Half day** field (Full day / First half / Second half)
+  between the date row and Reason. The script's click path does not mention it.
+  The default is Full day, so the path still works — but a presenter reading the
+  script will meet a field the script does not name.
+- **B5 claims "Taken two. Remaining eighteen."** A newly submitted request is
+  `DRAFT`, and `Allocation.taken` counts only **approved** requests — so the
+  request submitted at B3 does not move the balance by itself. Check that B4
+  actually approves it, or that the narration is talking about pre-existing
+  seeded state. As written this is the step most likely to embarrass someone.
 
 ---
 
 ## ⬜ NOT STARTED
 
-- T-060 demo script, T-061 roadmap — Trevor is on both, in flight
-- No frontend tests of any kind
-- No DRF-layer tests for employees / timeoff / payroll — `smoke_api.py` still
-  owns that ground and Trevor deliberately did not duplicate it
+- **T-063 — demo rehearsal.** Nobody has walked the script end to end.
+- **T-075 — frontend tests.** None exist. Lowest priority; the browser pass and
+  `probe_forms.py` cover the same ground more cheaply for a 24h build.
 
 ---
 
 ## ➡️ THE SINGLE NEXT ACTION
 
-Trevor: finish and verify `attendance/tests.py`, then write `accounts/tests.py`,
-commit one per app, run `manage.py test` green, then merge `test/backend-suite`
-into `main` with `--no-ff`.
+Start both servers, sign in as `admin@oxp.com`, and **walk
+`claude/deliverables/demo-script.md` from A1 to C2 with the script open beside
+you**, correcting it in place wherever the app disagrees. Begin with Scenario B
+steps B2–B5, which are the least trustworthy part of the document for the reasons
+above.
 
-Then rewrite `claude/deliverables/demo-script.md` **against a running app**, not
-against source. The closing move must read:
-
-> Reports → **Payroll Dashboard** → change Period from February 2026 to
-> December 2025 → Total Net Paid re-drives ₹15,63,028 → ₹14,73,360 → set
-> Department to Engineering → ₹5,03,998.
-
-The "Reports → Payroll Dashboard" hop is required because Reports became a
-dropdown in session 02. A script that says "click Reports and the dashboard
-appears" is wrong on stage.
+That is a rehearsal *and* a correctness pass on a graded deliverable, and it is
+the highest-value hour left in the project.
 
 ---
 
@@ -196,11 +200,8 @@ See `claude/context/decisions.md`. Do not reopen.
 | **UI** | Anthropic warm palette, serif/sans pairing. **Binding:** `claude/context/ui-design-language.md` *(D-013)* |
 | **Repo** | `https://github.com/MeghRaval30/odoo_2026` |
 | **Git identity** | Each session commits as its own teammate *(D-009)* |
-| **Commits** | No machine attribution *(D-010)*; one logical unit per commit *(§4a)* |
+| **Commits** | No machine attribution *(D-010)*; **no character name in the subject either** *(D-018)* |
 | **Context folder** | Updated **only** at MEGATRON LAUNCH *(D-012)* |
-
-Identity register in `claude/workflow/git-strategy.md` §1 is now **complete for
-all three characters** — Franklin filled in Trevor's row during this pack.
 
 ---
 
@@ -210,6 +211,7 @@ all three characters** — Franklin filled in Trevor's row during this pack.
    10:00 IST 06 Sep.
 2. Commit `12a632f` carries a Claude co-author trailer from before D-010. Fixing
    it needs a force-push, which is denied at settings level. Harmless; leave it.
-3. **Still open — ask.** Is a deployed demo required, or does a local walkthrough
-   suffice? It changes what the roadmap and demo script should assume. Trevor
-   asked for this explicitly and the user has not answered.
+3. **Still open, asked twice, never answered.** Is a deployed demo required, or
+   does a local walkthrough suffice? It changes what the roadmap and the demo
+   script should assume. Ask again early — it is cheap to ask and expensive to
+   guess wrong at hour 22.

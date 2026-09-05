@@ -79,43 +79,63 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-060 | Demo script, 2 end-to-end scenarios | `IN PROGRESS` | Trevor | in flight, NOT committed. Closing move must route Reports -> Payroll Dashboard |
-| T-061 | Future roadmap writeup | `IN PROGRESS` | Trevor | in flight, NOT committed. graded deliverable #3 |
+| T-060 | Demo script, 2 end-to-end scenarios | `DONE` | Trevor | written and committed; **not rehearsed** — see T-063 |
+| T-061 | Future roadmap writeup | `DONE` | Trevor | 694 lines, grounded in the current code |
 | T-062 | README for judges | `DONE` | Franklin | run-and-verify guide, demo accounts, seed evidence |
-| T-063 | Demo rehearsal | `TODO` | | last 2 hours, no code changes |
+| T-063 | **Demo rehearsal + correct the script in place** | `TODO` | | **top priority.** Scenario B was written against a form that could not submit until T-079; B5's balance claim is suspect |
 
 ## Phase 5 — Quality (added session 02/03)
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-070 | Form-payload probe harness | `DONE` | Franklin | `probe_forms.py`, 24/24 create + update |
-| T-071 | Django test suite: employees, timeoff, payroll | `DONE` | Trevor | 75 tests, on `test/backend-suite`, UNMERGED |
-| T-072 | Django test suite: attendance | `IN PROGRESS` | Trevor | ~421 lines written, not verified, not committed |
-| T-073 | Django test suite: accounts / role matrix | `TODO` | Trevor | still a 3-line stub |
-| T-074 | Merge `test/backend-suite` into main | `TODO` | Trevor | `--no-ff`, after handoff is confirmed |
-| T-075 | Frontend tests | `TODO` | | none exist; lowest priority |
+| T-070 | Form-payload probe harness | `DONE` | Franklin | `probe_forms.py`; extended to **26/26** by T-080 |
+| T-071 | Django test suite: employees, timeoff, payroll | `DONE` | Trevor | merged into `main` |
+| T-072 | Django test suite: attendance | `DONE` | Trevor | 420 lines, committed and green |
+| T-073 | Django test suite: accounts / role matrix | `DONE` | Trevor | 830 lines, five-role matrix, both allowed and denied sides |
+| T-074 | Merge `test/backend-suite` into main | `DONE` | Trevor | `--no-ff` at `7688be1`; suite now 158/158 |
+| T-075 | Frontend tests | `TODO` | | none exist; lowest priority — the browser pass and `probe_forms.py` cover the same ground more cheaply |
+
+## Phase 6 — Bug fixes found in session 03
+
+Three of these were *documented as failing tests* by session 03's first half,
+which asserted the broken behaviour on purpose. Closing them meant reversing
+those assertions, not deleting them — each is now a regression guard.
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-076 | Contract scope test caught up to Franklin's fix | `DONE` | Trevor | the merge made it fail *by succeeding*; leak was already closed in `e894840` |
+| T-077 | Employee could not raise their own time-off request | `DONE` | Trevor | carve-out substitutes the employee **before** validation, not in `perform_create` — the allocation gate reads that field |
+| T-078 | Payroll User could delete payruns | `DONE` | Trevor | delete is the whole difference between the two payroll rows of the spec matrix |
+| T-079 | **Time Off request form could never submit, for anyone** | `DONE` | Trevor | `half_day` sent as a boolean to a `FIRST`/`SECOND` choice field, with no control rendered at all. 400 since the screen was written |
+| T-080 | Probe now covers the time-off request form | `DONE` | Trevor | the one uncovered create form was the broken one. 24/24 → 26/26 |
+| T-081 | Browser pass over the payrun flow | `DONE` | Trevor | wizard → compute → validate → mark paid → payslip detail, driven by hand |
 
 ---
 
-## Critical path
+## ~~Critical path~~ — closed
 
-```
-T-010 → T-013 → T-014 → T-016 → T-020 → T-021 → T-022 → T-023 → T-024
-                                            ↑
-                                    the whole build hangs here
-```
+~~`T-010 → T-013 → T-014 → T-016 → T-020 → T-021 → T-022 → T-023 → T-024`~~
 
-**T-021, the salary rule computation engine, is the single highest-risk item.**
-Nothing downstream of it can be demonstrated until it works. If time runs short,
-cut frontend polish — never cut T-021.
+**Struck out: the whole chain is DONE and verified.** T-021, the salary rule
+engine, was the highest-risk item in the project and has been green since session
+01. There is no longer a build-blocking dependency anywhere on this board.
 
-## Suggested three-way split
+## ~~Suggested three-way split~~ — closed
 
-| Stream | Tasks |
-|---|---|
-| **A — HR master data** | T-013 … T-017, T-033 … T-037 |
-| **B — Leave & payroll engine** | T-018 … T-024, T-050 … T-052 |
-| **C — Frontend shell, payroll UI, dashboard** | T-030 … T-032, T-040 … T-045 |
+**Struck out: every stream is finished.** Streams A, B and C all completed across
+sessions 01–03. The split was a plan for building; nothing is left to build.
 
-Stream B is the critical path. If one person is stronger than the others, put
-them on B.
+## Priorities for the time actually remaining (~20h at 13:40)
+
+Everything below is optional except the first line.
+
+| Order | What | Why |
+|---|---|---|
+| 1 | **T-063 — rehearse the demo and fix the script in place** | The only item with real risk left. Scenario B has never been walked, and it is the half of the demo built on the form that was broken until T-079 |
+| 2 | Re-ask open question 3 — is a deployed demo required? | Asked twice, never answered. Cheap now, expensive at hour 22 |
+| 3 | Polish only if the rehearsal surfaces something | Do not open new work on a green board |
+| 4 | T-075 frontend tests | Genuinely lowest value for a 24h build; listed for completeness |
+
+**The board is effectively complete.** The failure mode from here is not running
+out of time — it is breaking something that already works. Prefer rehearsal over
+refactoring.

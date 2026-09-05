@@ -182,3 +182,74 @@ NEXT-SESSION-PROMPT.md)*
 
 **21.** *(mid-turn)*
 > immediately stop agents now first and focus on megatron launch
+
+---
+
+## Session 03 — TREVOR (second half: bug-fix pass and pack)
+
+> Session 03 ran in two halves. The first half (test suite, demo script,
+> roadmap) started in parallel with Franklin under the D-015 ownership split and
+> its prompts were not captured before that chat ended. What follows is the
+> second half, verbatim.
+
+**1.**
+> You are TREVOR, the third of three Claude sessions building this project in
+> relay (MICHAEL → FRANKLIN → TREVOR). You have no memory of the previous
+> session. The GitHub repo is the only channel between us.
+>
+> Repo: https://github.com/MeghRaval30/odoo_2026
+>
+> Do this before anything else:
+>
+> 1. Clone or pull the repo:
+>    git clone https://github.com/MeghRaval30/odoo_2026.git
+>    (or: git pull --rebase if you already have it)
+>
+> 2. Read claude/handoff/NEXT-SESSION-PROMPT.md IN FULL. It is a 14-section
+>    briefing written specifically for you and replaces the normal boot sequence.
+>    Then skim claude/state/current-state.md and claude/state/task-board.md.
+>
+> 3. Set and VERIFY your git identity before your first commit — you commit under
+>    YOUR OWN GitHub account, not Michael's. Fill in your row in
+>    claude/workflow/git-strategy.md §1 (it is marked TBC), and commit that
+>    first. GitHub attributes commits by email, not display name.
+>
+> 4. Prove the backend still works before writing any code:
+>    cd project/backend
+>    ./.venv/Scripts/python.exe manage.py migrate
+>    ./.venv/Scripts/python.exe manage.py seed --flush
+>    ./.venv/Scripts/python.exe verify_rules.py    # expect 28/28
+>    ./.venv/Scripts/python.exe smoke_api.py       # expect 51/51
+>
+> Context you need that is NOT in the repo:
+> - The hackathon started at <FILL IN ACTUAL START TIME> and ends at <FILL IN>.
+>   The briefing assumes 09:00 on 2026-09-05 — correct current-state.md.
+>
+> Where things stand: the Django backend is COMPLETE and verified (all five
+> graded business rules proven by the two harnesses above). The frontend is
+> SCAFFOLDED ONLY — src/api.js and src/index.css are done, but src/App.jsx is
+> still the untouched Vite demo and nothing renders.
+>
+> Your job is the frontend. Priority order is in §9 of the briefing: routing and
+> app shell, then login, then the DASHBOARD (highest visual payoff, API already
+> returns everything shaped for charts), then the payrun wizard and payslip
+> screen.
+>
+> Working rules:
+> - Work on feature branches, merge with --no-ff, tag versions. Never force-push.
+> - No Claude attribution in commit messages.
+> - Commit code as you go, but do NOT update the claude/ folder until I say
+>   "MEGATRON LAUNCH" — that phrase means stop everything and run
+>   claude/workflow/megatron-checklist.md end to end.
+>
+> Announce which character you are and what you are picking up, then start.
+
+**2.** *(mid-turn)*
+> high effort
+
+**3.** *(mid-turn)*
+> keep commiting what u do from megh raval 30, dont write the charcater names in
+> commit names pls.
+
+**4.** *(the trigger)*
+> megatron launch
