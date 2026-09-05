@@ -14,6 +14,7 @@ import {
   Modal,
   PageHead,
   rows,
+  useDebounced,
   useResource,
 } from "../components/ui";
 
@@ -179,12 +180,13 @@ function AttendanceForm({ id, onClose, onSaved }) {
 export default function Attendance({ route }) {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [editing, setEditing] = useState(undefined);
   const employeeFilter = route?.query?.employee || "";
 
   const records = useResource("/api/attendance/", {
     status,
-    search,
+    search: debouncedSearch,
     employee: employeeFilter,
     ordering: "-check_in",
     page_size: 100,

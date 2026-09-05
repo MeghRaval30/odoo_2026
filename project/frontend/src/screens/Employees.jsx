@@ -15,6 +15,7 @@ import {
   PageHead,
   StateBadge,
   rows,
+  useDebounced,
   useResource,
 } from "../components/ui";
 import { navigate } from "../lib/router";
@@ -329,12 +330,13 @@ function EmployeeForm({ id, onClose, onSaved }) {
 export default function Employees() {
   const [view, setView] = useState("kanban");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [department, setDepartment] = useState("");
   const [editing, setEditing] = useState(undefined);
 
   const departments = useResource("/api/departments/");
   const employees = useResource("/api/employees/", {
-    search,
+    search: debouncedSearch,
     department,
     page_size: 200,
   });

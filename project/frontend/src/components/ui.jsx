@@ -9,6 +9,19 @@ import { api } from "../api";
 export const rows = (payload) =>
   Array.isArray(payload) ? payload : payload?.results || [];
 
+// Search boxes feed straight into useResource, so without this every keystroke
+// fired a request and the responses could land out of order.
+export function useDebounced(value, delay = 300) {
+  const [settled, setSettled] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return settled;
+}
+
 export function useResource(path, params) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
