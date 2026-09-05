@@ -762,3 +762,190 @@ Removing it means rewriting ~120 commits and force-pushing, which breaks the
 other teammates' clones. Both operations are denied at tool level in
 `.claude/settings.json` by design. The user was asked directly and chose
 **"Leave history alone."** Do not reopen this.
+
+
+---
+
+### D-041 — The HR Payroll User reads payroll and writes nothing
+
+**Decided by:** Michael, session 07 · 2026-09-06 · at the user's instruction
+
+Nine capabilities, all reads: employees, contracts, attendance, leave,
+allocations, payruns, payslips and the two dashboards. No contract wage, no
+attendance correction, no leave approval, no employee add/edit/delete, no
+payrun create/compute/validate/pay, no configuration of any kind.
+
+**Rationale.** PRD 3.2 grants this role "all HR Manager permissions plus CRU on
+Payruns and Payslips". That single grant lets one login raise a wage, approve
+the leave that offsets it, correct the attendance behind it, and then compute
+and validate the payrun that pays it — every input to a payslip and the payslip
+itself, unwitnessed. The role's actual job is checking a run somebody else
+produced, and checking needs reading, not writing.
+
+Own-scope self service is untouched, because it lives in `BASELINE` rather than
+in any role: this person still punches their own clock, books their own leave
+and reads their own payslip.
+
+**Deliberately narrower than the PRD.** Recorded so nobody "fixes" it back.
+
+---
+
+### D-042 — HR Manager and Payroll Manager are siblings, not a ladder
+
+**Decided by:** Michael, session 07 · 2026-09-06 · at the user's instruction
+
+Neither role's capability set contains the other's.
+
+* **HR owns people** — the employee record and the contract on it, hiring and
+  offboarding, leave decisions and allocations, attendance corrections, and the
+  HR configuration those depend on (schedules, leave types, the reference
+  catalogues).
+* **Payroll owns the payrun** — create, compute, validate, pay, delete, and
+  nothing that feeds into it.
+
+Only the Admin holds both sides. That is now what makes an Admin an Admin, and
+`_ADMIN` is written as the explicit union of the two so it cannot silently lose
+a capability when either side is narrowed.
+
+**Rationale.** The PRD stacks the five roles so each contains the last, which
+puts the person who signs the payrun in charge of every number it consumes.
+Splitting on *subject* rather than *seniority* is the standard control, and it
+is the one a judge recognises.
+
+**Consequence to know:** the Payroll Manager can no longer set a wage. Wages
+live on contracts, contracts are part of the employment relationship, and that
+is HR's.
+
+---
+
+### D-043 — Salary structures and rules are readable by payroll, writable only by the Admin
+
+**Decided by:** Michael, session 07 · 2026-09-06 · at the user's instruction
+
+Both payroll ranks read them; neither writes them.
+
+**Rationale.** A salary rule is the formula that turns a wage into a payslip, so
+writing one is deciding pay just as surely as setting the wage is. Leaving it
+with the Payroll Manager would let one person add a rule and then run the payrun
+that applies it. Reading stays, because a payrun cannot be checked against rules
+that cannot be seen.
+
+This is the widest departure from PRD 3.2, which gives the Payroll Manager full
+CRUD here. It is deliberate.
+
+---
+
+### D-044 — An account holds exactly one role
+
+**Decided by:** Michael, session 07 · 2026-09-06 · at the user's instruction
+
+`UserSerializer.validate_role_ids` refuses a second role on create and on
+update. The form shows radios, not checkboxes.
+
+**Rationale.** The mockup's access note says "one or more roles", and
+`capabilities_for()` was built to union them. That was defensible while the
+roles formed a ladder. Under D-042 they are siblings, so holding both manager
+roles is not a bigger role — it is both jobs at once, which is exactly what the
+separation of duties exists to prevent.
+
+**What did not change.** The link is still many-to-many and the union still
+runs. The matrix must stay correct for any set it is handed, including rows
+written before this rule. Only the assignment path is capped, so relaxing this
+later is one validator.
+
+**Note:** an account may still hold *no* role, which yields BASELINE only.
+
+---
+
+### D-045 — Breadth of read is decided by a read capability, never by a write flag
+
+**Decided by:** Michael, session 07 · 2026-09-06
+
+Six querysets decided who may see everyone's rows by testing `can_manage_hr`,
+which is really `EMPLOYEE_WRITE`; the payslip queryset tested `can_run_payroll`,
+which is `PAYRUN_WRITE`. They now test `EMPLOYEE_READ_ALL`, `CONTRACT_READ_ALL`,
+`ATTENDANCE_READ_ALL`, `TIMEOFF_READ_ALL`, `ALLOCATION_READ_ALL` and
+`PAYSLIP_READ_ALL` respectively.
+
+**Rationale.** Asking a write question to decide a read meant a role could not be
+made read-only without also being made blind. Making the Payroll User read-only
+silently narrowed it from 61 payslips to its own 3 — caught only because the
+audit grew a READ BREADTH section. Any future narrowing hits the same trap
+unless the question matches the answer.
+
+---
+
+### D-046 — `seed --flush` is what "a known demo state" means, so it resets everything
+
+**Decided by:** Michael, session 07 · 2026-09-06
+
+The flush now also deletes the `SecuritySetting` singleton and every
+`NetworkPolicy`, letting the row be recreated at model defaults.
+`audit_permissions.py` sweeps the records its write probes create.
+
+**Rationale.** Security settings are one row that no model in the flush list
+touched, so they survived every reseed. Once `probe_forms.py` and
+`smoke_api.py` had exercised the security screen, the demo opened on "Sign-in is
+restricted to 0 permitted networks" and "Sessions are bound to the address they
+were opened". The first only reads alarmingly; the second signs everybody out
+the moment the machine changes network, which on demo day is the gap between
+venue wifi and a phone hotspot.
+
+Running the harnesses immediately before presenting is now safe.
+
+---
+
+### D-047 — Seeded attendance follows each contract's working schedule
+
+**Decided by:** Michael, session 07 · 2026-09-06
+
+`_attendance` reads the employee's contract's schedule lines for the weekdays
+they work and the hours they work, instead of generating Monday-to-Friday at
+eight hours for everyone. Overtime is measured against the person's own
+scheduled day rather than a flat 8.5 hours.
+
+**Rationale.** The part-time contract is 20 hours over four days and the seed
+produced five eight-hour days: 23 worked against 19 expected, roughly 44 hours
+against a 20-hour contract. Worked days exceeding expected days is incoherent on
+its face, and it undercuts the two things this area is graded on — the derived
+weekly hours of graded rule #2, and attendance feeding worked days (D-002 #1).
+
+**Figures moved.** Attendance 1746 → 1731; February net ₹15,58,667.87 →
+₹15,58,320.41. **December and January are unchanged**, so the demo's
+Dec < Jan < Feb evidence is intact. `core/tests.py` pins the new numbers and now
+also asserts the invariant rather than the number.
+
+---
+
+### D-048 — A screen whose subject is "mine" states its scope rather than inheriting it
+
+**Decided by:** Michael, session 07 · 2026-09-06
+
+`MyPayslips` asks for one employee by id. `useResource` accepts a null path
+meaning "do not fetch".
+
+**Rationale.** The screen relied on the server's queryset to narrow it, and said
+so in a comment that claimed it "would show nothing extra even if it asked for
+it". That only holds from an Employee's seat: the three roles holding
+`payslip.read.all` are never narrowed, so each saw all 61 payslips in the
+company under the heading "My payslips — every period you have been paid for".
+Not a leak, but the page stated something false about whose money it was.
+
+The general rule: **inherited scope is invisible scope.** If a screen's whole
+subject is own-scope, it says so.
+
+---
+
+### D-049 — The wordmark's prominence comes from size, weight and a rule — not colour
+
+**Decided by:** Michael, session 07 · 2026-09-06
+
+18px at weight 700 against 13px navigation, fenced with a hairline that takes
+`--topbar-border`.
+
+**Rationale.** `ui-design-language.md` rule 2 says colour carries meaning or it
+is warm neutral, never decoration, and rule 3 says hairlines, not shadows,
+outside floating layers. A tinted chip or a glow behind the mark would be louder
+and would spend something the palette reserves for state. The typographic route
+gets the same prominence honestly, follows all six themes, and keeps the bar at
+46px.

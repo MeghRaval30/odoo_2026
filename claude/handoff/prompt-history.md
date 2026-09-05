@@ -493,3 +493,60 @@ Then, mid-session:
 > megatron launch !!
 
 > commit everything asap all the claude files are ready and like in general all files are ready. first always ready file and then push first
+
+
+---
+
+## Session 07 — Michael · 2026-09-05 23:00 → 2026-09-06 01:00 IST
+
+> uninstall ollama
+
+> pull the latest commits in the repo and start the program
+
+> log out and login as payroll user we need to make changes in the access to payroll user
+
+*(answering the restriction question)* > Also the should not have access to edit
+attendence it should only be visible to him as read only / and the payroll user
+in the pay roll tab shoould not access to add payruns, and can not compute or
+validate payruns however he can read them / the config tabs under employees,
+time off, contracts should not be visible to payroll user, Contract writes
+(Recommended), Employee delete, Time-off approval, Config writes
+
+> he should not get the option to add employee or change employee config
+
+> okay that is perfect  the permissions and  frontend for payroll user is fine
+> now log out log in as payroll manager
+
+> Now we have to cut down some of his access
+
+*(answering the restriction question)* > Admin-shaped powers (Recommended), HR
+configuration, Leave approval and attendance correction
+
+> now one thing log out and login as admin I want the payroll dashboard under
+> reports
+
+> also in the administration tab while adding new user it should not be able to
+> select multiple roles as now when I tried to add user I was able to choose
+> multiple roles for user it should not happen only one role can be selected
+
+> now the "people pay360 should look a bit bigger and should highlight
+
+> push the recent change we made
+
+> ohhh I can see you did all the things fine
+
+> now wait
+
+> commit the changes we made to the repo
+
+> also his access should be same as payroll user in attendence tab
+
+> noo he can not write allocations and change salary config
+
+> he should now see the anything else except for employees in employees tab and
+> his access to employees tab and contracts tab should be same as payroll user
+
+> I feel the software is pretty much done now do a robust testing of everything
+> every component and code and find if there are any bugs
+
+> Megatron launch

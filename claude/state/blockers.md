@@ -567,3 +567,72 @@ Expect `session-log.md`, `PROGRESS.md`, `current-state.md` and `task-board.md`
 to have been edited by somebody who is not you. **Merge, never overwrite** — and
 prefer appending a clearly-headed section over rewriting a shared one. Push small
 and often; a large unpushed batch is what turns this into a real conflict.
+
+
+---
+
+### B-031 — The demo script quotes superseded February figures
+
+**Status:** OPEN — needs a human decision, then a five-minute edit.
+
+`claude/deliverables/demo-script.md` states **₹15,58,667.87** at lines 94 and
+168, and `claude/handoff/NEXT-SESSION-PROMPT.md` and `claude/PROGRESS.md` repeat
+it. The correct figure after D-047 is **₹15,58,320.41**.
+
+December (₹14,73,360) and January (₹14,82,320) are **unchanged**, so the
+demo's headline evidence — December under January, February above both — still
+holds. Only February's exact figure moved, by ₹347.46.
+
+**Why it was not simply fixed:** D-012 says `claude/` is updated only at
+MEGATRON LAUNCH, and this *is* that moment — so the demo-script numbers are
+corrected in this pack. The blocker is recorded because the number is read
+aloud on stage and anyone who memorised the old one must be told.
+
+**What to do:** re-run `manage.py seed --flush`, open the payroll dashboard on
+February, and read the tile. Trust the tile over any document.
+
+---
+
+### B-032 — Two read endpoints answer 400 for an account with no employee record
+
+**Status:** OPEN — cosmetic. Both screens already handle it well.
+
+`GET /api/attendance/status/` and `GET /api/me/profile/` return **400** when the
+signed-in account has no linked employee. `admin@oxp.com` is exactly that
+account, so the admin dashboard logs two console errors on every load and the
+profile screen logs four.
+
+Neither breaks anything: the attendance widget simply does not render, and the
+profile screen shows *"This account is not linked to an employee record, so
+there is no profile to show. An administrator can link it from Users & Roles."*
+
+**Why it is arguably wrong:** both are reads whose answer is well defined. "This
+account has no employee, so it is not checked in and cannot punch" is a 200 with
+`checked_in: false, can_punch: false`, not a client error.
+
+**Already tried:** nothing — it was reported twice this session and left alone
+deliberately, because the UX is correct and the change touches a demo path. If
+you fix it, `_sweep`-style probing found no other 4xx anywhere.
+
+---
+
+### B-033 — The frontend has no automated tests, and that is where the bugs were
+
+**Status:** OPEN — this is T-075, still the lowest-priority task, and it is now
+the largest gap.
+
+Both bugs found in session 07's testing pass were frontend or frontend-adjacent,
+and both were found by driving a browser by hand:
+
+* `MyPayslips` showing 61 payslips to three of five roles (D-048)
+* the payrun action row and several edit modals offering controls the server
+  would refuse
+
+The backend has 231 tests and five harnesses; the frontend has none. A route
+walk with an injected console/network collector caught both in minutes and is
+written up in the traps section of the next-session prompt — that technique is
+the cheap substitute until real tests exist.
+
+**Already tried:** nothing beyond the manual walk. No test runner is installed
+for the frontend; adding one at this point in the clock is a FREEZE-phase
+decision, not a default.

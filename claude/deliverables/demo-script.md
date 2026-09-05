@@ -91,7 +91,7 @@ fills both fields. Then `[Sign in]`.
 | Allocation to move | **Priya Sharma** · Paid Time Off 2026 · Allocated 20 / Taken 0 / Remaining 20 · Approved |
 | Allocation already consumed | **Audrey Peterson** · 20 / 3 / **17** |
 | Type that requires allocation | **Paid Time Off** and **Comp Off**. Sick Leave and Unpaid Leave do not. |
-| Existing payruns | December 2025 ₹14,73,360 net · January 2026 ₹14,82,320 · February 2026 ₹15,58,667.87 — all `Paid`, 20 payslips each |
+| Existing payruns | December 2025 ₹14,73,360 net · January 2026 ₹14,82,320 · February 2026 ₹15,58,320.41 — all `Paid`, 20 payslips each |
 | Payrun you create live | **March 2026**, 01–31 Mar 2026, Regular Salary, 20 employees |
 
 ---
@@ -165,7 +165,7 @@ explicitly against hardcoded dashboards. Slow down. Let the screen do the work.
 | # | At | Click | What appears |
 |---|---|---|---|
 | **C1** | 3:55 | `Reports` (top bar, far right) → **`Payroll Dashboard`**. | `Reports` is a **dropdown with two items** — `Payroll Dashboard` and `Payroll Register`. You want the first. It opens on **March 2026** — the payrun you created ninety seconds ago is already the default period. Say that out loud. |
-| | | `Period` → **`February 2026`**. | *Total Net Paid* → **₹ 15.59L**. Exact: **₹15,58,667.87** across 20 payslips. |
+| | | `Period` → **`February 2026`**. | *Total Net Paid* → **₹ 15.59L**. Exact: **₹15,58,320.41** across 20 payslips. |
 | **C2** | 4:05 | `Period` → **`December 2025`**. Then stop talking for two seconds. | *Total Net Paid* → **₹ 14.73L** (**₹14,73,360**). *Payslips*, *Avg Net / Employee*, *Approved Time Off Days*, *Attendance Health*, the Net Payroll Trend line, the Net Pay by Department bars, the Payslip Status donut, the Pre-Validation Alerts and the Time Off Overview **all re-drive together**. |
 | | | | "**Fifteen lakh sixty-three thousand, to fourteen lakh seventy-three thousand.** One dropdown. Every card on this page just re-queried six models — Employee, Contract, Payslip, PayslipWarning, Attendance, TimeOffRequest. They are listed at the bottom of the page." |
 | **C3** | 4:20 | `Department` → **`Engineering`**. | *Total Net Paid* → **₹ 4.69L** (**₹4,68,760**) — six payslips of twenty. |
@@ -181,7 +181,7 @@ explicitly against hardcoded dashboards. Slow down. Let the screen do the work.
 > you."
 
 > **Number check before you present.** The KPI cards use compact notation —
-> the *Total Net Paid* tile literally reads `₹ 15.59L`, not `₹15,58,667.87`. The
+> the *Total Net Paid* tile literally reads `₹ 15.59L`, not `₹15,58,320.41`. The
 > exact rupee figures are on the **Payruns** list (*Net* column) and in the
 > **Department Overview** rows. Say the lakh figure, point at the exact one if
 > challenged.
@@ -255,3 +255,46 @@ reopen `Reports` and pick `Payroll Dashboard`.
   accumulate and so Priya's balance is back at 20 / 0 / 20.
 - Have this file open on a second screen or printed. Do not present from memory.
 - The three numbers you must not fumble: **15,58,668 → 14,73,360 → 5,03,589**.
+
+
+---
+
+## Session 07 corrections — READ BEFORE REHEARSING
+
+Two changes landed after this script was last rehearsed. Neither breaks a
+scenario; both change what is on screen.
+
+### 1. February's exact figure moved by ₹347.46
+
+**₹15,58,667.87 → ₹15,58,320.41.** Attendance now follows each contract's
+working schedule, so overtime is measured against the person's own day (D-047).
+The three occurrences above are corrected. **December and January are
+unchanged**, so the headline evidence — December *under* January because two
+employees resolve to older, cheaper contracts, February above both because of
+overtime — is intact and is still the strongest thing in the demo.
+
+> Trust the tile, not this document. Re-run `seed --flush`, open the payroll
+> dashboard on February, and read what it says.
+
+### 2. The roles are much narrower, and that is now a talking point
+
+Session 07 rebuilt the permission model (D-041 to D-044). If a step has you
+signing in as anyone other than `aarav@oxp.com`, re-walk it:
+
+| Account | What it can do now |
+|---|---|
+| `rahul@oxp.com` — Payroll User | **Reads payroll, changes nothing.** No wages, no attendance corrections, no leave approval, no payrun operations, no configuration |
+| `aarav@oxp.com` — Payroll Manager | **Runs the payrun and owns none of its inputs.** Create, compute, validate, pay, delete — and on employees, contracts and attendance it is identical to the Payroll User |
+| `sara@oxp.com` — HR Manager | Owns people: hiring, contracts and wages, leave decisions, attendance corrections, HR configuration |
+| `admin@oxp.com` — Admin | The only account holding both sides, plus users, security and the audit log |
+
+**This is worth thirty seconds on stage.** Sign in as `rahul@oxp.com`, open a
+payrun, and show that Compute and Validate are *absent* — not greyed out. Then
+sign in as `aarav@oxp.com` and show them present. The line is: *the person who
+processes pay is not the person who decides it, and the person who decides it
+cannot pay it.* That is a control a judge recognises, and it is enforced
+server-side — `audit_permissions.py` proves 16 specific refusals.
+
+Also: an account now holds exactly one role (D-044), so the New User dialog
+shows radios rather than checkboxes. And **Reports → Payroll Dashboard** is a
+new menu entry — the admin no longer has to know the URL.

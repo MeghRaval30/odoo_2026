@@ -211,3 +211,38 @@ running out of time — it is breaking something that works.**
 | 5 | T-075 frontend tests | Still the lowest value for a 24-hour build |
 
 **Do not open new feature work.** Every graded requirement is built and proven.
+
+
+---
+
+## Session 07 — Michael · 2026-09-06
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-113 | Narrow the HR Payroll User to a read-only observer | `DONE` | Michael | Nine capabilities, all reads. 16 refusals and 6 preserved reads pinned in `audit_permissions.py` (D-041) |
+| T-114 | Split HR and payroll authority into siblings | `DONE` | Michael | Neither manager role contains the other; `_ADMIN` is the explicit union so narrowing either side cannot orphan a capability (D-042) |
+| T-115 | Move salary-rule writing to the Admin alone | `DONE` | Michael | Both payroll ranks read, neither writes — nobody can add a rule and then run the payrun applying it (D-043) |
+| T-116 | Move every viewset onto the capability table | `DONE` | Michael | The model-flag classes gated most viewsets while the menu was built from the matrix, so a matrix change moved the menu and not the API — the failure PRD-3.1 names |
+| T-117 | Retarget row scoping to read capabilities | `DONE` | Michael | Six querysets asked a write question to decide a read. Caught the payslip queryset narrowing a read-only role from 61 payslips to 3 (D-045) |
+| T-118 | One account, one role | `DONE` | Michael | Radios in the form, `validate_role_ids` on create *and* update, three tests (D-044) |
+| T-119 | Hide controls the signed-in role cannot use | `DONE` | Michael | New Payrun and the four payrun state buttons; Employees, Schedules, Reference, Holidays and Salary Rules open read-only with `Close` and a disabled fieldset |
+| T-120 | Payroll Dashboard under Reports | `DONE` | Michael | The route already existed and `DashboardRouter` already documented it; only the menu entry was missing. Also fixed the menu landing a reload late |
+| T-121 | Enlarge and fence the wordmark | `DONE` | Michael | 18px/700 against 13px nav, hairline divider on `--topbar-border`. No colour spent (D-049) |
+| T-122 | Stop the harnesses dirtying the demo | `DONE` | Michael | `seed --flush` resets security settings; `audit_permissions.py` sweeps its probes (D-046) |
+| T-123 | Attendance follows the contract's working schedule | `DONE` | Michael | Part-timer was seeded 5x8h against a 20h/4-day contract. Two invariant guards added to `core/tests.py` (D-047) |
+| T-124 | Scope My Payslips to the signed-in employee | `DONE` | Michael | Three of five roles saw all 61 payslips under "My payslips". `useResource` gained a null path (D-048) |
+| T-125 | Full robustness pass | `DONE` | Michael | 2,499 fuzzed requests (0 crashes, 0 anonymous leaks), 61 payslips x 12 invariants, 5 engine edge cases, 22 routes x 2 roles instrumented, idempotency, PDF, register |
+| T-126 | Re-point `/api/attendance/status/` and `/api/me/profile/` off 400 | `TODO` | | B-032. Cosmetic — both UIs handle it well. A read whose answer is well defined should not be a client error |
+| T-127 | Frontend test runner | `TODO` | | B-033, supersedes T-075 in urgency. Both bugs this session were frontend and both were found by hand |
+
+### Re-prioritised for the time actually left
+
+1. **T-107 / T-112** — rehearse the demo end to end. Still the only thing between
+   the build and the grade. The script is corrected for session 07 but has **not**
+   been walked since the RBAC rebuild.
+2. **T-111** — Ledger's 3.05:1 primary button. Needs the user, one token.
+3. **T-089** — the 300–10,000 employee dataset, if and only if rehearsal is done.
+4. T-126, T-127 — only if everything above is closed.
+
+**T-075** (frontend tests) is superseded by **T-127**: same subject, with real
+evidence behind it now.

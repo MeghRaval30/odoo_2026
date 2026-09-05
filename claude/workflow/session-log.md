@@ -574,3 +574,103 @@ Merge commit **`1437c25`** on `main`; handoff tagged **`handoff-trevor-06`**.
 running first*. The first action is T-112: start both servers, sign in as
 `aarav@oxp.com`, and walk demo steps A3 → A10, writing the real numbers into
 `claude/deliverables/demo-script.md` as you go.
+
+
+---
+
+## Session 07 — Michael · 2026-09-05 23:00 → 2026-09-06 01:05 IST (~2h 05m)
+
+Opened by pulling 13 commits from sessions 05 and 06 and finding the local
+database stale — three payruns where the runbook expects four, because it
+predated the March off-cycle correction. Reseeded and started both servers.
+
+### What was accomplished
+
+**The permission model was rebuilt, in four passes driven by the user.** It began
+as "limit the payroll user" and ended as a genuine separation of duties:
+
+* the **HR Payroll User** became an observer — nine capabilities, all reads
+* the **HR Payroll Manager** became the operator of the payrun and the owner of
+  none of its inputs; on employees, contracts and attendance it is now
+  byte-for-byte identical to the Payroll User
+* **HR Manager and Payroll Manager became siblings rather than a ladder**, and
+  the Admin became the explicit union of both
+* salary-rule writing moved to the Admin alone, so nobody can add a rule and
+  then run the payrun that applies it
+* an account now holds **exactly one role**
+
+Every viewset moved onto the capability table in the process. Before this,
+most viewsets used the old model-flag classes while the menu was built from the
+matrix — so changing the matrix would have moved the menu without moving the
+API, which is precisely the failure PRD-3.1 names.
+
+**Two latent bugs fell out of that work**, both structural rather than cosmetic:
+
+1. **Six querysets decided who sees everyone's rows by testing a *write*
+   capability.** Making a role read-only therefore also made it blind. The
+   payslip queryset did exactly that — a read-only Payroll User silently
+   dropped from 61 payslips to its own 3. Caught only because the audit grew a
+   READ BREADTH section (D-045).
+2. **`SALARY_CONFIG_WRITE` briefly belonged to no role at all.** The Admin only
+   inherited the union of the two manager roles, so narrowing both orphaned it
+   and the salary rules would have been uneditable by anyone, with no error
+   anywhere. Restored explicitly, plus `unreachable_capabilities()` and a test
+   asserting it stays empty.
+
+**Then a full testing pass, which found two more real bugs:**
+
+3. **"My payslips" showed a payroll operator the whole company.** The screen
+   leaned on the server to scope it, and said so in a comment claiming it "would
+   show nothing extra even if it asked for it" — true only from an Employee's
+   seat. Three of five roles saw all 61 payslips under "every period you have
+   been paid for" (D-048).
+4. **Attendance ignored each contract's working schedule.** The part-time
+   employee — 20 hours over four days — was seeded five eight-hour days: 23
+   worked against 19 expected, roughly 44 hours against a 20-hour contract. The
+   holiday exclusion sitting directly above it in the code was the same bug
+   found from the other end and fixed for holidays alone (D-047).
+
+**Smaller work:** Payroll Dashboard added under Reports (the route and its
+documentation already existed; only the menu entry was missing), and the menu
+fixed to stop landing a reload late; the wordmark enlarged and fenced; the
+harnesses stopped dirtying the demo they verify.
+
+### What was attempted and abandoned
+
+* **The AI features are dead.** The user asked for AI over a large dataset, chose
+  local Ollama models, and then asked for Ollama to be uninstalled — which was
+  the first action of this session. Nothing was built. The only remaining route
+  is the Anthropic API, which sends salary data off the machine, and that was
+  the exact thing local models were chosen to avoid.
+* **A negative net was reported as a bug and withdrawn.** A zero-gross payslip
+  produces net −₹200 because Professional Tax is fixed. The engine already
+  handles it: `NEGATIVE_NET` at ERROR severity, `can_validate` false,
+  `validate_payrun` refuses. Proven end to end rather than read off the code.
+* **The probe scripts were not committed.** The sweep, the invariants checker
+  and the edge-case runner were scratch. The two findings worth keeping became
+  real tests in `core/tests.py` and `accounts/tests.py`; the technique is
+  written up in the traps section of the next-session prompt.
+* **B-032 was left alone twice, deliberately** — two reads answer 400 for an
+  account with no employee record. Both UIs handle it correctly and the change
+  touches a demo path.
+
+### Verification at close
+
+231 backend tests (from 218), 28/28 rules, 53/53 API, 26/26 forms, and the
+permission audit clean across every cell plus 16 refusals, 6 preserved reads,
+read breadth, rank identity and row scoping. 2,499 fuzzed requests produced no
+crash and no anonymous leak. All 22 routes walked as Admin and as Employee with
+zero console errors.
+
+### Handoff
+
+Code merged to `main` at **`3c443c0`** ("merge: findings from a full testing
+pass") before packing; the working tree was clean at MEGATRON LAUNCH, so no
+`wip:` commit was needed. Context committed separately and tagged
+**`handoff-michael-07`**.
+
+**Next up: Franklin, session 08.** First action is **not** a feature. It is to
+seed, start both servers, sign in as `aarav@oxp.com`, and walk demo scenario A
+from A1 to A10 writing down the number actually on screen at each step — the
+script's figures are corrected but it has not been rehearsed since the
+permission model was rebuilt.

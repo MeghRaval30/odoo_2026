@@ -3,7 +3,7 @@
 Get from a fresh clone to a running, seeded app. **Verify every command here at
 each MEGATRON LAUNCH** — a stale runbook costs the next session its first hour.
 
-Last verified: **session 06 (Trevor), 2026-09-05 22:55 IST.** Every command below
+Last verified: **session 07 (Michael), 2026-09-06 00:55 IST.** Every command below
 was re-run in that session, including the frontend build and all five harnesses.
 
 > **Do not add `--noreload` to `runserver`** (B-016). Session 04 did, then spent
@@ -86,7 +86,7 @@ Serves on `http://127.0.0.1:8000`.
 | `john@oxp.com` | Employee | proves self-service scoping |
 
 `manage.py seed --flush` is idempotent and reproducible (`random.seed(360)`).
-It produces **22 employees · 24 contracts · 1746 attendance · 11 leave requests ·
+It produces **22 employees · 24 contracts · 1731 attendance · 11 leave requests ·
 4 payruns · 61 payslips · 976 lines · 6 warnings**, with December ₹14,73,360,
 January ₹14,82,320 and February ₹15,58,667.87. `core/tests.py` pins all of it, so
 a change that moves the demo's numbers fails there first.
@@ -132,7 +132,7 @@ cd project/backend
 ./.venv/Scripts/python.exe audit_permissions.py    # role matrix + row scoping
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test     # 218/218 — Django suite, 8 apps
+./.venv/Scripts/python.exe manage.py test     # 231/231 — Django suite, 8 apps
 ```
 
 The fourth drives real HTTP and **needs a live server in another terminal**:
@@ -198,3 +198,38 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/ \
 - Chained heredocs in one Bash call fail to parse (B-007). Use the Write tool,
   or a `.py` file for scripted edits.
 - `pdftotext` exists at `/mingw64/bin/pdftotext`; `pdftoppm` does not (B-003).
+
+
+---
+
+## Seed figures, as of session 07
+
+`manage.py seed --flush` is idempotent and reproducible (`random.seed(360)`).
+The figures below moved in session 07 when attendance began following each
+contract's working schedule (D-047). **December and January did not move**, so
+the demo's Dec < Jan < Feb evidence is unchanged.
+
+| | Value |
+|---|---|
+| Employees / contracts | 22 / 24 |
+| Attendance rows | **1731** (was 1746) |
+| Leave requests | 11 |
+| Payruns / payslips / lines / warnings | 4 / 61 / 976 / 6 |
+| December 2025 net | ₹14,73,360.00 |
+| January 2026 net | ₹14,82,320.00 |
+| **February 2026 net** | **₹15,58,320.41** (was ₹15,58,667.87) |
+| March 2026 (off-cycle) | ₹84,684.37, left `Computed` on purpose (D-033) |
+
+**The harnesses no longer dirty the demo** (D-046). `seed --flush` resets the
+security settings and network policies, and `audit_permissions.py` sweeps the
+probe records it creates. Running the full verification pass immediately before
+presenting is safe. After it, the state is 5 accounts, network enforcement off,
+sessions not IP-bound.
+
+### One trap worth knowing
+
+**Any login rotates that account's token.** `accounts/api.py:186` deletes every
+existing token for a user before issuing a new one, so an account holds exactly
+one live session. Running any harness signs out a browser logged in as one of
+the five demo accounts — which looks exactly like a session timeout and is not
+one. Two people cannot demo from the same account at the same time.
