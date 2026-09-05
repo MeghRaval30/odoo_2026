@@ -44,6 +44,27 @@ class UserSerializer(serializers.ModelSerializer):
                   "employee_work_email", "roles", "role_ids", "is_active",
                   "is_staff", "password"]
 
+    def validate_role_ids(self, roles):
+        """
+        One account, one role.
+
+        The link stays many-to-many and capabilities_for() still unions
+        whatever it is given, because the matrix has to behave correctly for
+        any set it is handed -- including rows that predate this rule. What
+        changed is the assignment path: an administrator picks a single role,
+        so an account's authority is legible from one word rather than
+        reconstructed from the union of several.
+
+        Enforced here rather than only in the form, because a hidden control
+        is not enforcement (PRD-3.1).
+        """
+        if len(roles) > 1:
+            names = ", ".join(r.name for r in roles)
+            raise serializers.ValidationError(
+                f"An account holds one role, not several. Choose one of: "
+                f"{names}.")
+        return roles
+
     def create(self, validated):
         password = validated.pop("password", None) or "demo1234"
         roles = validated.pop("roles", [])

@@ -1,10 +1,10 @@
 // User management (T-045, brought onto the capability matrix in T-104).
 //
 // The mockup's User Management screen: columns User · Employee · Work Email ·
-// Role · Status, with a search box and a role filter. Its access note is the
-// spec for the rest — accounts are created by an administrator, linked to an
-// employee, and assigned **one or more** roles, so roles are checkboxes and
-// never a single select.
+// Role · Status, with a search box and a role filter. Accounts are created by
+// an administrator, linked to an employee, and assigned **exactly one** role —
+// so these are radios, not checkboxes, and the server rejects a second role
+// rather than trusting the form to prevent it.
 //
 // Two things are deliberately not pre-empted client-side. Changing your own
 // roles and deactivating yourself are refused by the server, and the refusal
@@ -95,13 +95,12 @@ function UserForm({ id, onClose, onSaved }) {
       .catch((err) => setError(err.message));
   }, [id]);
 
-  const toggleRole = (roleId) =>
-    setForm((f) => ({
-      ...f,
-      role_ids: f.role_ids.includes(roleId)
-        ? f.role_ids.filter((r) => r !== roleId)
-        : [...f.role_ids, roleId],
-    }));
+  // One role per account: picking a role replaces the selection rather than
+  // adding to it. An account with no role at all is still reachable -- leave
+  // this untouched when creating one -- but there is no un-pick, because a
+  // radio that clears itself on a second click surprises everybody.
+  const chooseRole = (roleId) =>
+    setForm((f) => ({ ...f, role_ids: [roleId] }));
 
   const save = async () => {
     setBusy(true);
@@ -181,14 +180,15 @@ function UserForm({ id, onClose, onSaved }) {
         </select>
       </Field>
 
-      <Field label="Roles">
+      <Field label="Role">
         <div className="check-list">
           {refs.roles?.map((r) => (
             <label key={r.id} className="check">
               <input
-                type="checkbox"
+                type="radio"
+                name="user-role"
                 checked={form.role_ids.includes(r.id)}
-                onChange={() => toggleRole(r.id)}
+                onChange={() => chooseRole(r.id)}
               />
               <span>{r.name}</span>
             </label>

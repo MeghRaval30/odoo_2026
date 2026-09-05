@@ -921,6 +921,56 @@ class UserManagementTests(RoleFixtureMixin, APITestCase):
         cls.admin_role = cls.make_role(Role.ADMIN)
         cls.hr_role = cls.make_role(Role.HR_MANAGER)
 
+    def test_an_account_may_not_be_given_two_roles(self):
+        """
+        One account, one role.
+
+        The mockup's note allows "one or more" and the link is still
+        many-to-many, but an account whose authority has to be reconstructed by
+        unioning several rows is an account nobody can reason about at a
+        glance -- and this build's HR Manager and Payroll Manager are siblings,
+        so holding both is not a bigger role, it is both jobs at once.
+
+        Asserted against the API rather than the form: a screen that hides the
+        second checkbox has not enforced anything (PRD-3.1).
+        """
+        self.client.force_authenticate(user=self.admin)
+        before = User.objects.count()
+
+        response = self.client.post(reverse("user-list"), {
+            "email": "two.hats@example.com",
+            "role_ids": [self.admin_role.pk, self.hr_role.pk],
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("role_ids", response.data)
+        self.assertEqual(User.objects.count(), before)
+
+    def test_one_role_is_of_course_still_accepted(self):
+        """The cap is on the second role, not on assigning one at all."""
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.post(reverse("user-list"), {
+            "email": "one.hat@example.com",
+            "role_ids": [self.hr_role.pk],
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = User.objects.get(email="one.hat@example.com")
+        self.assertEqual(created.role_codes, {Role.HR_MANAGER})
+
+    def test_a_second_role_cannot_be_added_by_editing_either(self):
+        """Create is the obvious door; update is the one that gets forgotten."""
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.patch(
+            reverse("user-detail", args=[self.hr.pk]),
+            {"role_ids": [self.hr_role.pk, self.admin_role.pk]}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.hr.refresh_from_db()
+        self.assertEqual(self.hr.role_codes, {Role.HR_MANAGER})
+
     def test_no_non_admin_role_may_reach_user_management(self):
         for user in (self.employee, self.hr, self.payroll_user,
                      self.payroll_manager):
@@ -969,11 +1019,17 @@ class UserManagementTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(self.employee.role_codes, {Role.HR_MANAGER})
 
     def test_an_admin_may_not_modify_their_own_roles(self):
-        """`UserViewSet.perform_update` rejects the payload outright."""
+        """
+        `UserViewSet.perform_update` rejects the payload outright.
+
+        A single role in the payload on purpose: two would be refused a step
+        earlier by the one-role-per-account rule, and this test is about who
+        the change is aimed at, not how many roles it names.
+        """
         self.client.force_authenticate(user=self.admin)
         response = self.client.patch(
             reverse("user-detail", args=[self.admin.pk]),
-            {"role_ids": [self.hr_role.pk, self.admin_role.pk]}, format="json")
+            {"role_ids": [self.hr_role.pk]}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("roles", response.data)
