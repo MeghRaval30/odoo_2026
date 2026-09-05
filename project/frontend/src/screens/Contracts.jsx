@@ -15,6 +15,7 @@ import {
   PageHead,
   StateBadge,
   rows,
+  useDebounced,
   useResource,
 } from "../components/ui";
 
@@ -180,12 +181,13 @@ function ContractForm({ id, onClose, onSaved }) {
 export default function Contracts({ route }) {
   const [state, setState] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [editing, setEditing] = useState(undefined);
   const employeeFilter = route?.query?.employee || "";
 
   const contracts = useResource("/api/contracts/", {
     state,
-    search,
+    search: debouncedSearch,
     employee: employeeFilter,
     ordering: "-start_date",
     page_size: 200,

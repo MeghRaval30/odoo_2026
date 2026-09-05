@@ -15,6 +15,7 @@ import {
   PageHead,
   StateBadge,
   rows,
+  useDebounced,
   useResource,
 } from "../components/ui";
 
@@ -156,6 +157,7 @@ function RequestForm({ onClose, onSaved }) {
 export default function TimeOff({ route }) {
   const [state, setState] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [myTeam, setMyTeam] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
@@ -164,7 +166,7 @@ export default function TimeOff({ route }) {
 
   const requests = useResource("/api/timeoff-requests/", {
     state,
-    search,
+    search: debouncedSearch,
     my_team: myTeam ? 1 : "",
     employee: employeeFilter,
     ordering: "-date_from",

@@ -2,18 +2,19 @@
 
 import { useState } from "react";
 import { formatDate, money } from "../api";
-import { ErrorBox, Loading, PageHead, StateBadge, useResource } from "../components/ui";
+import { ErrorBox, Loading, PageHead, StateBadge, useDebounced, useResource } from "../components/ui";
 import { href, navigate } from "../lib/router";
 import PayslipDetail from "./PayslipDetail";
 
 export default function Payslips({ route }) {
   const id = route.parts[1];
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [department, setDepartment] = useState("");
   const [state, setState] = useState("");
   const departments = useResource("/api/departments/");
   const payslips = useResource("/api/payslips/", {
-    search,
+    search: debouncedSearch,
     state,
     employee__department: department,
     page_size: 200,
