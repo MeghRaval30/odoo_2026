@@ -198,6 +198,10 @@ function RuleForm({ id, onClose, onSaved }) {
     }
   };
 
+  // Save is already withheld below; this keeps the fields from
+  // looking editable and silently discarding what is typed into them.
+  const canWrite = auth.has("salaryconfig.write");
+
   return (
     <Modal
       title={id ? form.name || "Salary Rule" : "New Salary Rule"}
@@ -219,6 +223,10 @@ function RuleForm({ id, onClose, onSaved }) {
         </>
       }
     >
+      <fieldset
+        disabled={!canWrite}
+        style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}
+      >
       <ErrorBox error={error} />
 
       <Field label="Salary structure">
@@ -328,6 +336,7 @@ function RuleForm({ id, onClose, onSaved }) {
           <span>Active</span>
         </label>
       </div>
+      </fieldset>
     </Modal>
   );
 }

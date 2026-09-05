@@ -75,25 +75,39 @@ function HolidayForm({ id, onClose, onSaved }) {
     }
   };
 
+  // Rows are clickable, so a role with read access but no write access
+  // reaches this modal legitimately -- to look, not to change. Offering
+  // a Save the server would refuse is the mirror image of hiding a
+  // control it allows; both mislead about what the account can do.
+  const canWrite = auth.has("reference.write");
+
   return (
     <Modal
       title={id ? form.name || "Holiday" : "New Holiday"}
       onClose={onClose}
       footer={
-        <>
-          {id && (
-            <button className="danger" onClick={remove} disabled={busy}>
-              Delete
+        canWrite ? (
+          <>
+            {id && (
+              <button className="danger" onClick={remove} disabled={busy}>
+                Delete
+              </button>
+            )}
+            <div className="spacer" />
+            <button onClick={onClose}>Cancel</button>
+            <button className="primary" onClick={save} disabled={busy}>
+              {busy ? <span className="spinner" /> : "Save"}
             </button>
-          )}
-          <div className="spacer" />
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={save} disabled={busy}>
-            {busy ? <span className="spinner" /> : "Save"}
-          </button>
-        </>
+          </>
+        ) : (
+          <button onClick={onClose}>Close</button>
+        )
       }
     >
+      <fieldset
+        disabled={!canWrite}
+        style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}
+      >
       <ErrorBox error={error} />
       <Field label="Name">
         <input value={form.name} onChange={set("name")} />
@@ -110,6 +124,7 @@ function HolidayForm({ id, onClose, onSaved }) {
           ))}
         </select>
       </Field>
+      </fieldset>
     </Modal>
   );
 }

@@ -134,18 +134,27 @@ function EmployeeForm({ id, onClose, onSaved }) {
     )),
   ];
 
+  // A read-only role still opens this -- clicking a row to read someone's
+  // record is the job. What it must not get is a Save button that the server
+  // would refuse, or fields that look editable and silently discard typing.
+  const canWrite = auth.has("employee.write");
+
   return (
     <Modal
       wide
       title={id ? detail?.full_name || "Employee" : "New Employee"}
       onClose={onClose}
       footer={
-        <>
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={save} disabled={busy}>
-            {busy ? <span className="spinner" /> : "Save"}
-          </button>
-        </>
+        canWrite ? (
+          <>
+            <button onClick={onClose}>Cancel</button>
+            <button className="primary" onClick={save} disabled={busy}>
+              {busy ? <span className="spinner" /> : "Save"}
+            </button>
+          </>
+        ) : (
+          <button onClick={onClose}>Close</button>
+        )
       }
     >
       <ErrorBox error={error} />
@@ -171,6 +180,10 @@ function EmployeeForm({ id, onClose, onSaved }) {
         </div>
       )}
 
+      <fieldset
+        disabled={!canWrite}
+        style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}
+      >
       <div className="tabs">
         {[
           ["work", "Work Information"],
@@ -323,6 +336,7 @@ function EmployeeForm({ id, onClose, onSaved }) {
           </Field>
         </>
       )}
+      </fieldset>
     </Modal>
   );
 }

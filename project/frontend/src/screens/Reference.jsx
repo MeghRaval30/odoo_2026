@@ -71,19 +71,33 @@ function ReferenceForm({ title, path, fields, id, onClose, onSaved }) {
     }
   };
 
+  // Rows are clickable, so a role with read access but no write access
+  // reaches this modal legitimately -- to look, not to change. Offering
+  // a Save the server would refuse is the mirror image of hiding a
+  // control it allows; both mislead about what the account can do.
+  const canWrite = auth.has("reference.write");
+
   return (
     <Modal
       title={id ? title : `New ${title}`}
       onClose={onClose}
       footer={
-        <>
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={save} disabled={busy}>
-            {busy ? <span className="spinner" /> : "Save"}
-          </button>
-        </>
+        canWrite ? (
+          <>
+            <button onClick={onClose}>Cancel</button>
+            <button className="primary" onClick={save} disabled={busy}>
+              {busy ? <span className="spinner" /> : "Save"}
+            </button>
+          </>
+        ) : (
+          <button onClick={onClose}>Close</button>
+        )
       }
     >
+      <fieldset
+        disabled={!canWrite}
+        style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}
+      >
       <ErrorBox error={error} />
       {fields.map((f) => (
         <Field key={f.key} label={f.label}>
@@ -113,6 +127,7 @@ function ReferenceForm({ title, path, fields, id, onClose, onSaved }) {
           )}
         </Field>
       ))}
+      </fieldset>
     </Modal>
   );
 }
