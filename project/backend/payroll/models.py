@@ -225,8 +225,16 @@ class Payslip(TimeStampedModel):
     # -- derived from lines (PRD-4.4.8) -------------------------------------
 
     def _category_total(self, category):
-        return self.lines.filter(category=category).aggregate(
-            t=Coalesce(Sum("amount"), ZERO))["t"]
+        """
+        Employee-side total for a category.
+
+        Employer contributions are excluded: they are a cost to the company,
+        not money the employee receives or forfeits, so they must never move
+        gross or net.
+        """
+        return self.lines.filter(
+            category=category, is_employer_cost=False
+        ).aggregate(t=Coalesce(Sum("amount"), ZERO))["t"]
 
     @property
     def basic(self):
@@ -249,6 +257,22 @@ class Payslip(TimeStampedModel):
     def net(self):
         total = self._category_total(SalaryRule.NET)
         return total if total else self.gross - self.deductions
+
+    @property
+    def employer_cost(self):
+        """Total employer contributions — the company-side half of CTC."""
+        return self.lines.filter(is_employer_cost=True).aggregate(
+            t=Coalesce(Sum("amount"), ZERO))["t"]
+
+    @property
+    def ctc(self):
+        """Cost to company: what the employee earns plus what we pay on top."""
+        return self.gross + self.employer_cost
+
+    @property
+    def visible_lines(self):
+        """Lines to print. A rule may compute without appearing on the slip."""
+        return self.lines.filter(appears_on_payslip=True)
 
     @property
     def has_warnings(self):
@@ -275,6 +299,11 @@ class PayslipLine(models.Model):
                                    default=Decimal("1.00"))
     rate = models.DecimalField(max_digits=12, decimal_places=2, default=ZERO)
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=ZERO)
+
+    # Snapshotted from the rule alongside name/code/category, so a payslip
+    # keeps reading correctly if the rule's flags are changed afterwards.
+    is_employer_cost = models.BooleanField(default=False)
+    appears_on_payslip = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["sequence", "id"]
