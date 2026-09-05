@@ -6,6 +6,30 @@ was taken from the seeded database and the frontend source, not from memory.
 **Notation:** `Menu ▾ → Item` is the top bar · `[Button]` is a button you click ·
 `Field` = `value` is something you type or select · *Column* is a table heading.
 
+> ### ✅ Rehearsed against the running app — session 04, 2026-09-05
+>
+> Scenario B was walked click by click in a browser and **every claim holds**:
+> the Comp Off refusal fires with the server's exact wording, the balance table
+> reads 20 / 0 / 20, approving Priya's 08 Mar row moves her allocation to
+> **20 / 2 / 18**, and Audrey sits at 20 / 3 / 17 throughout.
+>
+> Scenario A's data was verified against the database: John Dsouza is
+> `EMP/2025/0003` with smart buttons **2 · 35 · 1 · 1**, his two contracts are
+> `CON/2025/0003` (₹1,03,000, Expired) and `CON/2026/0002` (₹1,10,000, Running),
+> a March period resolves the January contract and a December period resolves
+> the July one, and the two bank-account warnings are Anita Oliver and Meera Iyer.
+>
+> **One bug was found and fixed during the rehearsal:** switching the type at B3
+> used to leave the Comp Off refusal on screen above the balance table. It now
+> clears on any field change.
+>
+> The earlier worry that B5's "Taken two, Remaining eighteen" was wrong is
+> **unfounded** — B4 approves the March row first, which is what moves the
+> balance. Do not skip B4.
+>
+> **Reseed before presenting** (`manage.py seed --flush`) — the rehearsal
+> approved a request, and the seed restores Priya to 20 / 0 / 20.
+
 ---
 
 ## Time budget — it adds to 5:00
