@@ -125,13 +125,51 @@ for name, path, body in CASES:
         print("  FAIL  %-18s %s  %s" % (name, status, payload))
         failures.append((name, status, payload))
 
+# ---------------------------------------------------------------- updates
+#
+# Edit forms round-trip the record they loaded, so they send back read-only and
+# display fields the serializer never asked for. Patch each created record with
+# a realistic edit to catch anything the write path rejects.
+
+EDITS = {
+    "/api/employees/": {"work_phone": "+91 9000000000"},
+    "/api/contracts/": {"wage": "51000"},
+    "/api/working-schedules/": {"name": "Probe Schedule Renamed"},
+    "/api/attendance/": {"status": "OVERTIME", "notes": "corrected"},
+    "/api/timeoff-types/": {"requires_allocation": True},
+    "/api/allocations/": {"allocated": "7"},
+    "/api/salary-rules/": {"sequence": 998},
+    "/api/holidays/": {"name": "Probe Holiday Renamed"},
+    "/api/departments/": {"name": "Probe Dept Renamed"},
+    "/api/job-positions/": {"name": "Probe Position Renamed"},
+    "/api/work-locations/": {"name": "Probe Location Renamed"},
+    "/api/users/": {"is_active": False},
+}
+
+print()
+edit_failures = []
+for path, pk in created:
+    body = EDITS.get(path)
+    if body is None:
+        continue
+    status, payload = call("PATCH", "%s%s/" % (path, pk), token, body)
+    name = path.strip("/").split("/")[-1]
+    if status in (200, 201):
+        print("  PASS  %-18s PATCH %s" % (name, status))
+    else:
+        print("  FAIL  %-18s PATCH %s  %s" % (name, status, payload))
+        edit_failures.append((name, status, payload))
+
 print()
 for path, pk in reversed(created):
     call("DELETE", "%s%s/" % (path, pk), token)
 print("cleaned up %d record(s)" % len(created))
 
+total = len(CASES) + len(EDITS)
+passed = total - len(failures) - len(edit_failures)
+
 print()
 print("=" * 60)
-print("  %d/%d create endpoints accept the UI payload" %
-      (len(CASES) - len(failures), len(CASES)))
+print("  %d/%d create and update endpoints accept the UI payload" %
+      (passed, total))
 print("=" * 60)
