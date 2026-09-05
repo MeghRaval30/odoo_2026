@@ -8,10 +8,16 @@ Targets deliberately chosen so the demo script works:
   - 3 months of payroll history for the trend chart
   - mixed leave, both allocation-required and not
 
-Usage:  python manage.py seed [--flush]
+A larger roster can be generated on top of that with `--employees N`. The 22
+demo people are always seeded first and are never touched, so the demo script
+stays true at any headcount; everything above 22 is generated and written with
+`bulk_create`.
+
+Usage:  python manage.py seed [--flush] [--employees N]
 """
 
 import random
+import time as time_module
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -36,6 +42,11 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--flush", action="store_true",
                             help="Delete existing data first")
+        parser.add_argument("--employees", type=int, default=None, metavar="N",
+                            help="Total headcount to seed. The 22-person demo "
+                                 "roster is always created first and kept "
+                                 "intact; anything above 22 is generated. "
+                                 "Default: 22.")
 
     @transaction.atomic
     def handle(self, *args, **opts):
@@ -64,6 +75,9 @@ class Command(BaseCommand):
         employees = self._employees(company, departments, positions,
                                     locations, schedules)
         self._contracts(employees, schedules, structures)
+        employees += self._generated_roster(
+            company, departments, positions, locations, schedules, structures,
+            target=opts.get("employees") or len(self.ROSTER))
         self._users(employees, roles)
         self._timeoff(employees)
         self._attendance(employees)
@@ -322,6 +336,197 @@ class Command(BaseCommand):
         self.stdout.write(f"  contracts: {created} "
                           f"(2 employees have contract history)")
 
+    # ------------------------------------------------- generated roster (T-089)
+
+    #: Names for the generated roster. Paired with a running index in the work
+    #: email, so a collision between two generated people is impossible however
+    #: large N gets.
+    GEN_FIRST = [
+        "Aditya", "Akash", "Ameya", "Ananya", "Anjali", "Ansh", "Arnav",
+        "Aryan", "Bhavna", "Chirag", "Deepa", "Dhruv", "Farhan", "Gaurav",
+        "Harsha", "Imran", "Ira", "Jatin", "Kavya", "Kabir", "Lakshmi",
+        "Manish", "Mitali", "Naveen", "Nikita", "Omkar", "Pallavi", "Pranav",
+        "Rachana", "Raghav", "Ritika", "Sahil", "Sanya", "Shreya", "Siddharth",
+        "Tarun", "Trisha", "Uday", "Varun", "Yash", "Zoya", "Nandini",
+    ]
+    GEN_LAST = [
+        "Agarwal", "Banerjee", "Chandra", "Chauhan", "Desai", "Dutta", "Ghosh",
+        "Hegde", "Jain", "Kulkarni", "Menon", "Mishra", "Naidu", "Pillai",
+        "Prasad", "Ranganathan", "Sethi", "Shetty", "Sinha", "Sridhar",
+        "Thakur", "Trivedi", "Vaidya", "Venkatesan", "Yadav", "Chopra",
+    ]
+
+    #: Position -> (department, base monthly wage). Generated wages jitter
+    #: around the base so department totals on the dashboard stay plausible.
+    GEN_POSITIONS = [
+        ("Developer", "Engineering", 105000),
+        ("QA Engineer", "Engineering", 84000),
+        ("System Admin", "IT", 94000),
+        ("Support Engineer", "IT", 68000),
+        ("Sales Executive", "Sales", 73000),
+        ("Account Manager", "Sales", 88000),
+        ("Accountant", "Finance", 76000),
+        ("Payroll Specialist", "Finance", 82000),
+        ("HR Officer", "HR", 79000),
+        ("Recruiter", "HR", 72000),
+    ]
+
+    #: A leaver's contract closes here — the last day of the newest seeded
+    #: payrun period. Every historical payrun still resolves a contract for
+    #: them, so the seeded history validates; a payrun for March or later
+    #: raises NO_CONTRACT, which is what makes the check demonstrable.
+    LEAVER_END = date(2026, 2, 28)
+
+    def _sequencer(self, model, field, prefix):
+        """
+        Hand back a `next(year) -> 'PREFIX/YYYY/NNNN'` callable.
+
+        `Employee.save` and `Contract.save` mint these references themselves,
+        but `bulk_create` does not call `save`, so the generated rows have to
+        carry their own. Counters start above whatever is already in the table
+        so the fixed roster's codes — which the demo script quotes — are never
+        reused or shifted.
+        """
+        highest = {}
+        for value in model.objects.values_list(field, flat=True):
+            try:
+                _, year, seq = value.split("/")
+                highest[year] = max(highest.get(year, 0), int(seq))
+            except (ValueError, AttributeError):
+                continue
+
+        def mint(year):
+            key = str(year)
+            highest[key] = highest.get(key, 0) + 1
+            return f"{prefix}/{key}/{highest[key]:04d}"
+
+        return mint
+
+    def _generated_roster(self, company, departments, positions, locations,
+                          schedules, structures, target):
+        """
+        Grow the roster to `target` people (T-089).
+
+        The 22 fixed demo employees are already in the database and are left
+        exactly as they are. Everything here is appended after them, so the
+        random stream the fixed roster drew from is untouched and a default
+        seed is byte-for-byte what it always was.
+        """
+        extra = target - len(self.ROSTER)
+        if extra <= 0:
+            return []
+
+        emp_code = self._sequencer(Employee, "employee_code", "EMP")
+        con_ref = self._sequencer(Contract, "reference", "CON")
+
+        rows, plans = [], []
+        for i in range(extra):
+            first = random.choice(self.GEN_FIRST)
+            last = random.choice(self.GEN_LAST)
+            title, dept, base = random.choice(self.GEN_POSITIONS)
+
+            roll = random.random()
+            if roll < 0.05:
+                etype, schedule = "INTERN", schedules["Flexible Hybrid"]
+            elif roll < 0.12:
+                etype, schedule = "PART_TIME", schedules["Part-time 20h"]
+            else:
+                etype, schedule = "FULL_TIME", schedules["40 Hours / Week"]
+
+            # Four contract shapes, in the proportions a real roster has.
+            shape = random.random()
+            if shape < 0.04:
+                profile = "JOINER"      # starts mid-period — proration
+            elif shape < 0.07:
+                profile = "LEAVER"      # contract closes 28 Feb 2026
+            elif shape < 0.18:
+                profile = "RAISE"       # expired + running pair
+            else:
+                profile = "STANDARD"
+
+            if profile == "JOINER":
+                joined = date(2026, 2, 1) + timedelta(days=random.randint(8, 45))
+            else:
+                joined = date(2023, 1, 2) + timedelta(days=random.randint(0, 1060))
+
+            wage = D(base if etype == "FULL_TIME"
+                     else int(base * 0.55) if etype == "PART_TIME"
+                     else 25000)
+            wage += D(random.randrange(-6, 9) * 1000)
+
+            has_bank = random.random() >= 0.05
+
+            rows.append(Employee(
+                employee_code=emp_code(joined.year),
+                first_name=first, last_name=last, company=company,
+                department=departments[dept], job_position=positions[title],
+                work_location=random.choice(locations),
+                working_schedule=schedule, employee_type=etype,
+                date_of_joining=joined,
+                work_email=f"{first}.{last}.{i + 1}@oxp.com".lower(),
+                work_phone=f"+91 98{random.randint(10000000, 99999999)}",
+                bank_account_number=(f"5011{random.randint(10**9, 10**10 - 1)}"
+                                     if has_bank else None),
+                bank_ifsc="HDFC0001234" if has_bank else None,
+                pan_number=f"ABCDE{random.randint(1000, 9999)}F",
+            ))
+            plans.append((profile, joined, wage, etype, schedule, dept, title))
+
+        Employee.objects.bulk_create(rows, batch_size=500)
+
+        structure_for = {"INTERN": structures["intern"]}
+        contracts, counts = [], {"JOINER": 0, "LEAVER": 0,
+                                 "RAISE": 0, "STANDARD": 0}
+
+        for emp, (profile, joined, wage, etype, schedule, dept, title) in zip(rows, plans):
+            counts[profile] += 1
+            common = {
+                "working_schedule": schedule,
+                "salary_structure": structure_for.get(etype, structures["regular"]),
+                "department": departments[dept],
+                "job_position": positions[title],
+            }
+            # Attendance is only meaningful while somebody is actually employed.
+            emp._attend_from = joined
+            emp._attend_to = None
+
+            if profile == "RAISE":
+                # The raise lands on 01 Jan 2026, so December resolves the old
+                # contract and January the new one — graded rule #1 at scale.
+                contracts.append(Contract(
+                    employee=emp, reference=con_ref(joined.year),
+                    start_date=joined, end_date=date(2025, 12, 31),
+                    wage=wage - D("7000"), state=Contract.EXPIRED, **common))
+                contracts.append(Contract(
+                    employee=emp, reference=con_ref(2026),
+                    start_date=date(2026, 1, 1), end_date=None,
+                    wage=wage, state=Contract.RUNNING, **common))
+            elif profile == "LEAVER":
+                emp._attend_to = self.LEAVER_END
+                contracts.append(Contract(
+                    employee=emp, reference=con_ref(joined.year),
+                    start_date=joined, end_date=self.LEAVER_END,
+                    wage=wage, state=Contract.EXPIRED, **common))
+            else:
+                contracts.append(Contract(
+                    employee=emp, reference=con_ref(joined.year),
+                    start_date=joined, end_date=None,
+                    wage=wage, state=Contract.RUNNING, **common))
+
+        Contract.objects.bulk_create(contracts, batch_size=500)
+
+        # Everyone reports to the HR manager, matching the fixed roster.
+        Employee.objects.filter(pk__in=[e.pk for e in rows]).update(
+            manager=Employee.objects.get(work_email="sara@oxp.com"))
+
+        no_bank = sum(1 for e in rows if not e.has_bank_details)
+        self.stdout.write(
+            f"  generated: {len(rows)} employees, {len(contracts)} contracts "
+            f"({counts['RAISE']} with a raise, {counts['JOINER']} mid-period "
+            f"joiners, {counts['LEAVER']} leavers, {no_bank} without a bank "
+            f"account)")
+        return rows
+
     def _users(self, employees, roles):
         accounts = [
             ("admin@oxp.com", None, [Role.ADMIN]),
@@ -359,16 +564,21 @@ class Command(BaseCommand):
                                    f"{'Balance comes from approved allocations.' if req_alloc else 'No allocation required.'}",
                 })
 
-        for emp in employees:
-            Allocation.objects.get_or_create(
+        # One allocation each, written in bulk — at 250 employees the
+        # row-at-a-time get_or_create this replaced was 250 round trips.
+        already = set(Allocation.objects
+                      .filter(time_off_type=types["PTO"],
+                              valid_from=date(2026, 1, 1))
+                      .values_list("employee_id", flat=True))
+        Allocation.objects.bulk_create([
+            Allocation(
                 employee=emp, time_off_type=types["PTO"],
-                valid_from=date(2026, 1, 1),
-                defaults={
-                    "name": "Paid Time Off 2026", "allocated": D("20"),
-                    "valid_to": date(2026, 12, 31),
-                    "state": Allocation.APPROVED,
-                    "description": "Annual leave balance granted at start of policy year.",
-                })
+                valid_from=date(2026, 1, 1), name="Paid Time Off 2026",
+                allocated=D("20"), valid_to=date(2026, 12, 31),
+                state=Allocation.APPROVED,
+                description="Annual leave balance granted at start of policy year.")
+            for emp in employees if emp.pk not in already
+        ], batch_size=500)
 
         # A spread of requests, approved and pending
         for i, emp in enumerate(employees[:10]):
@@ -421,14 +631,23 @@ class Command(BaseCommand):
 
     def _attendance(self, employees):
         made = 0
+        rows = []
         span = (self.ATTENDANCE_TO - self.ATTENDANCE_FROM).days + 1
         # Nobody is at their desk on a company holiday. Generating attendance
         # on them made worked days exceed expected days — January read 22 of 21.
         holidays = set(Holiday.objects.values_list("date", flat=True))
         for emp in employees:
+            # Generated joiners and leavers are only at work while employed.
+            # The fixed roster carries neither attribute, so it is unaffected.
+            attend_from = getattr(emp, "_attend_from", None)
+            attend_to = getattr(emp, "_attend_to", None)
             for offset in range(span):
                 day = self.ATTENDANCE_FROM + timedelta(days=offset)
                 if day.weekday() >= 5 or day in holidays:
+                    continue
+                if attend_from and day < attend_from:
+                    continue
+                if attend_to and day > attend_to:
                     continue
                 if random.random() < 0.07:      # absence
                     continue
@@ -442,11 +661,15 @@ class Command(BaseCommand):
                 ci = timezone.make_aware(datetime.combine(day, time(9, start_m)))
                 co = ci + timedelta(hours=worked)
                 overtime = D(str(round(max(0.0, worked - 8.5), 2)))
-                Attendance.objects.create(
+                rows.append(Attendance(
                     employee=emp, check_in=ci, check_out=co,
                     status=Attendance.OVERTIME if overtime > 0 else Attendance.PRESENT,
-                    overtime_hours=overtime)
+                    overtime_hours=overtime))
                 made += 1
+
+        # ~87 working days per person: at 250 employees this is over 20,000
+        # rows, which is unusable one INSERT at a time.
+        Attendance.objects.bulk_create(rows, batch_size=2000)
         self.stdout.write(
             f"  attendance: {made} records, "
             f"{self.ATTENDANCE_FROM:%b %Y} - {self.ATTENDANCE_TO:%b %Y} "
@@ -467,16 +690,26 @@ class Command(BaseCommand):
                           "period_start": start, "period_end": end})
             if not created:
                 continue
-            eligible = [e for e in employees if e.employee_type != "INTERN"]
+            # Somebody who had not joined yet, or had already left, has no
+            # contract for the period. Including them would raise a NO_CONTRACT
+            # error, and an errored payrun cannot be validated — the seeded
+            # history would then sit at Computed instead of Paid. A payrun the
+            # operator creates for March still meets them, which is the point.
+            eligible = [e for e in employees
+                        if e.employee_type != "INTERN"
+                        and e.contract_for_period(start, end) is not None]
+            began = time_module.perf_counter()
             engine.create_payrun_payslips(payrun, eligible)
             engine.compute_payrun(payrun)
+            elapsed = time_module.perf_counter() - began
             if payrun.can_validate:
                 engine.validate_payrun(payrun)
                 engine.mark_payrun_paid(payrun)
             self.stdout.write(
                 f"  payrun {name}: {payrun.payslip_count} payslips, "
                 f"net INR {payrun.total_net:,.2f}, "
-                f"{payrun.warning_count} warnings, state={payrun.state}")
+                f"{payrun.warning_count} warnings, state={payrun.state}, "
+                f"computed in {elapsed:.2f}s")
 
     # ----------------------------------------------------------------- report
 
