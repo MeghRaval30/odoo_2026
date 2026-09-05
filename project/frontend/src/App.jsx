@@ -12,6 +12,7 @@ import Login from "./screens/Login";
 import Payruns from "./screens/Payruns";
 import Payslips from "./screens/Payslips";
 import { Departments, JobPositions, WorkLocations } from "./screens/Reference";
+import Reports from "./screens/Reports";
 import { SalaryRules, SalaryStructures } from "./screens/SalaryConfig";
 import Schedules from "./screens/Schedules";
 import TimeOff from "./screens/TimeOff";
@@ -37,6 +38,7 @@ const SCREENS = {
   "job-positions": JobPositions,
   "work-locations": WorkLocations,
   holidays: Holidays,
+  reports: Reports,
   users: Users,
 };
 
