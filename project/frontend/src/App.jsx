@@ -1,122 +1,101 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+// Application root: hash routing, auth gate, and the screen table.
+//
+// Screens not yet built render a Placeholder rather than 404ing, so the top bar
+// is fully explorable during the demo and the next session can see at a glance
+// what is still outstanding.
 
-function App() {
-  const [count, setCount] = useState(0)
+import { useEffect } from "react";
+import Shell from "./components/Shell";
+import Dashboard from "./screens/Dashboard";
+import Login from "./screens/Login";
+import { auth } from "./api";
+import { navigate, useHashRoute } from "./lib/router";
 
+function Placeholder({ title, task }) {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="page">
+      <div className="page-head">
+        <h1>{title}</h1>
+        <span className="sub">{task}</span>
+      </div>
+      <div className="card">
+        <div className="empty">
+          This screen is not built yet.
+          <div className="tiny mt">
+            The API behind it already works — see the task board for {task}.
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </div>
+    </div>
+  );
 }
 
-export default App
+const SCREENS = {
+  dashboard: { title: "Payroll Dashboard", component: Dashboard },
+  employees: { title: "Employees", task: "T-033" },
+  contracts: { title: "Contracts", task: "T-034" },
+  schedules: { title: "Working Schedules", task: "T-035" },
+  attendance: { title: "Attendance", task: "T-036" },
+  timeoff: { title: "Time Off Requests", task: "T-038" },
+  allocations: { title: "Allocations", task: "T-038" },
+  "timeoff-types": { title: "Time Off Types", task: "T-038" },
+  payroll: { title: "Payruns", task: "T-041 / T-042" },
+  payslips: { title: "Payslips", task: "T-043" },
+  "salary-structures": { title: "Salary Structures", task: "T-040" },
+  "salary-rules": { title: "Salary Rules", task: "T-040" },
+  departments: { title: "Departments", task: "T-033" },
+  "job-positions": { title: "Job Positions", task: "T-033" },
+  "work-locations": { title: "Work Locations", task: "T-033" },
+  users: { title: "User Management", task: "T-045" },
+};
+
+export default function App() {
+  const route = useHashRoute();
+  const signedIn = Boolean(auth.token);
+  const head = route.parts[0] || "";
+
+  // Redirects live in an effect so they happen after render rather than
+  // mutating location during it.
+  useEffect(() => {
+    if (!signedIn && head !== "login") {
+      navigate("/login");
+    } else if (signedIn && (head === "login" || head === "")) {
+      navigate("/dashboard");
+    }
+  }, [signedIn, head]);
+
+  if (head === "login") return <Login />;
+
+  if (!signedIn) {
+    return (
+      <div className="login-wrap">
+        <span className="spinner" />
+      </div>
+    );
+  }
+
+  const screen = SCREENS[head];
+
+  return (
+    <Shell route={route}>
+      {screen ? (
+        screen.component ? (
+          <screen.component route={route} />
+        ) : (
+          <Placeholder title={screen.title} task={screen.task} />
+        )
+      ) : (
+        <div className="page">
+          <div className="card">
+            <div className="empty">
+              Nothing here.
+              <div className="tiny mt">
+                <a href="#/dashboard">Go to the dashboard</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </Shell>
+  );
+}
