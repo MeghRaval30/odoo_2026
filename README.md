@@ -34,17 +34,18 @@ On Linux or macOS use `.venv/bin/python` in place of `./.venv/Scripts/python.exe
 
 ### Verify it works
 
-Three of the four need nothing but the virtualenv:
+Four of the five need nothing but the virtualenv:
 
 ```bash
 cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py        # 28/28 — business rules
 ./.venv/Scripts/python.exe smoke_api.py           # 51/51 — HTTP layer
+./.venv/Scripts/python.exe audit_permissions.py   # every cell matches PRD 3.2
 ./.venv/Scripts/python.exe manage.py seed --flush # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test         # 158/158 — Django suite, 7 apps
+./.venv/Scripts/python.exe manage.py test         # 173/173 — Django suite, 7 apps
 ```
 
-The fourth drives real HTTP, so it needs the server running in another terminal:
+The fifth drives real HTTP, so it needs the server running in another terminal:
 
 ```bash
 ./.venv/Scripts/python.exe manage.py runserver    # terminal 1
@@ -60,9 +61,13 @@ harnesses could not see, because they construct their own correct payloads — a
 a fifth once its coverage was completed, on the one create form it had been
 missing. It deletes everything it creates.
 
+`audit_permissions.py` walks every role against the PRD 3.2 permission matrix and
+reports each cell as OK, LEAK or BLOCK. It exits non-zero if any cell disagrees.
+
 `smoke_api.py` writes to the development database and leaves an
 `April 2026 (smoke)` payrun behind. Re-run `seed --flush` before demoing.
-`manage.py test` does not have this problem — it uses a throwaway database.
+`manage.py test` and `audit_permissions.py` do not have this problem — they use
+Django's test client against a throwaway database.
 
 ---
 
