@@ -1,66 +1,137 @@
-# PeoplePay360 — HR & Payroll
+# PeoplePay360
 
-An integrated Human Resource and Payroll Operations Platform.
-Built for the **Odoo Hackathon 2026** (24 hours).
+Integrated HR & Payroll Operations Platform. Odoo hackathon, 24 hours.
+
+Employee records, contracts, working schedules, attendance and time off feed a
+sequenced salary-rule engine that produces payslips, PDFs and a live payroll
+dashboard. The point is the connections between those records, not the CRUD
+screens around them.
 
 ---
 
-## The problem
+## Run it
 
-Most basic HR tools store employee details, attendance, leave and salary as
-*separate* records. Real HR and payroll teams need those records to work
-together — an employee has multiple contracts over time but payroll must use the
-one valid for the period; working hours come from an assigned schedule; leave
-balances depend on allocations and approved requests; and all of it has to
-resolve into a correct, explainable payslip.
+Two terminals. Backend first.
 
-PeoplePay360 is built as a **connected operational flow**, not a set of CRUD
-screens.
-
+```bash
+cd project/backend
+python -m venv .venv
+./.venv/Scripts/python.exe -m pip install -r requirements.txt
+./.venv/Scripts/python.exe manage.py migrate
+./.venv/Scripts/python.exe manage.py seed --flush
+./.venv/Scripts/python.exe manage.py runserver
 ```
-Employee ──┬── Contract (period-scoped) ──── wage, salary structure
-           ├── Working Schedule ──────────── expected hours
-           ├── Attendance ────────────────── actual worked hours
-           └── Time Off (Allocation → Request) ── leave balance
-                              ↓
-              Salary Structure → ordered Salary Rules
-                              ↓
-              Payrun → Payslips → PDF → Email
-                              ↓
-                   Payroll Dashboard (live aggregate)
+
+```bash
+cd project/frontend
+npm install
+npm run dev
 ```
+
+Open http://localhost:5173. Sign in as `admin@oxp.com` / `demo1234`.
+
+On Linux or macOS use `.venv/bin/python` in place of `./.venv/Scripts/python.exe`.
+
+### Verify it works
+
+```bash
+cd project/backend
+./.venv/Scripts/python.exe verify_rules.py   # 28/28 — business rules
+./.venv/Scripts/python.exe smoke_api.py      # 51/51 — HTTP layer
+```
+
+`smoke_api.py` writes to the development database and leaves an
+`April 2026 (smoke)` payrun behind. Re-run `seed --flush` before demoing.
+
+---
+
+## Demo accounts
+
+All use the password `demo1234`. The login screen has one-click chips for each.
+
+| Email | Role | Sees |
+|---|---|---|
+| `admin@oxp.com` | Admin | Everything, plus user management |
+| `aarav@oxp.com` | Payroll Manager | Payroll, structures and rules |
+| `sara@oxp.com` | HR Manager | HR data, leave approval |
+| `rahul@oxp.com` | Payroll User | Payroll, structures read-only |
+| `john@oxp.com` | Employee | Own records and the check-in widget |
+
+Roles are enforced server-side. Signing in as the Employee removes the Payroll
+menu because the API refuses those endpoints, not because the UI hides them.
+
+---
+
+## The five graded business rules
+
+1. **Period-based contract resolution.** Payroll resolves the contract covering
+   the payrun period, not the newest one. Expired contracts still govern the
+   period they covered. Two `RUNNING` contracts may not overlap.
+2. **Derived weekly hours.** Computed from the schedule's day lines. There is no
+   weekly-hours input anywhere in the UI.
+3. **Allocation-gated leave.** A type marked *requires allocation* refuses
+   requests that no approved allocation covers.
+   `Remaining = Allocated − Taken`, both derived.
+4. **Sequenced salary rules.** Rules execute in `sequence` order, each result
+   visible to later rules. Gross and Net are read from the payslip lines, never
+   stored.
+5. **Pre-finalization warnings.** Missing bank account, duplicate payslip, no
+   contract, negative net and no structure all surface before Validate.
+
+Plus three integrations: attendance drives worked days and Loss of Pay, overtime
+is paid through a rule, and unpaid leave deducts.
+
+### The seed proves the numbers are live
+
+| Period | Net | Why it matters |
+|---|---|---|
+| Dec 2025 | ₹14,73,360 | Lower than January — two employees resolve to older, cheaper contracts |
+| Jan 2026 | ₹14,82,320 | |
+| Feb 2026 | ₹15,63,028 | Higher — February overtime reached payroll |
+
+Filtering the dashboard to Engineering alone drops February to ₹5,03,998.
+Changing Period or Department re-drives every card on the screen.
+
+---
 
 ## Stack
 
-React · Django + Django REST Framework · PostgreSQL
+React 19 + Vite, Django 6.1 + DRF 3.18, SQLite.
+
+SQLite rather than PostgreSQL is a deliberate decision — neither Postgres nor
+Docker is installed on the build machine. `DATABASE_URL` switches engines.
+
+```
+project/backend/
+  config/      settings, urls, pagination
+  core/        Company, Department, JobPosition, WorkLocation, Holiday
+  accounts/    User, Role, permission classes
+  employees/   WorkingSchedule, ScheduleLine, Employee, Contract
+  attendance/  Attendance + check-in widget endpoints
+  timeoff/     TimeOffType, Allocation, TimeOffRequest
+  payroll/     models, engine, pdf, mail, api
+  dashboard/   aggregation only, no models
+
+project/frontend/src/
+  api.js       client, token auth, error flattening, formatters
+  index.css    design system
+  lib/         hash router
+  components/  shell, attendance widget, shared primitives
+  screens/     one file per screen
+```
+
+Money is `Decimal` everywhere. Derived values are Python properties, not
+columns — schedule hours, attendance worked hours, allocation balance, payslip
+gross/net/worked days/LOP/overtime, and the employee smart-button counts.
+
+---
 
 ## Repository layout
 
-| Path | Contents |
-|---|---|
-| `project/` | The application — backend and frontend |
-| `claude/` | Project context, specification, PRD, task board and handoff notes |
-| `claude/source/` | The original problem statement PDF and mockups |
-| `CLAUDE.md` | Boot instructions for AI sessions working on this repo |
+`project/` is the product. `claude/` is the build's working memory — the
+problem statement, spec, PRD, data model, decisions, task board and the handoff
+briefings that carry context between sessions. `claude/source/` holds the
+untouched originals.
 
-## Getting started
-
-See [`claude/state/runbook.md`](claude/state/runbook.md) for setup, run, seed and
-test instructions.
-
-## Documentation
-
-| Document | |
-|---|---|
-| [Problem statement](claude/context/problem-statement.md) | What was asked for |
-| [Product spec](claude/context/product-spec.md) | Field-level detail for every screen |
-| [PRD](claude/context/prd.md) | Requirements and acceptance criteria |
-| [Data model](claude/context/data-model.md) | Entities, relationships, constraints |
-| [Demo script](claude/deliverables/demo-script.md) | The five-minute walkthrough |
-| [Roadmap](claude/deliverables/roadmap.md) | What we would build next |
-
-## Team
-
-Three developers, working in relay across the 24 hours. Development is
-AI-assisted; the working protocol is documented in
-[`claude/workflow/relay-protocol.md`](claude/workflow/relay-protocol.md).
+The UI design language is binding and lives in
+`claude/context/ui-design-language.md`.
