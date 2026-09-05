@@ -38,7 +38,16 @@ other projects.
 |---|---|---|---|---|
 | **MICHAEL** | `Soham2256` (Soham Panchal) | `TheTeam404` | `sohampanchal2229@gmail.com` | ✅ verified session 01 |
 | **FRANKLIN** | `Robo9327study` | `Robo9327study` | `rajstudy9327@gmail.com` | ✅ verified session 02 |
-| **TREVOR** | ⚠️ TBC | ⚠️ TBC | ⚠️ TBC | ❌ **fill in on first run** |
+| **TREVOR** | `MeghRaval30` | `MeghRaval30` | `meghraval306@gmail.com` | ✅ verified session 03 |
+
+> **Register complete (session 02 pack).** All three rows are now filled
+> and verified. Trevor's row was supplied by Trevor himself in a written
+> pre-handoff report, confirmed with the user rather than inferred, and
+> filled in here by Franklin because this file was on Franklin's ownership
+> list while both sessions were live. Note the coincidence worth not
+> misreading: Trevor's session *is* authenticated as the repo owner
+> `MeghRaval30`. That does not contradict the correction below — identity
+> still followed the session, it simply happened to match the remote.
 
 > **Correction (session 02).** The register guessed Franklin would be
 > `MeghRaval30`. That is wrong: `MeghRaval30` owns the repository, but the

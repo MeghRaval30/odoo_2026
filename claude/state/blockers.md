@@ -128,3 +128,51 @@ set of backticks while reconciling the task board.
 
 `smoke_api.py` drives the real HTTP stack, and Django's test client sends
 `Host: testserver`. `settings.py` now appends it when `DEBUG` is on.
+
+### B-009 — Subagent workflows are capped by the account session limit
+**Status:** open · session 02
+
+A multi-agent bug hunt (8 reviewers × 3 adversarial verifiers) was launched via
+the Workflow tool. All eight finder agents died immediately with
+`You've hit your session limit`, having consumed ~761k subagent tokens and
+returned nothing. A re-run after the limit reset was making progress when the
+user stopped it to prioritise packing.
+
+**What this means:** large fan-out workflows are not free on this account, and a
+failed fan-out still burns the budget. Before launching one, check remaining
+capacity. The script survives at
+`.claude/projects/.../workflows/scripts/peoplepay-bug-hunt-*.js` and can be
+resumed with `resumeFromRunId` — completed agents replay from cache.
+
+**Not a blocker for the product.** The manual review it was meant to replace
+found the four real bugs listed below anyway.
+
+### B-010 — `smoke_api.py` writes to the development database
+**Status:** known, documented · session 02
+
+It creates an `April 2026 (smoke)` payrun and 5 payslips in `db.sqlite3`, not in
+a throwaway test database. The dashboard then defaults to that payrun, because it
+is the most recent, and opens on junk instead of February.
+
+**Always run `manage.py seed --flush` after `smoke_api.py`.** This is in the
+README and in the runbook. Trevor's Django tests do not have this problem — they
+use `TestCase`, so they run against a throwaway database and never touch
+`db.sqlite3`.
+
+### B-011 — The formula sandbox blocks tokens, not capabilities
+**Status:** open, accepted · session 02
+
+`payroll/engine.py` `safe_eval` rejects a denylist of substrings (`__`, `import`,
+`getattr`, `open(`, …) before evaluating. It genuinely blocks the obvious
+escapes, and there is a test for each.
+
+But the evaluation context contains live Django model instances (`employee`,
+`contract`, `payslip`), and attribute access is not restricted. A chain that
+avoids every denied substring — reaching `_meta`, then the app registry — is not
+prevented.
+
+**Accepted, not fixed.** Writing formulas requires `can_configure_payroll`, i.e.
+Payroll Manager or Admin, so this is a privileged configuration feature by
+design rather than a user-input surface. Recording it so nobody claims the
+sandbox is airtight, and so a future session that opens rule authoring to a
+lower role knows to fix it first.

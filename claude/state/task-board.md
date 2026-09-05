@@ -20,7 +20,7 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 | T-005 | Write the PRD | `DONE` | Michael | `claude/context/prd.md` v1.0 |
 | T-006 | Write the data model / schema | `DONE` | Michael | `claude/context/data-model.md` v1.0 |
 | T-007 | `git init`, connect remote, first push | `DONE` | Michael | pushed; branching model live |
-| T-008 | Confirm hackathon start/end time with user | `TODO` | | blocks accurate scope gates |
+| T-008 | Confirm hackathon start/end time with user | `DONE` | Franklin | 10:00 IST 05 Sep -> 10:00 IST 06 Sep, confirmed by user |
 
 ## Phase 1 — Backend foundation
 
@@ -50,22 +50,22 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-030 | React scaffold, routing, API client, auth flow | `IN PROGRESS` | Michael | api.js + index.css done; App.jsx untouched | |
-| T-031 | App shell: top nav with the 6 required menus | `TODO` | | Time Off items **only** in its dropdown |
-| T-032 | Login screen | `TODO` | | |
-| T-033 | Employee Kanban + List + Form, smart buttons | `TODO` | | both views open the same form |
-| T-034 | Contract list + form | `TODO` | | Running contract visually obvious |
-| T-035 | Working Schedule list + form with day lines | `TODO` | | |
-| T-036 | Attendance list + form | `TODO` | | |
-| T-037 | Attendance check-in/out widget in top bar | `TODO` | | red/green, elapsed time |
-| T-038 | Time Off: Requests, Allocations, Types | `TODO` | | |
-| T-039 | Approve / Refuse flow | `TODO` | | |
-| T-040 | Salary Structure + Salary Rule screens | `TODO` | | |
-| T-041 | Payrun wizard (2 steps, no record until step 2) | `TODO` | | **specific behaviour called out in the spec** |
-| T-042 | Payrun form + action bar | `TODO` | | Compute / Validate / Mark Paid / Send |
-| T-043 | Payslip form with salary computation table | `TODO` | | |
-| T-044 | Payroll Dashboard | `TODO` | | live data, filters must actually re-drive it |
-| T-045 | User Management (admin only) | `TODO` | | |
+| T-030 | React scaffold, routing, API client, auth flow | `DONE` | Franklin | hash router, auth gate, api client wired |
+| T-031 | App shell: top nav with the 6 required menus | `DONE` | Franklin | six menus; Time Off items only in its dropdown |
+| T-032 | Login screen | `DONE` | Franklin | + one-click chips for all five demo roles |
+| T-033 | Employee Kanban + List + Form, smart buttons | `DONE` | Franklin | kanban + list share one form; 3 tabs; smart buttons |
+| T-034 | Contract list + form | `DONE` | Franklin | RUNNING marked with a green rule; + Resolve-by-period probe |
+| T-035 | Working Schedule list + form with day lines | `DONE` | Franklin | day lines; no weekly-hours input, it is derived |
+| T-036 | Attendance list + form | `DONE` | Franklin | list + correction form; edits flagged is_manually_edited |
+| T-037 | Attendance check-in/out widget in top bar | `DONE` | Franklin | top-bar widget; hides for accounts with no linked employee |
+| T-038 | Time Off: Requests, Allocations, Types | `DONE` | Franklin | requests, allocations and types all built |
+| T-039 | Approve / Refuse flow | `DONE` | Franklin | approve/refuse post to the server actions |
+| T-040 | Salary Structure + Salary Rule screens | `DONE` | Franklin | structures list + rule form, value fields switch on computation |
+| T-041 | Payrun wizard (2 steps, no record until step 2) | `DONE` | Franklin | step 1 creates nothing; step 2 searchable with 1-N/N counter |
+| T-042 | Payrun form + action bar | `DONE` | Franklin | Compute/Validate/Mark Paid/Send + Export Register |
+| T-043 | Payslip form with salary computation table | `DONE` | Franklin | sequence-ordered computation table + Print Payslip |
+| T-044 | Payroll Dashboard | `DONE` | Franklin | 5 spec KPIs, 4 filters, all re-drive; + register report |
+| T-045 | User Management (admin only) | `DONE` | Franklin | admin only; server refuses self-role-escalation |
 
 ## Phase 3 — Integration wins (D-002)
 
@@ -79,10 +79,21 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-060 | Demo script, 2 end-to-end scenarios | `TODO` | | `claude/deliverables/demo-script.md` |
-| T-061 | Future roadmap writeup | `TODO` | | graded deliverable #3 |
-| T-062 | README for judges | `TODO` | | |
+| T-060 | Demo script, 2 end-to-end scenarios | `IN PROGRESS` | Trevor | in flight, NOT committed. Closing move must route Reports -> Payroll Dashboard |
+| T-061 | Future roadmap writeup | `IN PROGRESS` | Trevor | in flight, NOT committed. graded deliverable #3 |
+| T-062 | README for judges | `DONE` | Franklin | run-and-verify guide, demo accounts, seed evidence |
 | T-063 | Demo rehearsal | `TODO` | | last 2 hours, no code changes |
+
+## Phase 5 — Quality (added session 02/03)
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-070 | Form-payload probe harness | `DONE` | Franklin | `probe_forms.py`, 24/24 create + update |
+| T-071 | Django test suite: employees, timeoff, payroll | `DONE` | Trevor | 75 tests, on `test/backend-suite`, UNMERGED |
+| T-072 | Django test suite: attendance | `IN PROGRESS` | Trevor | ~421 lines written, not verified, not committed |
+| T-073 | Django test suite: accounts / role matrix | `TODO` | Trevor | still a 3-line stub |
+| T-074 | Merge `test/backend-suite` into main | `TODO` | Trevor | `--no-ff`, after handoff is confirmed |
+| T-075 | Frontend tests | `TODO` | | none exist; lowest priority |
 
 ---
 

@@ -239,3 +239,73 @@ The accepted tradeoff is that context notes go stale between packs, so a session
 that dies without warning loses its notes rather than its code.
 
 Do not reintroduce rolling context updates unless the user asks.
+
+---
+
+## D-013 — The UI design language is binding, and it is Anthropic's palette
+
+**Decided by:** user, session 02 (Franklin) · 2026-09-05
+
+Recorded in `claude/context/ui-design-language.md`. That file is binding for any
+frontend work and `CLAUDE.md` boot step 5a points at it.
+
+Warm light theme: bone and sand grounds, **Claude orange as the only action
+colour**, dusty rose across roughly a quarter of the surface area (KPI grounds,
+table headers, row hovers, hairlines), brown rather than grey for text. Type is
+a classical pairing — Source Serif 4 for what is read, Inter for what is
+operated.
+
+**Rationale.** The first frontend pass was rejected outright as looking
+machine-generated, twice. The user's diagnosis was specific and correct: a dark
+palette lifted from the mockup, decorative colour, and — the bigger problem —
+instructional copy that explained fields and reassured the user rather than
+labelling things. §5 of the design doc is a copy rule, and it matters as much as
+the palette.
+
+The mockup's **layout and field placement stay binding**; only its colours are
+discarded. Product spec §7 explicitly leaves the UI to the participant as long
+as behaviour and data relationships stay clear.
+
+Three palettes were tried in order: the mockup's dark theme (rejected), a
+Zoho/Razorpay blue light theme (rejected as generic), and this one. The middle
+attempt is preserved on `exp/design-language-spike`.
+
+---
+
+## D-014 — A third harness that posts the frontend's own payloads
+
+**Decided by:** Franklin, session 02 · 2026-09-05
+
+`project/backend/probe_forms.py` joins `verify_rules.py` and `smoke_api.py`. It
+posts **the exact body each React form builds**, then patches and deletes what it
+created. 24/24 across create and update.
+
+**Rationale.** `smoke_api.py` constructs its own correct payloads, so it is
+structurally incapable of finding a bug where the *frontend* sends the wrong
+shape. Four real bugs were invisible to it and fell out of this harness
+immediately: four create forms omitting a required `company` FK, `structure_type`
+sent as `""` against a field that is not `blank=True`, and `percentage_base` sent
+as `null` against a field that is `blank=True` but not `null=True`.
+
+The general lesson is worth keeping: a harness that builds its own inputs tests
+the server, not the product.
+
+---
+
+## D-015 — Trevor started in parallel, before the handoff, under a file-ownership split
+
+**Decided by:** user, session 02 · 2026-09-05
+
+Session 03 was started while session 02 was still live, working on a disjoint set
+of files, with an explicit ownership list and an instruction not to merge into
+`main` until the user confirms the handoff.
+
+**Rationale.** Capacity was available on the third account and there was
+genuinely separable work — the project had two proof harnesses but no test suite.
+The split was drawn so the two sessions could not collide: Trevor took new
+`tests.py` files and the deliverables, Franklin kept the whole frontend, the API
+layer and `claude/state/`.
+
+It worked — Trevor confirmed zero overlapping paths — but it only worked because
+the ownership list was written down first. **Do not start a parallel session
+without one.**
