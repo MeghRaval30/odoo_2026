@@ -13,6 +13,7 @@ import {
   Modal,
   PageHead,
   StateBadge,
+  useDefaultCompany,
   useResource,
 } from "../components/ui";
 
@@ -44,6 +45,7 @@ function ScheduleForm({ id, onClose, onSaved }) {
   const [derived, setDerived] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const defaultCompany = useDefaultCompany();
 
   useEffect(() => {
     if (!id) return;
@@ -78,7 +80,7 @@ function ScheduleForm({ id, onClose, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      const payload = { ...form };
+      const payload = { ...form, company: form.company || defaultCompany };
       if (id) await api.patch(`/api/working-schedules/${id}/`, payload);
       else await api.post("/api/working-schedules/", payload);
       onSaved();
