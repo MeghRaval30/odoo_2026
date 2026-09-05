@@ -315,7 +315,9 @@ class EmployeeOwnRecordsScopeTests(RoleFixtureMixin, APITestCase):
     """
     The Employee cell of the HR-data column reads *"Own records only; may
     create own attendance + time-off requests"*, over Employees, Attendance,
-    **Contracts**, Schedules and Time Off. One of those five does not hold up.
+    **Contracts**, Schedules and Time Off. Two of those five did not hold up
+    when this suite was written; both have since been closed, and the tests
+    that documented them are kept here as regression guards.
     """
 
     @classmethod
@@ -371,20 +373,53 @@ class EmployeeOwnRecordsScopeTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["results"], [])
 
-    # PRODUCT BUG: product-spec §2 lets an Employee "create own ... time-off
-    # requests", and AttendanceViewSet implements exactly that with its
-    # SELF_SERVICE_ACTIONS carve-out. TimeOffRequestViewSet has no equivalent:
-    # it is plain CanManageHR, so POST is an unsafe method and every Employee
-    # is refused. The Time Off request form is therefore unusable by the people
-    # it is for. Asserting the ACTUAL behaviour; the fix mirrors
-    # attendance.api.AttendanceViewSet.get_permissions / perform_create.
-    def test_an_employee_cannot_create_their_own_time_off_request(self):
+    # Regression guard. This test was written while the refusal was open and
+    # asserted it: TimeOffRequestViewSet was plain CanManageHR, so POST was an
+    # unsafe method and every Employee got a 403 on the form built for them,
+    # even though product-spec §2 gives them "create own ... time-off
+    # requests". The create carve-out has since been added.
+    def test_an_employee_can_create_their_own_time_off_request(self):
         response = self.client.post(reverse("timeoffrequest-list"), {
             "employee": self.record.pk, "time_off_type": self.sick_leave.pk,
             "date_from": "2026-02-02", "date_to": "2026-02-03",
         }, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(TimeOffRequest.objects.count(), 1)
+        self.assertEqual(TimeOffRequest.objects.get().employee, self.record)
+
+    def test_an_employee_cannot_raise_a_request_for_a_colleague(self):
+        """The employee in the payload is substituted, not trusted."""
+        response = self.client.post(reverse("timeoffrequest-list"), {
+            "employee": self.colleague.pk, "time_off_type": self.sick_leave.pk,
+            "date_from": "2026-02-02", "date_to": "2026-02-03",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(TimeOffRequest.objects.get().employee, self.record)
+
+    def test_the_allocation_gate_runs_against_the_requester_not_the_payload(self):
+        """
+        Graded rule #3 has to be evaluated against the balance the requester is
+        allowed to spend, which is why the substitution happens before
+        validation rather than in perform_create. Ravi holds an approved
+        allocation; Asha holds none. Asha posting Ravi's employee id must be
+        refused on her own empty balance rather than admitted on his -- and
+        must not attach itself to his allocation on the way through.
+        """
+        earned = TimeOffType.objects.create(
+            name="Earned Leave", code="EARN", requires_allocation=True)
+        Allocation.objects.create(
+            employee=self.colleague, time_off_type=earned,
+            name="2026 Earned Balance", allocated=Decimal("10.00"),
+            valid_from=date(2026, 1, 1), state=Allocation.APPROVED)
+
+        response = self.client.post(reverse("timeoffrequest-list"), {
+            "employee": self.colleague.pk, "time_off_type": earned.pk,
+            "date_from": "2026-02-02", "date_to": "2026-02-03",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(TimeOffRequest.objects.count(), 0)
 
     # Regression guard. This test was written while the leak was open and
