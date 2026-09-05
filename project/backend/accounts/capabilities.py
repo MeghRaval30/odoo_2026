@@ -1,12 +1,17 @@
 """
 The capability matrix — one declarative home for "who may do what".
 
-Roles are the five the problem statement names in §3, and a user may hold
-**more than one**; the mockup's login note is explicit about assigning "one or
-more roles". Effective permission is therefore the *union* of the capabilities
-of every role held, never the highest single role — that distinction matters,
-because "HR Manager + Payroll User" is a real combination a company would grant
-and it has to behave as the sum of both.
+Roles are the five the problem statement names in §3. Effective permission is
+the *union* of the capabilities of every role held, never the highest single
+role — the two are not the same thing once the roles stop forming a ladder, and
+this build's HR Manager and Payroll Manager deliberately do not.
+
+**An account is assigned exactly one role.** The mockup's login note allows
+"one or more", and the link is still many-to-many, but the assignment path caps
+it at one so that an account's authority is legible from a single word instead
+of reconstructed by unioning several. The union below therefore has nothing to
+do most of the time — and it stays, because it must still be right for any set
+it is handed, including rows written before the cap existed.
 
 Capabilities are named `resource.action[.scope]` and are the only vocabulary the
 rest of the codebase should reason in. Permission classes, the navigation
