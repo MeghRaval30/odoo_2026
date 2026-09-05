@@ -191,9 +191,18 @@ class Employee(TimeStampedModel):
     # -- contract resolution ------------------------------------------------
 
     def contract_for_period(self, period_start, period_end):
-        """Graded rule #1 — resolve by period, never by recency (PRD-4.1.2)."""
+        """
+        Graded rule #1 — resolve by period, never by recency (PRD-4.1.2).
+
+        Both RUNNING and EXPIRED contracts are candidates. Lifecycle state and
+        period coverage are different things: a contract that has since expired
+        is still the correct basis for payroll covering the period it governed,
+        which is exactly what "retain contract history, but pay on the
+        applicable contract" requires. DRAFT and CANCELLED never pay.
+        """
         return (self.contracts
-                .filter(state=Contract.RUNNING, start_date__lte=period_end)
+                .filter(state__in=(Contract.RUNNING, Contract.EXPIRED),
+                        start_date__lte=period_end)
                 .filter(Q(end_date__gte=period_start) | Q(end_date__isnull=True))
                 .order_by("-start_date")
                 .first())
