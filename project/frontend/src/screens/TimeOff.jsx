@@ -71,11 +71,18 @@ function RequestForm({ onClose, onSaved }) {
       .catch(() => setBalances([]));
   }, [form.employee]);
 
-  const set = (key) => (e) =>
+  const set = (key) => (e) => {
+    // Clear a previous refusal as soon as the request changes. Without this
+    // the server's "no allocation covers this" message stays on screen after
+    // the user switches to a type they *do* have balance for, so the form
+    // shows a refusal directly above a balance table saying 20 days are
+    // available — which reads as though that type were refused too.
+    setError(null);
     setForm((f) => ({
       ...f,
       [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value,
     }));
+  };
 
   const save = async () => {
     setBusy(true);

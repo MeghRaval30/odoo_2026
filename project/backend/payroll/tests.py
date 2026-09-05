@@ -468,3 +468,149 @@ class WizardStepTests(PayrollTestCase):
         [payslip] = create_payrun_payslips(december, [employee])
 
         self.assertEqual(payslip.contract.wage, Decimal("100000.00"))
+
+
+class EmployerCostTests(PayrollTestCase):
+    """
+    `is_employer_cost` must keep a rule out of the employee's gross and net.
+
+    The flag was stored on the model, serialized by the API and editable as a
+    checkbox in the Salary Rule form, and the engine never read it — so an
+    employer-side PF rule categorised DEDUCTION reduced the employee's take-home
+    pay. These tests pin the corrected behaviour.
+    """
+
+    def setUp(self):
+        self.employee = self.make_employee()
+        # Employer PF: 12% of BASIC, charged to the company, not the employee.
+        SalaryRule.objects.create(
+            structure=self.structure, name="Provident Fund (Employer)",
+            code="PF_ER", category=SalaryRule.DEDUCTION, sequence=60,
+            computation=SalaryRule.PERCENTAGE, percentage=Decimal("12.000"),
+            percentage_base="BASIC", is_employer_cost=True)
+        self.payslip = compute_payslip(self.make_payslip(self.employee))
+
+    def test_the_employer_line_is_computed_and_stored(self):
+        line = self.payslip.lines.get(code="PF_ER")
+        self.assertEqual(line.amount, Decimal("6000.00"))
+        self.assertTrue(line.is_employer_cost)
+
+    def test_employer_cost_does_not_reduce_net(self):
+        """The whole point: net is what it was before the rule existed."""
+        self.assertEqual(self.payslip.net, Decimal("64000.00"))
+
+    def test_employer_cost_is_excluded_from_deductions(self):
+        # Employee PF alone, not employee PF + employer PF.
+        self.assertEqual(self.payslip.deductions, Decimal("6000.00"))
+
+    def test_employer_cost_does_not_reach_gross(self):
+        self.assertEqual(self.payslip.gross, Decimal("70000.00"))
+
+    def test_employer_cost_and_ctc_are_exposed(self):
+        self.assertEqual(self.payslip.employer_cost, Decimal("6000.00"))
+        self.assertEqual(self.payslip.ctc, Decimal("76000.00"))
+        self.assertEqual(self.payslip.ctc,
+                         self.payslip.gross + self.payslip.employer_cost)
+
+    def test_an_employer_rule_is_still_visible_to_later_rules(self):
+        """Kept in `rules` by code even though it is out of `categories`."""
+        SalaryRule.objects.create(
+            structure=self.structure, name="Echo Employer PF", code="ECHO",
+            category=SalaryRule.ALLOWANCE, sequence=70,
+            computation=SalaryRule.FORMULA, formula="rules['PF_ER']")
+        payslip = compute_payslip(self.make_payslip(
+            self.make_employee(first="Echo", last="Test")))
+        self.assertEqual(payslip.lines.get(code="ECHO").amount,
+                         Decimal("6000.00"))
+
+
+class PayslipVisibilityTests(PayrollTestCase):
+    """`appears_on_payslip` lets a rule compute without being printed."""
+
+    def setUp(self):
+        self.employee = self.make_employee()
+        SalaryRule.objects.create(
+            structure=self.structure, name="Internal Working Figure",
+            code="INTERNAL", category=SalaryRule.ALLOWANCE, sequence=25,
+            computation=SalaryRule.FIXED, amount=Decimal("1000.00"),
+            appears_on_payslip=False)
+        self.payslip = compute_payslip(self.make_payslip(self.employee))
+
+    def test_a_hidden_rule_still_computes_and_still_counts(self):
+        line = self.payslip.lines.get(code="INTERNAL")
+        self.assertEqual(line.amount, Decimal("1000.00"))
+        self.assertFalse(line.appears_on_payslip)
+        # Hiding a line must not hide its money: it is a real allowance and
+        # still aggregates into the ALLOWANCE category. (This fixture's GROSS
+        # is an explicit BASIC + HRA formula rather than a category sum, so
+        # gross itself does not move — that is the rule's definition, not the
+        # visibility flag.)
+        self.assertEqual(self.payslip.allowances, Decimal("21000.00"))
+        self.assertEqual(self.payslip.gross, Decimal("70000.00"))
+
+    def test_a_hidden_rule_is_left_out_of_the_printed_lines(self):
+        printed = {l.code for l in self.payslip.visible_lines}
+        self.assertNotIn("INTERNAL", printed)
+        self.assertIn("BASIC", printed)
+
+
+class ProrationTests(PayrollTestCase):
+    """
+    A mid-period joiner or leaver is paid for the days their contract covers.
+
+    `gather_period_facts` used to measure expected days across the whole
+    period and ignore the contract's own dates, while `evaluate_rule` took a
+    percentage of the full monthly wage — so somebody who joined on the 20th
+    was paid a full month. It is the commonest real payroll case and the one
+    nobody would sign off.
+    """
+
+    FULL_FEB_WORKING_DAYS = Decimal("20")
+
+    def _payslip_for_contract(self, start, end=None, first="Mid", last="Joiner"):
+        employee = Employee.objects.create(
+            first_name=first, last_name=last,
+            work_email=f"{first.lower()}.{last.lower()}@example.com",
+            company=self.company, date_of_joining=start,
+            working_schedule=self.schedule,
+            bank_account_number="1234567890", bank_ifsc="HDFC0001234")
+        Contract.objects.create(
+            employee=employee, start_date=start, end_date=end,
+            wage=Decimal("100000.00"), working_schedule=self.schedule,
+            salary_structure=self.structure, state=Contract.RUNNING)
+        return compute_payslip(self.make_payslip(employee))
+
+    def test_a_full_month_is_not_prorated(self):
+        payslip = self._payslip_for_contract(date(2025, 1, 1))
+        self.assertEqual(payslip.expected_days, self.FULL_FEB_WORKING_DAYS)
+        self.assertEqual(payslip.basic, Decimal("50000.00"))
+
+    def test_a_mid_month_joiner_is_paid_for_part_of_the_month(self):
+        # Joins Mon 16 Feb 2026. February 2026 has 20 working days; the 16th
+        # onward leaves 16-20 and 23-27, so 10 of them.
+        payslip = self._payslip_for_contract(date(2026, 2, 16))
+        self.assertEqual(payslip.expected_days, Decimal("10"))
+        # 50% of a 100,000 wage, halved by the 10/20 factor.
+        self.assertEqual(payslip.basic, Decimal("25000.00"))
+        self.assertLess(payslip.net, Decimal("64000.00"))
+
+    def test_a_mid_month_leaver_is_paid_only_to_their_last_day(self):
+        # Last day Fri 6 Feb 2026: only 2-6 fall inside, so 5 of 20 days.
+        payslip = self._payslip_for_contract(
+            date(2025, 1, 1), end=date(2026, 2, 6), first="Early", last="Leaver")
+        self.assertEqual(payslip.expected_days, Decimal("5"))
+        self.assertEqual(payslip.basic, Decimal("12500.00"))
+
+    def test_derived_rules_inherit_the_proration(self):
+        """HRA is 40% of BASIC, so it must scale once, not twice."""
+        payslip = self._payslip_for_contract(
+            date(2026, 2, 16), first="Derived", last="Case")
+        basic = payslip.basic
+        hra = payslip.lines.get(code="HRA").amount
+        self.assertEqual(hra, (basic * Decimal("0.40")).quantize(Decimal("0.01")))
+
+    def test_gross_and_net_stay_consistent_when_prorated(self):
+        payslip = self._payslip_for_contract(
+            date(2026, 2, 16), first="Consistent", last="Case")
+        self.assertEqual(payslip.gross, payslip.basic + payslip.allowances)
+        self.assertEqual(payslip.net, payslip.gross - payslip.deductions)

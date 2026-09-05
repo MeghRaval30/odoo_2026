@@ -9,7 +9,8 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import CanConfigurePayroll, CanRunPayroll
+from accounts.permissions import (CanConfigurePayroll, CanReadOwnPayslips,
+                                  CanRunPayroll)
 from employees.models import Employee
 
 from . import engine
@@ -60,7 +61,8 @@ class PayslipLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = PayslipLine
         fields = ["id", "name", "code", "category", "category_display",
-                  "sequence", "quantity", "rate", "amount"]
+                  "sequence", "quantity", "rate", "amount",
+                  "is_employer_cost", "appears_on_payslip"]
 
 
 class PayslipWarningSerializer(serializers.ModelSerializer):
@@ -110,12 +112,17 @@ class PayslipDetailSerializer(PayslipListSerializer):
                                           read_only=True)
     deductions = serializers.DecimalField(max_digits=12, decimal_places=2,
                                           read_only=True)
+    employer_cost = serializers.DecimalField(max_digits=12, decimal_places=2,
+                                             read_only=True)
+    ctc = serializers.DecimalField(max_digits=12, decimal_places=2,
+                                   read_only=True)
 
     class Meta(PayslipListSerializer.Meta):
         fields = PayslipListSerializer.Meta.fields + [
             "contract", "contract_reference", "contract_wage",
             "salary_structure", "structure_name", "expected_days", "lop_days",
-            "overtime_hours", "allowances", "deductions", "lines", "warnings"]
+            "overtime_hours", "allowances", "deductions", "employer_cost",
+            "ctc", "lines", "warnings"]
 
 
 # ==========================================================================
@@ -166,7 +173,10 @@ class SalaryRuleViewSet(viewsets.ModelViewSet):
 
 
 class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [CanRunPayroll]
+    # Read-only for everyone; get_queryset narrows non-payroll users to their
+    # own rows. CanRunPayroll here made the Employee role's "R (own)" grant in
+    # PRD 3.2 unreachable — the scoping branch below was dead code.
+    permission_classes = [CanReadOwnPayslips]
     filterset_fields = ["payrun", "employee", "state", "employee__department"]
     search_fields = ["number", "employee__first_name", "employee__last_name"]
 

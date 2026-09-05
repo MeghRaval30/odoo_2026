@@ -88,18 +88,34 @@ def gather_period_facts(employee, contract, period_start, period_end):
 
     This is the integration the problem statement hints at but does not
     require (D-002): attendance and leave genuinely reach the payslip.
+
+    The day window is clamped to the contract's own dates, so an employee who
+    joins or leaves mid-period is measured against the days they were actually
+    employed. Without that clamp a 20 February joiner was billed a full
+    February — the most common real-world payroll case, and one no payroll
+    manager would sign off.
     """
     holidays = set(Holiday.objects.filter(
         company=employee.company,
         date__range=(period_start, period_end),
     ).values_list("date", flat=True))
 
+    # The stretch of this period the contract actually covers.
+    paid_start = max(period_start, contract.start_date) if contract else period_start
+    paid_end = period_end
+    if contract and contract.end_date:
+        paid_end = min(period_end, contract.end_date)
+
     schedule = contract.working_schedule if contract else employee.working_schedule
     if schedule:
-        expected = Decimal(schedule.expected_working_days(
+        full = Decimal(schedule.expected_working_days(
             period_start, period_end, holidays))
+        expected = Decimal(schedule.expected_working_days(
+            paid_start, paid_end, holidays)) if paid_start <= paid_end else ZERO
     else:
-        expected = Decimal(_weekdays_between(period_start, period_end, holidays))
+        full = Decimal(_weekdays_between(period_start, period_end, holidays))
+        expected = (Decimal(_weekdays_between(paid_start, paid_end, holidays))
+                    if paid_start <= paid_end else ZERO)
 
     sessions = Attendance.objects.filter(
         employee=employee,
@@ -124,11 +140,20 @@ def gather_period_facts(employee, contract, period_start, period_end):
         lop += _overlap_days(req.date_from, req.date_to,
                              period_start, period_end, req.duration)
 
+    # Fraction of the period the contract covers. 1 for anyone employed
+    # throughout, less for a joiner or leaver. Wage-derived rules scale by it.
+    proration = (expected / full) if full else Decimal("1")
+
     return {
         "expected_days": expected,
+        "full_period_days": full,
         "worked_days": worked_days,
         "lop_days": money(lop),
         "overtime_hours": money(overtime),
+        "proration": proration,
+        "paid_from": paid_start,
+        "paid_to": paid_end,
+        "is_prorated": proration != Decimal("1"),
     }
 
 
@@ -164,9 +189,12 @@ def evaluate_rule(rule, ctx) -> Decimal:
     if rule.computation == SalaryRule.PERCENTAGE:
         pct = Decimal(rule.percentage or 0)
         if rule.percentage_base:
+            # Already prorated: it derives from an earlier rule's result.
             base = Decimal(ctx["rules"].get(rule.percentage_base, ZERO))
-        else:
-            base = Decimal(ctx["wage"])
+            return money(base * pct / Decimal(100))
+        # A percentage of the contract wage is a monthly figure, so it is
+        # scaled to the part of the period the contract actually covers.
+        base = Decimal(ctx["wage"]) * ctx["proration"]
         return money(base * pct / Decimal(100))
 
     if rule.computation == SalaryRule.FORMULA:
@@ -178,6 +206,7 @@ def evaluate_rule(rule, ctx) -> Decimal:
 
 def build_context(payslip, contract, facts):
     categories = defaultdict(lambda: ZERO)
+    employer_categories = defaultdict(lambda: ZERO)
     rules_by_code = {}
     return {
         "contract": contract,
@@ -186,9 +215,18 @@ def build_context(payslip, contract, facts):
         "wage": Decimal(contract.wage) if contract else ZERO,
         "worked_days": facts["worked_days"],
         "expected_days": facts["expected_days"],
+        "full_period_days": facts["full_period_days"],
         "lop_days": facts["lop_days"],
         "overtime_hours": facts["overtime_hours"],
+        # Fraction of the period the contract covers — 1 for a full month.
+        # Exposed so a formula rule can prorate a fixed amount too:
+        #   amount * proration
+        "proration": facts["proration"],
         "categories": categories,
+        # Employer contributions accumulate separately so they never move the
+        # employee's gross or net. Exposed to formulas so a rule can reference
+        # the employer side if it needs to.
+        "employer_categories": employer_categories,
         "rules": rules_by_code,
         "Decimal": Decimal,
     }
@@ -261,11 +299,25 @@ def compute_payslip(payslip) -> Payslip:
             payslip=payslip, rule=rule, name=rule.name, code=rule.code,
             category=rule.category, sequence=rule.sequence,
             quantity=rule.quantity, rate=rate, amount=amount,
+            is_employer_cost=rule.is_employer_cost,
+            appears_on_payslip=rule.appears_on_payslip,
         ))
 
-        # Make this result visible to every later rule
-        ctx["categories"][rule.category] += amount
+        # Every rule's result is visible to later rules by code, employer cost
+        # included — an employer PF rule may well want to reference the
+        # employee's PF figure.
         ctx["rules"][rule.code] = amount
+
+        if rule.is_employer_cost:
+            # Employer contributions are a cost to the company, not money the
+            # employee receives or forfeits. Accumulating them into
+            # `categories` made an employer-side PF rule categorised DEDUCTION
+            # reduce the employee's net pay, which is simply wrong: the flag
+            # was stored, serialized and editable in the UI, and nothing read
+            # it. They go into a parallel bucket that feeds CTC instead.
+            ctx["employer_categories"][rule.category] += amount
+        else:
+            ctx["categories"][rule.category] += amount
 
     PayslipLine.objects.bulk_create(lines)
     payslip.save()

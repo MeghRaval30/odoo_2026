@@ -108,9 +108,9 @@ is paid through a rule, and unpaid leave deducts.
 |---|---|---|
 | Dec 2025 | ₹14,73,360 | Lower than January — two employees resolve to older, cheaper contracts |
 | Jan 2026 | ₹14,82,320 | |
-| Feb 2026 | ₹15,63,028 | Higher — February overtime reached payroll |
+| Feb 2026 | ₹15,58,668 | Higher — February overtime reached payroll |
 
-Filtering the dashboard to Engineering alone drops February to ₹5,03,998.
+Filtering the dashboard to Engineering alone drops February to ₹5,03,589.
 Changing Period or Department re-drives every card on the screen.
 
 ---

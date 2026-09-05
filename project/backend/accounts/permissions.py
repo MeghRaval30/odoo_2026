@@ -67,6 +67,27 @@ class CanConfigurePayroll(BasePermission):
         return user.can_configure_payroll
 
 
+class CanReadOwnPayslips(BasePermission):
+    """
+    Payslips: payroll staff read everyone's, everyone else reads only their own.
+
+    The viewset's queryset already narrows non-payroll users to their own
+    records, so this only has to let the request through — the row filtering,
+    including the PDF action which resolves through the same queryset, happens
+    there. Writes are impossible regardless: the viewset is read-only.
+
+    PRD 3.2 grants the Employee role "R (own)" on payslips, and gating the
+    endpoint behind CanRunPayroll made that unreachable — an employee could
+    never see their own payslip. The same reading applies to an HR Manager:
+    the matrix row means no access to *other people's* payslips, not that a
+    person is denied their own.
+    """
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated
+                    and request.method in SAFE_METHODS)
+
+
 class IsOwnerOrHR(BasePermission):
     """An employee sees only their own records; HR sees everything."""
 

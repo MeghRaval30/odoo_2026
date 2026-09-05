@@ -285,3 +285,72 @@ to a form's blank state, render a control for it or leave it out of the payload.
 
 **The other lesson:** open the screen. Three sessions read this file; one clicked
 it, and that is when it fell over.
+
+
+---
+
+## TRAPS — session 04
+
+### B-016 — Never run `manage.py runserver --noreload`
+**Status:** trap · session 04
+
+Session 04 started the backend with `--noreload` to keep a background task
+quiet. Python edits then had no effect on the running server, and a correct
+employer-cost fix looked broken for several minutes: the UI showed employer
+provident fund inside the employee's deductions because the *server* was still
+executing pre-fix code, while a shell running the same code returned the right
+answer.
+
+Use plain `manage.py runserver`. If a served response disagrees with what the
+same code produces in a shell, suspect a stale server before suspecting the code.
+
+### B-017 — A PDF harness that only counts bytes proves nothing
+**Status:** lesson · session 04
+
+`smoke_api.py` asserted the payslip endpoint returns `application/pdf` and more
+than 1,500 bytes. It stayed green for the entire build while every money figure
+on the document rendered a substitute character, because ReportLab's Helvetica
+has no rupee glyph. The user found it by downloading a payslip.
+
+When a binary deliverable matters, read it:
+
+```bash
+pdftotext -layout -enc UTF-8 slip.pdf slip.txt
+```
+
+```python
+import re
+raw = open("slip.pdf", "rb").read()
+print(sorted(set(re.findall(rb"/BaseFont\s*/([A-Za-z0-9+\-]+)", raw))))
+```
+
+If `Helvetica` still appears in a document meant to be fully embedded, some cell
+is falling back to it — a `TableStyle` that sets `FONTNAME` only on its header
+row leaves every body cell on the default face.
+
+### B-018 — `pdftotext` misreads subset-embedded fonts
+**Status:** know this · session 04
+
+Even after the font fix, `pdftotext` rendered some rupee signs as `s`. That is an
+extraction artifact of a subsetted TrueType face, not a rendering fault. The
+decisive checks are the embedded ToUnicode CMap containing `<01> <20B9>`, and
+counting how many money figures carry the glyph — 22 of 26 in the fixed file,
+the remaining four being non-currency values (worked days, LOP days, OT hours).
+
+### B-019 — The Browser pane will not display a PDF
+**Status:** know this · session 04
+
+Navigating the Browser pane to a `.pdf` URL triggers a download dialog instead of
+rendering, so a payslip cannot be eyeballed that way. Inspect the file's
+internals or extract its text instead.
+
+### B-020 — Inline `python -c` and heredocs keep corrupting file content
+**Status:** recurring · sessions 01 and 04
+
+Extends B-007. In session 04 a heredoc turned `\Fonts\arial.ttf` into
+`Fonts<BEL>rial.ttf` — a literal 0x07 byte, invisible in the file view, which the
+Edit tool then could not match because the string on disk was not what it looked
+like.
+
+Write a `.py` file into the scratchpad and run it. Reserve inline `python -c` for
+one-liners containing no backslashes, backticks or quotes.

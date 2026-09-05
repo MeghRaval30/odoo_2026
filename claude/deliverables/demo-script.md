@@ -6,6 +6,30 @@ was taken from the seeded database and the frontend source, not from memory.
 **Notation:** `Menu ▾ → Item` is the top bar · `[Button]` is a button you click ·
 `Field` = `value` is something you type or select · *Column* is a table heading.
 
+> ### ✅ Rehearsed against the running app — session 04, 2026-09-05
+>
+> Scenario B was walked click by click in a browser and **every claim holds**:
+> the Comp Off refusal fires with the server's exact wording, the balance table
+> reads 20 / 0 / 20, approving Priya's 08 Mar row moves her allocation to
+> **20 / 2 / 18**, and Audrey sits at 20 / 3 / 17 throughout.
+>
+> Scenario A's data was verified against the database: John Dsouza is
+> `EMP/2025/0003` with smart buttons **2 · 35 · 1 · 1**, his two contracts are
+> `CON/2025/0003` (₹1,03,000, Expired) and `CON/2026/0002` (₹1,10,000, Running),
+> a March period resolves the January contract and a December period resolves
+> the July one, and the two bank-account warnings are Anita Oliver and Meera Iyer.
+>
+> **One bug was found and fixed during the rehearsal:** switching the type at B3
+> used to leave the Comp Off refusal on screen above the balance table. It now
+> clears on any field change.
+>
+> The earlier worry that B5's "Taken two, Remaining eighteen" was wrong is
+> **unfounded** — B4 approves the March row first, which is what moves the
+> balance. Do not skip B4.
+>
+> **Reseed before presenting** (`manage.py seed --flush`) — the rehearsal
+> approved a request, and the seed restores Priya to 20 / 0 / 20.
+
 ---
 
 ## Time budget — it adds to 5:00
@@ -67,7 +91,7 @@ fills both fields. Then `[Sign in]`.
 | Allocation to move | **Priya Sharma** · Paid Time Off 2026 · Allocated 20 / Taken 0 / Remaining 20 · Approved |
 | Allocation already consumed | **Audrey Peterson** · 20 / 3 / **17** |
 | Type that requires allocation | **Paid Time Off** and **Comp Off**. Sick Leave and Unpaid Leave do not. |
-| Existing payruns | December 2025 ₹14,73,360 net · January 2026 ₹14,82,320 · February 2026 ₹15,63,027.86 — all `Paid`, 20 payslips each |
+| Existing payruns | December 2025 ₹14,73,360 net · January 2026 ₹14,82,320 · February 2026 ₹15,58,667.87 — all `Paid`, 20 payslips each |
 | Payrun you create live | **March 2026**, 01–31 Mar 2026, Regular Salary, 20 employees |
 
 ---
@@ -141,7 +165,7 @@ explicitly against hardcoded dashboards. Slow down. Let the screen do the work.
 | # | At | Click | What appears |
 |---|---|---|---|
 | **C1** | 3:55 | `Reports` (top bar, far right) → **`Payroll Dashboard`**. | `Reports` is a **dropdown with two items** — `Payroll Dashboard` and `Payroll Register`. You want the first. It opens on **March 2026** — the payrun you created ninety seconds ago is already the default period. Say that out loud. |
-| | | `Period` → **`February 2026`**. | *Total Net Paid* → **₹ 15.63L**. Exact: **₹15,63,027.86** across 20 payslips. |
+| | | `Period` → **`February 2026`**. | *Total Net Paid* → **₹ 15.59L**. Exact: **₹15,58,667.87** across 20 payslips. |
 | **C2** | 4:05 | `Period` → **`December 2025`**. Then stop talking for two seconds. | *Total Net Paid* → **₹ 14.73L** (**₹14,73,360**). *Payslips*, *Avg Net / Employee*, *Approved Time Off Days*, *Attendance Health*, the Net Payroll Trend line, the Net Pay by Department bars, the Payslip Status donut, the Pre-Validation Alerts and the Time Off Overview **all re-drive together**. |
 | | | | "**Fifteen lakh sixty-three thousand, to fourteen lakh seventy-three thousand.** One dropdown. Every card on this page just re-queried six models — Employee, Contract, Payslip, PayslipWarning, Attendance, TimeOffRequest. They are listed at the bottom of the page." |
 | **C3** | 4:20 | `Department` → **`Engineering`**. | *Total Net Paid* → **₹ 4.69L** (**₹4,68,760**) — six payslips of twenty. |
@@ -157,7 +181,7 @@ explicitly against hardcoded dashboards. Slow down. Let the screen do the work.
 > you."
 
 > **Number check before you present.** The KPI cards use compact notation —
-> the *Total Net Paid* tile literally reads `₹ 15.63L`, not `₹15,63,027.86`. The
+> the *Total Net Paid* tile literally reads `₹ 15.59L`, not `₹15,58,667.87`. The
 > exact rupee figures are on the **Payruns** list (*Net* column) and in the
 > **Department Overview** rows. Say the lakh figure, point at the exact one if
 > challenged.
@@ -230,4 +254,4 @@ reopen `Reports` and pick `Payroll Dashboard`.
 - Reseed between rehearsals (`manage.py seed --flush`) so March 2026 does not
   accumulate and so Priya's balance is back at 20 / 0 / 20.
 - Have this file open on a second screen or printed. Do not present from memory.
-- The three numbers you must not fumble: **15,63,028 → 14,73,360 → 5,03,998**.
+- The three numbers you must not fumble: **15,58,668 → 14,73,360 → 5,03,589**.

@@ -154,8 +154,33 @@ export default function PayslipDetail({ id }) {
                   <strong>{money(slip.net)}</strong>
                 </td>
               </tr>
+              {Number(slip.employer_cost) > 0 && (
+                <>
+                  {/*
+                    Employer contributions sit below Net deliberately. They are
+                    a company cost, not a deduction from the employee, so they
+                    must never appear to reduce take-home pay.
+                  */}
+                  <tr>
+                    <td className="muted">Employer contributions</td>
+                    <td className="right mono">
+                      {money(slip.employer_cost)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="muted">Cost to company</td>
+                    <td className="right mono">{money(slip.ctc)}</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
+          {Number(slip.employer_cost) > 0 && (
+            <div className="tiny faint mt">
+              Employer contributions are paid by the company and do not reduce
+              net pay.
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -204,6 +229,14 @@ export default function PayslipDetail({ id }) {
                       <span className={`badge ${CATEGORY_TONE[line.category] || "grey"}`}>
                         {line.category_display || line.category}
                       </span>
+                      {/* An employer line sits in the sequence like any other
+                          but is kept out of gross and net — label it so the
+                          category badge is not read as a deduction. */}
+                      {line.is_employer_cost && (
+                        <span className="badge purple" style={{ marginLeft: 6 }}>
+                          Employer
+                        </span>
+                      )}
                     </td>
                     <td className="num mono">{line.quantity}</td>
                     <td className="num mono">{line.rate}</td>
