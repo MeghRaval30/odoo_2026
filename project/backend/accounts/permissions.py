@@ -27,7 +27,17 @@ class CanManageHR(BasePermission):
 
 
 class CanRunPayroll(BasePermission):
-    """Payrun and payslip access — Payroll User and above."""
+    """
+    Payrun and payslip access — Payroll User and above.
+
+    Delete is what separates the two payroll rows of the matrix: an HR Payroll
+    User has "Create / Read / Update", an HR Payroll Manager has "Full CRUD"
+    (PRD §3.2). Collapsing every unsafe method into a single can_run_payroll
+    check erased that distinction, so DELETE is tested on its own.
+
+    `can_configure_payroll` is named for structures and rules, but it resolves
+    to exactly the set this needs — Payroll Manager or Admin.
+    """
 
     def has_permission(self, request, view):
         user = request.user
@@ -35,6 +45,8 @@ class CanRunPayroll(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return user.can_run_payroll or user.is_admin
+        if request.method == "DELETE":
+            return user.can_configure_payroll
         return user.can_run_payroll
 
 
