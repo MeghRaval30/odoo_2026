@@ -27,7 +27,7 @@ _PAN = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 #: catches an annual figure that was divided twice; the upper catches one that
 #: was not divided at all.
 WAGE_FLOOR = 1000
-WAGE_CEILING = 5000000
+WAGE_CEILING = 1000000
 
 
 def _issue(row, column, severity, code, message, suggestion="", auto_fix=""):

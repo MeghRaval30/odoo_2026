@@ -120,6 +120,79 @@ Changing Period or Department re-drives every card on the screen.
 
 ---
 
+## Data migration, with a local model
+
+The biggest thing standing between a company and this software is not the
+software. It is five years of people data sitting in whatever they keep it in
+today -- usually a spreadsheet somebody has maintained by hand since 2019.
+
+**Workforce -> Data Import** reads that spreadsheet. Admin only.
+
+It is not a model with a file attached. Every column is judged three ways:
+
+| Voter | Reads | Good at | Blind to |
+|---|---|---|---|
+| `lexical` | the header, against a synonym dictionary | `DOJ`, `A/C No`, `Emp Naam` | anything not in the dictionary |
+| `shape` | the actual cell values | recognising an IFSC code or an email; cannot be argued out of it | what the column is *for* |
+| `model` | headers plus the other two voters' evidence | meaning and judgement | occasional confabulation |
+
+The reconciler combines them and **keeps the losing votes**, so a column where
+measured evidence overruled the model shows exactly that, struck through, on
+screen. Nothing is written until a person approves a plan they can edit.
+
+That design came out of a measurement rather than a preference. Asked to map
+headers cold, `qwen2.5:7b` returned null for `Sal (pm)`, `DOJ` and `Mob No`.
+Given the same headers plus one sentence per column describing what the values
+actually look like, the same model at the same temperature got all six right,
+including correctly declining to map a free-text notes column.
+
+Three deliberately broken rosters ship with it, each failing differently:
+
+| Sample | What breaks | What handles it |
+|---|---|---|
+| `messy_startup_roster.csv` | Two title rows above the header, Hinglish column names, three date formats, rupees written three ways, a `TOTAL` row at the bottom | Header scoring, the transform chain |
+| `legacy_hrms_export.xlsx` | Structurally perfect and semantically wrong: salary is **annual**, blanks are the string `NULL` | Value profiling — only the distribution reveals a figure twelve times too large |
+| `acquisition_northwind.csv` | Another company's vocabulary, and four people already on the roster | Value mapping and duplicate detection |
+
+**Nothing leaves the machine.** The model runs on `127.0.0.1` via Ollama. It
+receives column headers, a one-line description of each column, and at most
+three sample values. Full rows are never sent anywhere.
+
+**It is optional.** With the model off, the import still runs on the dictionary
+and the profiler -- 10 of 13 columns on the bundled files -- and every screen
+says which path produced its answer.
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\setup-ai.ps1   # Windows
+bash scripts/setup-ai.sh                                        # macOS, Linux
+cd project/backend && python manage.py ai_doctor                # verify
+```
+
+Full detail, including troubleshooting: [docs/AI-SETUP.md](docs/AI-SETUP.md).
+
+---
+
+## Workforce operations
+
+Also Admin only. The rest of the product acts on one record at a time; these
+act on a group.
+
+- **Segments** -- a saved question rather than a saved list, so "interns past
+  six months" means the same thing in March as in January. Describe one in a
+  sentence and the compiled rule comes back editable, with a live match count.
+- **Mass actions** -- increment, offboarding, transfer, bond issue. Always
+  previewed from the same code that executes them, with a typed confirmation.
+  A **mass increment closes each current contract and opens a new one** from
+  the effective date rather than editing a wage in place, so December still
+  resolves to December's contract at December's wage. That is graded rule 1
+  working from the other side.
+- **Bonds** -- service agreements with a lock-in and a **pro-rata** recovery
+  amount, which is the figure a mass-exit preview totals.
+- **Playbooks** -- standing rules that raise reminders and never change
+  anything, which is what makes them safe to leave switched on.
+
+---
+
 ## Stack
 
 React 19 + Vite, Django 6.1 + DRF 3.18, SQLite.
