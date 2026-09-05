@@ -26,6 +26,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Role, User
+from accounts.security import NetworkPolicy, SecuritySetting
 from attendance.models import Attendance
 from core.models import Company, Department, Holiday, JobPosition, WorkLocation
 from employees.models import Contract, Employee, ScheduleLine, WorkingSchedule
@@ -61,6 +62,19 @@ class Command(BaseCommand):
                           Company):
                 model.objects.all().delete()
             User.objects.filter(is_superuser=False).delete()
+
+            # Security settings are a single row that nothing above touches,
+            # so they survived every reseed. probe_forms.py and smoke_api.py
+            # exercise the security screen by flipping them, which left the
+            # demo opening on "Sign-in is restricted to 0 permitted networks"
+            # and IP-bound sessions -- alarming to read, and the second one
+            # signs everybody out the moment the laptop changes network.
+            #
+            # This command is what "a known demo state" means, so the row and
+            # its policies are reset here with it.
+            NetworkPolicy.objects.all().delete()
+            SecuritySetting.objects.all().delete()
+            SecuritySetting.load()          # recreated at model defaults
 
         random.seed(360)  # reproducible demos
 
