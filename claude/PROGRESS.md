@@ -82,3 +82,72 @@ Before the pivot this session finished the previously-queued work: `seed
 --employees N` (T-089) and its tests, merged and pushed. A 250-person roster
 seeds in 40s and a 233-employee payrun computes in 5.7s; that run raises
 `NO_CONTRACT` and `AC_MISSING` together, which closes PRD success criterion 4.
+
+### 21:30 — the capability matrix, and what it replaced
+`accounts/capabilities.py` is now the single home for "who may do what". Roles
+are the five the PDF names; a user may hold several and the effective set is the
+**union**, not the highest one — which is what the mockup's "one or more roles"
+actually requires and what a real "HR Manager + Payroll User" needs.
+
+The four old boolean flags (`is_admin`, `can_manage_hr`, `can_run_payroll`,
+`can_configure_payroll`) still exist but are now *views* onto the matrix rather
+than a second copy of the rules, so the 86 existing account tests kept passing
+without edits.
+
+`/api/auth/me/` now returns capabilities, a **server-built navigation tree** and
+which dashboard the account lands on. A menu a role cannot use is absent, not
+greyed out. Hiding is presentation; the permission classes still enforce.
+
+### 21:55 — security: sign-in, sessions, self-service, audit
+Six things, each closing a named attack rather than ticking a box.
+
+**Network-restricted sign-in.** `NetworkPolicy` rows hold CIDRs and can be
+scoped to a single role — the realistic shape being "pin payroll staff to the
+office because they can move money, leave everyone else alone". The check runs
+on **every request**, not only at sign-in: checking once would mean you
+authenticate at the office and then use the token from anywhere.
+`X-Forwarded-For` is ignored unless `TRUSTED_PROXY_COUNT` says a proxy is real,
+because otherwise anyone claims to be on the office Wi-Fi with one header.
+
+**Sessions that end.** DRF's token never expires. `ExpiringTokenAuthentication`
+adds an idle timeout, an absolute lifetime and optional address binding.
+Deactivating a user now kills their live sessions instead of waiting for the
+token to lapse — which is exactly the window someone being walked out uses.
+
+**Lockout.** Failures counted per email and per address; the streak resets on
+success. A locked account is rejected *before* the password is checked, so it
+leaks nothing. A wrong email and a wrong password return the identical message.
+
+**Self-service, split by blast radius.** Phone and address are the employee's
+own business and apply immediately. Name, date of birth, PAN and **bank account**
+go through an HR approval queue — repointing a salary the day before a payrun is
+the single most attacked field in any payroll system. Nobody can approve a change
+to their own record, HR rights or not, or the control would be decorative.
+
+**Password change.** Requires the current password (a borrowed unlocked laptop
+must not become a permanent takeover) and signs out every other session.
+
+**Audit log.** Append-only, and deliberately not a generic history table — it
+records the handful of actions that matter in a dispute: who approved what, who
+changed whose bank account, who granted which role, whose attendance was
+corrected by hand.
+
+Plus the escalation guards: you cannot change your own roles, deactivate
+yourself, or remove the last active administrator.
+
+### 22:05 — attendance reads in hours and minutes
+The user was right twice. `8.45` is eight hours and *twenty-seven* minutes, and
+a dashboard tile that counts how many times overtime happened tells you nothing.
+`core/formatting.py` holds the conversion; the API now serves `worked_hm`,
+`elapsed_hm` and `overtime_hm` beside the decimals, which payroll still needs to
+multiply. The widget's compact form matches the mockup exactly: `6h56`.
+
+Anti-gaming on the same surface: an employee may punch **only for themselves**
+and **only for today** — worked days feed pay, so a back-dated record is a
+self-service raise. Posting a colleague's id used to be silently rewritten; it
+is now refused and logged, because nobody does that by accident. Check-in can be
+required to come from a permitted network, on its own switch, since a clock you
+can punch from your sofa is not attendance.
+
+**119 backend tests green** (86 accounts including 31 new security tests, 33
+attendance).

@@ -9,7 +9,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts import capabilities as caps
+from accounts.models import AuditLog, SecuritySetting, client_ip
 from accounts.permissions import CanManageHR
+from core.formatting import hours_minutes, hours_minutes_compact
 
 from .models import Attendance
 
@@ -26,17 +29,35 @@ class AttendanceSerializer(serializers.ModelSerializer):
                                             read_only=True)
     elapsed_hours = serializers.DecimalField(max_digits=6, decimal_places=2,
                                              read_only=True)
+    # The same numbers as hours and minutes. Payroll multiplies the decimal;
+    # people read the other one. "8.45" is eight hours twenty-seven, and a
+    # timesheet that invites that misreading is a timesheet nobody trusts.
+    worked_hm = serializers.SerializerMethodField()
+    elapsed_hm = serializers.SerializerMethodField()
+    overtime_hm = serializers.SerializerMethodField()
     is_open = serializers.BooleanField(read_only=True)
     status_display = serializers.CharField(source="get_status_display",
                                            read_only=True)
+    edited_by_email = serializers.CharField(source="edited_by.email",
+                                            read_only=True, default=None)
 
     class Meta:
         model = Attendance
         fields = ["id", "employee", "employee_name", "department_name",
                   "manager_name", "check_in", "check_out", "worked_hours",
-                  "elapsed_hours", "is_open", "status", "status_display",
-                  "overtime_hours", "is_manually_edited", "notes"]
-        read_only_fields = ["is_manually_edited"]
+                  "worked_hm", "elapsed_hours", "elapsed_hm", "is_open",
+                  "status", "status_display", "overtime_hours", "overtime_hm",
+                  "is_manually_edited", "edited_by_email", "notes"]
+        read_only_fields = ["is_manually_edited", "edited_by_email"]
+
+    def get_worked_hm(self, obj):
+        return hours_minutes(obj.worked_hours)
+
+    def get_elapsed_hm(self, obj):
+        return hours_minutes(obj.elapsed_hours)
+
+    def get_overtime_hm(self, obj):
+        return hours_minutes(obj.overtime_hours)
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
@@ -58,14 +79,52 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        """An employee may only create attendance for themselves."""
+        """
+        An employee may only create attendance for themselves, and only for
+        today.
+
+        Both halves matter. Without the first, anyone can punch a colleague in.
+        Without the second, a missed week is a week you can quietly invent on
+        the last day of the month — and worked days feed straight into pay, so
+        a back-dated record is a self-service raise. HR keeps the ability to
+        correct history; that is a different action, by a different person,
+        and it is flagged and logged.
+        """
         user = self.request.user
-        if not user.can_manage_hr:
-            if user.employee_id is None:
-                raise PermissionDenied("No employee linked to this account.")
-            serializer.save(employee_id=user.employee_id)
-        else:
-            serializer.save()
+        payload = serializer.validated_data
+
+        if user.can(caps.ATTENDANCE_CORRECT):
+            record = serializer.save(is_manually_edited=True, edited_by=user)
+            AuditLog.write(
+                self.request, AuditLog.ATTENDANCE_CORRECTED,
+                f"{user.email} created a manual attendance record for "
+                f"{record.employee.full_name} on {record.check_in:%d-%b-%Y}",
+                target=record)
+            return
+
+        if user.employee_id is None:
+            raise PermissionDenied("No employee linked to this account.")
+
+        requested = payload.get("employee")
+        if requested is not None and requested.pk != user.employee_id:
+            raise PermissionDenied(
+                "You can only record your own attendance.")
+
+        check_in = payload.get("check_in")
+        if check_in is not None:
+            today = timezone.localdate()
+            when = timezone.localtime(check_in).date()
+            if when != today:
+                raise PermissionDenied(
+                    f"You can only record attendance for today ({today:%d-%b-%Y}). "
+                    f"Ask HR to correct an earlier day.")
+            if check_in > timezone.now():
+                raise PermissionDenied("Attendance cannot start in the future.")
+
+        record = serializer.save(employee_id=user.employee_id)
+        AuditLog.write(self.request, AuditLog.ATTENDANCE_PUNCH,
+                       f"{record.employee.full_name} recorded attendance for "
+                       f"{record.check_in:%d-%b-%Y}", target=record)
 
     def get_queryset(self):
         qs = Attendance.objects.select_related(
@@ -76,10 +135,52 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_update(self, serializer):
-        """Manual corrections are flagged and attributed (PRD-5.5.4)."""
-        serializer.save(is_manually_edited=True, edited_by=self.request.user)
+        """
+        Manual corrections are flagged and attributed (PRD-5.5.4), and now
+        logged.
+
+        Editing attendance edits pay. The record already carried
+        `is_manually_edited` and `edited_by`, which answers "was this touched";
+        the audit entry answers "by whom, from where, and what changed" — the
+        questions actually asked when a figure is disputed.
+        """
+        instance = serializer.instance
+        before = (instance.check_in, instance.check_out, instance.status,
+                  instance.overtime_hours)
+        record = serializer.save(is_manually_edited=True,
+                                 edited_by=self.request.user)
+        after = (record.check_in, record.check_out, record.status,
+                 record.overtime_hours)
+        if before != after:
+            AuditLog.write(
+                self.request, AuditLog.ATTENDANCE_CORRECTED,
+                f"{self.request.user.email} corrected "
+                f"{record.employee.full_name}'s {record.check_in:%d-%b-%Y} "
+                f"attendance: in {before[0]:%H:%M} → {after[0]:%H:%M}, "
+                f"worked {hours_minutes(record.worked_hours)}", target=record)
+
+    def perform_destroy(self, instance):
+        AuditLog.write(
+            self.request, AuditLog.ATTENDANCE_CORRECTED,
+            f"{self.request.user.email} deleted {instance.employee.full_name}'s "
+            f"attendance for {instance.check_in:%d-%b-%Y}", target=instance)
+        instance.delete()
 
     # -- widget endpoints (PRD-5.5.5) --------------------------------------
+
+    @staticmethod
+    def _punch_network_check(request):
+        """
+        A clock you can punch from your sofa is not attendance.
+
+        This is the one place the network rule earns its keep even when general
+        sign-in is unrestricted, so it has its own switch:
+        `enforce_network_on_punch`.
+        """
+        settings_row = SecuritySetting.load()
+        allowed, reason = settings_row.network_allows(
+            client_ip(request), request.user.role_codes, for_punch=True)
+        return allowed, reason
 
     @action(detail=False, methods=["get"])
     def status(self, request):
@@ -92,11 +193,17 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         today = Attendance.objects.filter(
             employee=employee, check_in__date=timezone.localdate())
         total_today = sum((a.worked_hours for a in today), Decimal("0.00"))
+        can_punch, punch_reason = self._punch_network_check(request)
         return Response({
             "checked_in": session is not None,
             "session": AttendanceSerializer(session).data if session else None,
             "elapsed_hours": session.elapsed_hours if session else 0,
+            "elapsed_hm": hours_minutes_compact(
+                session.elapsed_hours if session else 0),
             "total_today": total_today,
+            "total_today_hm": hours_minutes_compact(total_today),
+            "can_punch": can_punch,
+            "punch_blocked_reason": punch_reason,
         })
 
     @action(detail=False, methods=["post"])
@@ -105,7 +212,19 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if employee is None:
             return Response({"detail": "No employee linked to this account."},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        allowed, reason = self._punch_network_check(request)
+        if not allowed:
+            AuditLog.write(request, AuditLog.ATTENDANCE_PUNCH,
+                           f"{employee.full_name} was refused a check-in: {reason}")
+            return Response({"detail": reason}, status=status.HTTP_403_FORBIDDEN)
+
         session, created = Attendance.check_in_employee(employee)
+        if created:
+            AuditLog.write(request, AuditLog.ATTENDANCE_PUNCH,
+                           f"{employee.full_name} checked in at "
+                           f"{timezone.localtime(session.check_in):%H:%M}",
+                           target=session)
         return Response(
             {"created": created, "session": AttendanceSerializer(session).data},
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
