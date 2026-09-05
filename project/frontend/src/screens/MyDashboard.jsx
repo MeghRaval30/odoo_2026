@@ -66,14 +66,14 @@ export default function MyDashboard() {
           </div>
         </div>
         <div className="card kpi">
-          <div className="label">Worked this month</div>
+          <div className="label">Worked in {attendance.period_label}</div>
           <div className="value">{attendance.worked_this_month_hm}</div>
           <div className="foot">
             {attendance.days_recorded} day{attendance.days_recorded === 1 ? "" : "s"} recorded
           </div>
         </div>
         <div className="card kpi">
-          <div className="label">Overtime this month</div>
+          <div className="label">Overtime in {attendance.period_label}</div>
           <div className="value">{attendance.overtime_this_month_hm}</div>
           <div className="foot">
             {attendance.missing_checkouts
@@ -96,13 +96,18 @@ export default function MyDashboard() {
             <div className="between">
               <div className="card-title" style={{ marginBottom: 0 }}>
                 Recent attendance
+                {!attendance.is_current_month && (
+                  <span className="badge grey" style={{ marginLeft: 8 }}>
+                    {attendance.period_label}
+                  </span>
+                )}
               </div>
               <a className="tiny" href={href("/attendance")}>
                 All my records &rarr;
               </a>
             </div>
             {!attendance.recent.length ? (
-              <div className="empty">Nothing recorded this month yet.</div>
+              <div className="empty">Nothing recorded yet.</div>
             ) : (
               <div className="table-wrap mt">
                 <table>

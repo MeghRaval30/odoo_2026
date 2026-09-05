@@ -268,10 +268,24 @@ def my_dashboard_view(request):
 
     today = date.today()
     month_start = today.replace(day=1)
+    month_end = today
+
+    # If nothing has been recorded this month, show the most recent month that
+    # has something rather than a screen of zeroes. An empty dashboard reads as
+    # "the system is broken" far more often than it reads as "you have not
+    # clocked in yet", and the label below says which month is on screen.
+    if not Attendance.objects.filter(employee=employee,
+                                     check_in__date__gte=month_start).exists():
+        newest = (Attendance.objects.filter(employee=employee)
+                  .order_by("-check_in").first())
+        if newest is not None:
+            anchor = newest.date
+            month_start = anchor.replace(day=1)
+            month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
     attendance = Attendance.objects.filter(
         employee=employee, check_in__date__gte=month_start,
-        check_in__date__lte=today)
+        check_in__date__lte=month_end)
     worked_rows = [a.worked_hours for a in attendance if a.check_out]
     worked_total = sum(worked_rows, ZERO)
     overtime_total = attendance.aggregate(
@@ -304,6 +318,10 @@ def my_dashboard_view(request):
             "has_bank_details": employee.has_bank_details,
         },
         "attendance": {
+            "period_start": month_start,
+            "period_end": month_end,
+            "period_label": month_start.strftime("%B %Y"),
+            "is_current_month": month_start == today.replace(day=1),
             "checked_in": open_session is not None,
             "open_since": open_session.check_in if open_session else None,
             "days_recorded": attendance.count(),
