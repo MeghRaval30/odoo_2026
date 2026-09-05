@@ -37,12 +37,61 @@ class SeedDefaultTests(TestCase):
     def test_roster_shape_matches_the_demo_script(self):
         self.assertEqual(Employee.objects.count(), 22)
         self.assertEqual(Contract.objects.count(), 24)
-        self.assertEqual(Attendance.objects.count(), 1746)
+        # 1731 rather than 1746: attendance now follows each contract's
+        # working schedule, so the part-time employee is seeded on her
+        # four days rather than on five.
+        self.assertEqual(Attendance.objects.count(), 1731)
         # Three paid months plus the off-cycle March correction, which exists so
         # that the payrun the operator creates during the demo has a DUPLICATE
         # to find. 60 monthly payslips plus that one.
         self.assertEqual(Payrun.objects.count(), 4)
         self.assertEqual(Payslip.objects.count(), 61)
+
+    def test_nobody_works_more_days_than_their_schedule_allows(self):
+        """
+        Worked days come from attendance and expected days come from the
+        contract's working schedule. If the seed generates attendance without
+        consulting that schedule the two disagree, and the disagreement is
+        visible on stage: a part-time employee shown working a full week.
+
+        This was real. The part-time contract is 20 hours over four days and
+        the seed produced five eight-hour days -- 23 worked against 19
+        expected, and roughly 44 hours against a 20-hour contract. The holiday
+        exclusion just above is the same bug found from the other end.
+        """
+        offenders = [
+            f"{p.number} {p.employee.full_name}: "
+            f"{p.worked_days} worked vs {p.expected_days} expected"
+            for p in Payslip.objects.select_related("employee")
+            if p.worked_days > p.expected_days
+        ]
+        self.assertEqual(offenders, [])
+
+    def test_attendance_falls_only_on_days_the_schedule_names(self):
+        """The same rule stated on the attendance rows themselves."""
+        from collections import defaultdict
+
+        by_employee = defaultdict(set)
+        for row in Attendance.objects.select_related("employee"):
+            by_employee[row.employee_id].add(row.check_in.weekday())
+
+        offenders = []
+        for contract in (Contract.objects
+                         .select_related("employee", "working_schedule")):
+            schedule = contract.working_schedule
+            if schedule is None:
+                continue
+            allowed = {line.day_of_week for line in schedule.lines.all()}
+            if not allowed:
+                continue
+            worked = by_employee.get(contract.employee_id, set())
+            stray = worked - allowed
+            if stray:
+                offenders.append(
+                    f"{contract.employee.full_name} on {schedule.name}: "
+                    f"attended weekday(s) {sorted(stray)}, schedule allows "
+                    f"{sorted(allowed)}")
+        self.assertEqual(offenders, [])
 
     def test_the_named_demo_people_are_present_and_unchanged(self):
         john = Employee.objects.get(work_email="john@oxp.com")
@@ -113,7 +162,12 @@ class SeedDefaultTests(TestCase):
     def test_the_three_seeded_payruns_are_paid_and_hold_their_totals(self):
         expected = {"December 2025": Decimal("1473360.00"),
                     "January 2026": Decimal("1482320.00"),
-                    "February 2026": Decimal("1558667.87")}
+                    # Moved by 347.46 when overtime began to be measured
+                    # against each person's own scheduled day rather
+                    # than a flat 8.5 hours. December and January are
+                    # unchanged, so the demo's Dec < Jan < Feb evidence
+                    # is untouched.
+                    "February 2026": Decimal("1558320.41")}
         for name, net in expected.items():
             with self.subTest(payrun=name):
                 run = Payrun.objects.get(name=name)

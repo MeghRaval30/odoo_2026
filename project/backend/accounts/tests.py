@@ -634,6 +634,54 @@ class PayrollRunAccessTests(RoleFixtureMixin, APITestCase):
                     foreign, [],
                     "a non-payroll user must not see other people's payslips")
 
+    def test_a_payroll_reader_can_still_narrow_payslips_to_one_employee(self):
+        """
+        The foundation of the My Payslips fix.
+
+        A role holding payslip.read.all is never narrowed by the queryset --
+        that is the point of the capability. So the personal payslips screen
+        cannot rely on the server to scope for it, and used to show a payroll
+        operator all 61 payslips in the company under the heading "My
+        payslips". It now asks for one employee explicitly, which only works
+        if the filter is honoured for a caller who can read everything.
+        """
+        from employees.models import Employee
+        from payroll.models import Payslip
+
+        one = Employee.objects.create(
+            first_name="Scoped", last_name="One",
+            work_email="scoped.one@example.com",
+            company=self.company, date_of_joining=date(2026, 1, 1))
+        other = Employee.objects.create(
+            first_name="Scoped", last_name="Other",
+            work_email="scoped.other@example.com",
+            company=self.company, date_of_joining=date(2026, 1, 1))
+        for employee in (one, other):
+            Payslip.objects.create(
+                payrun=self.payrun, employee=employee,
+                salary_structure=self.structure,
+                period_start=self.payrun.period_start,
+                period_end=self.payrun.period_end)
+
+        self.client.force_authenticate(user=self.payroll_user)
+
+        everyone = self.client.get(reverse("payslip-list"))
+        self.assertEqual(everyone.status_code, status.HTTP_200_OK)
+        all_rows = everyone.json().get("results", everyone.json())
+        self.assertGreaterEqual(
+            len(all_rows), 2,
+            "this role reads every payslip, which is exactly why the personal "
+            "screen cannot rely on the queryset to scope for it")
+
+        mine = self.client.get(reverse("payslip-list"), {"employee": one.pk})
+        self.assertEqual(mine.status_code, status.HTTP_200_OK)
+        rows = mine.json().get("results", mine.json())
+        self.assertTrue(rows, "the filter returned nothing at all")
+        foreign = [r for r in rows if r.get("employee") != one.pk]
+        self.assertEqual(
+            foreign, [],
+            "filtering by employee must return only that employee's payslips")
+
     def test_payslips_stay_read_only_for_everyone(self):
         """
         No role may write a payslip — they are produced by computing a payrun.

@@ -5,18 +5,32 @@
 // anomaly. This one spans one person and exists to answer "what was I paid, and
 // can I have the PDF".
 //
-// The scoping is the server's — the payslip queryset narrows to the caller's
-// own employee unless they hold `payslip.read.all`. This screen would show
-// nothing extra even if it asked for it.
+// This screen asks for one person's payslips **explicitly**.
+//
+// It used to lean on the server: the payslip queryset narrows to the caller's
+// own employee unless they hold `payslip.read.all`, and the note here claimed
+// the screen would show nothing extra even if it asked for everything. That
+// reasoning only held from an Employee's seat. The three roles that do hold
+// `payslip.read.all` are never narrowed, so a payroll operator opening this
+// page saw all 61 payslips in the company under the heading "My payslips —
+// every period you have been paid for". Not a leak, since those roles may read
+// them anyway, but the page was telling them something untrue about whose
+// money they were looking at.
+//
+// Own-scope is this screen's whole subject, so it states it rather than
+// inheriting it. An account with no employee record has no payslips by
+// definition, and says so instead of falling back to everybody's.
 
 import { useState } from "react";
-import { api, downloadBlob, formatDate, money } from "../api";
+import { api, auth, downloadBlob, formatDate, money } from "../api";
 import { ErrorBox, Loading, PageHead, StateBadge, useResource } from "../components/ui";
 
 export default function MyPayslips() {
-  const { rows, loading, error } = useResource("/api/payslips/", {
-    ordering: "-period_start",
-  });
+  const employeeId = auth.user?.employee_id ?? null;
+  const { rows, loading, error } = useResource(
+    employeeId ? "/api/payslips/" : null,
+    { ordering: "-period_start", employee: employeeId },
+  );
   const [busy, setBusy] = useState(null);
   const [problem, setProblem] = useState(null);
 
@@ -44,8 +58,15 @@ export default function MyPayslips() {
 
       <ErrorBox error={error || problem} />
 
+
+
       <div className="card">
-        {!rows.length ? (
+        {employeeId === null ? (
+          <div className="empty">
+            This account is not linked to an employee record, so it has no
+            payslips of its own. The full payroll register is under Payroll.
+          </div>
+        ) : !rows.length ? (
           <div className="empty">
             No payslips yet. One appears here once a payrun covering your period
             has been computed.
