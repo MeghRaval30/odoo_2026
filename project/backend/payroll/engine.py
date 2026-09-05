@@ -314,7 +314,11 @@ def compute_payrun(payrun):
     if payrun.is_locked:
         raise ValueError("A paid payrun is read-only and cannot be recomputed.")
 
-    payrun.warnings.filter(payslip__isnull=True).delete()
+    # Clear only warnings that compute itself regenerates. Warnings raised at
+    # payrun creation — an employee skipped because they already had a payslip
+    # for the period — record a fact about the run and must survive recompute,
+    # otherwise the operator silently loses the record that someone was skipped.
+    payrun.warnings.filter(payslip__isnull=True, employee__isnull=True).delete()
 
     for payslip in payrun.payslips.select_related("employee", "contract"):
         payslip.salary_structure = payrun.salary_structure

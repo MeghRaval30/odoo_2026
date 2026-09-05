@@ -18,6 +18,9 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-key-change-in-production")
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+if DEBUG:
+    # Django's test client sends Host: testserver — needed by smoke_api.py
+    ALLOWED_HOSTS += ["testserver"]
 
 # --------------------------------------------------------------------------
 # Applications
