@@ -22,27 +22,20 @@ import {
   YAxis,
 } from "recharts";
 import { api, compactMoney, money } from "../api";
+import { useChartPalette } from "../lib/theme";
 
-// Recharts needs concrete values rather than CSS custom properties for its
-// internal colour maths, so these mirror index.css by hand.
-const C = {
-  accent: "#d97757",
-  green: "#5b7d58",
-  amber: "#a97a24",
-  red: "#b5504a",
-  purple: "#856b9c",
-  rose: "#c0757b",
-  grid: "#e7d9d1",
-  dim: "#9c8f84",
-};
+// Recharts needs concrete colour strings rather than CSS custom properties for
+// its own interpolation, so the palette is read back out of the document by
+// `useChartPalette()` — see lib/theme.js. It used to be a hand copy of Ledger's
+// tokens here, which was wrong the moment there was more than one theme.
 
 // Keys must match Payrun.STATES in payroll/models.py.
-const STATE_COLOR = {
+const stateColor = (C) => ({
   PAID: C.green,
   VALIDATED: C.accent,
   COMPUTED: C.amber,
   DRAFT: C.dim,
-};
+});
 
 const STATE_BADGE = {
   PAID: "green",
@@ -51,15 +44,15 @@ const STATE_BADGE = {
   DRAFT: "grey",
 };
 
-const tooltipStyle = {
-  background: "#fffcf9",
-  border: "1px solid #e7d9d1",
-  borderRadius: 8,
+const tooltipStyleFor = (C) => ({
+  background: C.surface,
+  border: `1px solid ${C.grid}`,
+  borderRadius: C.radius,
   fontSize: 12,
-  color: "#241e1a",
-  fontFamily: "Inter, sans-serif",
-  boxShadow: "0 6px 22px rgba(59,46,40,0.16)",
-};
+  color: C.text,
+  fontFamily: C.sans,
+  boxShadow: C.shadow,
+});
 
 function Kpi({ label, value, foot, tone }) {
   return (
@@ -72,6 +65,9 @@ function Kpi({ label, value, foot, tone }) {
 }
 
 export default function Dashboard() {
+  const C = useChartPalette();
+  const tooltipStyle = tooltipStyleFor(C);
+  const STATE_COLOR = stateColor(C);
   const [options, setOptions] = useState(null);
   const [data, setData] = useState(null);
   const [filters, setFilters] = useState({

@@ -16,6 +16,17 @@
    offline; a theme has to stay recognisably itself on Georgia and Segoe UI,
    which is why the pairings differ by *class* (serif / grotesk / mono /
    humanist) and not only by name.
+
+   A NOTE ON SPECIFICITY, and it matters. Every selector below is written
+   `:root[data-theme="x"]` rather than `[data-theme="x"]`. index.css imports
+   this file at the top — @import is only legal there — and then declares the
+   Ledger defaults on a bare `:root`. `:root` and `[data-theme="x"]` have the
+   same specificity, so the later block wins, and the later block is the
+   defaults. With a bare attribute selector every theme silently resolved to
+   Ledger: the attribute was set on <html>, the switcher stored the choice, and
+   not one token changed. Adding `:root` in front raises the theme to (0,2,0)
+   and it beats the fallback, which is the behaviour the fallback was always
+   meant to have.
    ========================================================================== */
 
 
@@ -26,7 +37,7 @@
    looks considered.
    ========================================================================== */
 
-[data-theme="ledger"] {
+:root[data-theme="ledger"] {
   --espresso: #3b2e28;
   --espresso-2: #4a3a32;
   --bg: #f4efe9;
@@ -99,7 +110,7 @@
    carry a faint glow instead of a shadow.
    ========================================================================== */
 
-[data-theme="console"] {
+:root[data-theme="console"] {
   --bg: #0d1117;
   --surface: #151b23;
   --surface-2: #1b232d;
@@ -171,7 +182,7 @@
    opposite of dense — for demos and presentation screens.
    ========================================================================== */
 
-[data-theme="atrium"] {
+:root[data-theme="atrium"] {
   --bg: #f6f7fb;
   --surface: #ffffff;
   --surface-2: #f4f5fa;
@@ -243,7 +254,7 @@
    maximum density — built to be read from a projector at the back of a room.
    ========================================================================== */
 
-[data-theme="blueprint"] {
+:root[data-theme="blueprint"] {
   --bg: #ffffff;
   --surface: #ffffff;
   --surface-2: #f2f4f7;
@@ -315,7 +326,7 @@
    screens rather than a payroll operator's.
    ========================================================================== */
 
-[data-theme="marigold"] {
+:root[data-theme="marigold"] {
   --bg: #fbf5ea;
   --surface: #fffdf8;
   --surface-2: #f7eeda;
@@ -331,7 +342,11 @@
   --primary: #d98324;
   --primary-dark: #b06614;
   --primary-wash: #fdefdb;
-  --on-primary: #fffdf8;
+  /* Cocoa on marigold, not cream. Cream on #d98324 measures 2.86:1, which
+     fails WCAG AA for 13px button labels and fails the 3:1 large-text floor
+     too. The dark ink measures 5.28:1 and is truer to the theme's warm,
+     printed feel besides. */
+  --on-primary: #2e2317;
 
   --rose: #b5476b;      --rose-wash: #fbe6ec;
   --green: #2f7d63;     --green-wash: #e2f1eb;
@@ -389,7 +404,7 @@
    highlight rather than a drop shadow.
    ========================================================================== */
 
-[data-theme="graphite"] {
+:root[data-theme="graphite"] {
   --bg: #131316;
   --surface: #1b1b1f;
   --surface-2: #232328;

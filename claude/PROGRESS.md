@@ -365,3 +365,79 @@ stale copy was on the **server** side of the module graph. `curl
 localhost:5173/src/screens/TimeOff.jsx` showed the truth in one command, and
 `touch` on the file fixed it. Same shape as B-021: the thing serving you is not
 the thing you edited.
+
+### 23:20 — T-106 the six themes, and the reason none of them worked
+
+The briefing said four themes had never been rendered. The truth was worse:
+**not one of the six had ever rendered.** Every theme resolved to Ledger.
+
+`index.css` must `@import "./themes.css"` at the top — CSS allows `@import`
+nowhere else — and then declares the Ledger defaults on a bare `:root`, as a
+graceful fallback for a theme that forgets a token. But `:root` and
+`[data-theme="x"]` have **identical specificity** (0,1,0), so the later
+declaration wins, and the later declaration is always the fallback. The
+attribute was being set on `<html>`, the choice was being stored, the swatch was
+highlighting — and not one token changed. Measured, before the fix:
+
+```
+ledger    bg #f4efe9  primary #d97757  radius 8px
+console   bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+atrium    bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+blueprint bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+marigold  bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+graphite  bg #f4efe9  primary #d97757  radius 8px     ← Ledger
+```
+
+The fix is one character class per selector: `[data-theme="x"]` →
+`:root[data-theme="x"]`, which is (0,2,0) and beats the fallback. That is the
+behaviour the fallback was always meant to have, and the reasoning is now
+written into the top of `themes.css` so nobody re-flattens it.
+
+This is worth dwelling on for a moment. Session 05 wrote in capitals, twice,
+that four themes were unverified — and that instinct was right. But the two it
+believed *were* verified were verified by looking at a switcher that highlighted
+the right swatch. **A control that visibly responds is not evidence that
+anything downstream of it happened.** The check that actually settles it is four
+lines of `getComputedStyle`, and it now exists as a habit rather than a
+screenshot.
+
+Then all six were driven for real — the payroll dashboard, a kanban, a table and
+a modal in each:
+
+| Theme | Verified |
+|---|---|
+| **Ledger** | Warm paper, terracotta, hairlines, serif figures |
+| **Console** | Dark slate, teal, JetBrains Mono, caps labels |
+| **Atrium** | White topbar, indigo, 14px radius, soft shadows, Outfit |
+| **Blueprint** | Square corners, 2px rules, electric blue on white, IBM Plex. The contracts table holds up — **no layout break at `--radius: 0`** |
+| **Marigold** | Cream and cocoa, Fraunces, rounded |
+| **Graphite** | Neutral dark, amber, Space Grotesk |
+
+No horizontal page overflow in any of the six, measured rather than eyeballed.
+
+**Two real defects fell out of finally seeing them.**
+
+**The charts belonged to one theme.** Recharts cannot read CSS custom
+properties, so its palette was a hand copy of Ledger's tokens at the top of
+`Dashboard.jsx`. Harmless with one theme; wrong with six. On Blueprint it drew a
+terracotta line across electric blue, and on both dark themes the axes were a
+light-theme grey that disappeared into the card — the trend line was effectively
+invisible. `lib/theme.js` now exposes `chartPalette()` and a `useChartPalette()`
+hook that reads the tokens back out of the document, with a `MutationObserver`
+on `data-theme` so the charts re-colour **live** when the theme is switched with
+a dashboard open, which is exactly what a demo does. Confirmed: switching
+Marigold → Console repaints the trend line `#d98324` → `#3fd0c9` without a
+reload.
+
+**Marigold's buttons failed contrast.** Cream `#fffdf8` on marigold `#d98324`
+measures **2.86:1** — below WCAG AA for 13px labels and below even the 3:1
+large-text floor. Now cocoa `#2e2317` at **5.28:1**, which also suits the
+theme's printed feel better.
+
+Contrast was measured across all six for text, dim text, faint text, primary,
+button labels and the topbar. Everything else clears AA, with one **inherited**
+exception worth flagging rather than silently changing: Ledger's white-on-
+terracotta button is **3.05:1**, the same failure Marigold had. That colour pair
+is fixed by `ui-design-language.md` §2 and is the product's signature look, so
+it is being reported rather than altered at hour 13 — see the note in
+`current-state.md`.

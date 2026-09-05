@@ -180,5 +180,5 @@ running diary is `claude/PROGRESS.md`.
 | T-103 | Payroll dashboard overtime tile | `DONE` | Trevor | Reads **124h 38m carried by 22 employees** plus average day 8h 43m. The count survives as "Days with overtime", where a count is the right unit |
 | T-104 | Users & Roles screen for the capability matrix | `DONE` | Trevor | Mockup's five columns, search, role filter, the Active switch (which was in form state but had no control), Reset password, and the capability grid. Every path driven in a browser |
 | T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `DONE` | Trevor | Last `auth.can()` gone. Create/Save/Approve gated per capability, plus a route guard read off the server's own navigation tree so a typed URL refuses in one clause instead of rendering a broken shell over a 403 |
-| T-106 | Render and check the four unverified themes | `TODO` | | Atrium, Blueprint, Marigold, Graphite |
+| T-106 | Render and check the four unverified themes | `DONE` | Trevor | **None of the six had ever rendered** — a specificity bug made every theme resolve to Ledger. Fixed, all six driven, charts made theme-aware, Marigold's button contrast repaired |
 | T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | It still describes the old menu and mentions no roles or themes |
