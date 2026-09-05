@@ -124,6 +124,7 @@ def build_payslip_pdf(payslip) -> bytes:
     ]
     meta_table = Table(meta, colWidths=[30 * mm, 55 * mm, 30 * mm, 55 * mm])
     meta_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), regular),
         ("FONTNAME", (0, 0), (0, -1), bold),
         ("FONTNAME", (2, 0), (2, -1), bold),
         ("FONTSIZE", (0, 0), (-1, -1), 8.5),
@@ -151,6 +152,7 @@ def build_payslip_pdf(payslip) -> bytes:
 
     calc = Table(rows, colWidths=[70 * mm, 25 * mm, 35 * mm, 40 * mm])
     style = [
+        ("FONTNAME", (0, 0), (-1, -1), regular),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2d3748")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), bold),
@@ -183,6 +185,7 @@ def build_payslip_pdf(payslip) -> bytes:
         er_rows.append(["Total employer cost", "", _fmt(payslip.employer_cost)])
         er = Table(er_rows, colWidths=[95 * mm, 35 * mm, 40 * mm])
         er.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), regular),
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a5568")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), bold),
@@ -207,6 +210,7 @@ def build_payslip_pdf(payslip) -> bytes:
         ["Cost to Company", _fmt(payslip.ctc)],
     ], colWidths=[130 * mm, 40 * mm])
     totals.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), regular),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("ALIGN", (1, 0), (1, -1), "RIGHT"),
         ("FONTNAME", (0, 2), (-1, 2), bold),
