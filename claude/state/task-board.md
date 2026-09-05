@@ -181,4 +181,33 @@ running diary is `claude/PROGRESS.md`.
 | T-104 | Users & Roles screen for the capability matrix | `DONE` | Trevor | Mockup's five columns, search, role filter, the Active switch (which was in form state but had no control), Reset password, and the capability grid. Every path driven in a browser |
 | T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `DONE` | Trevor | Last `auth.can()` gone. Create/Save/Approve gated per capability, plus a route guard read off the server's own navigation tree so a typed URL refuses in one clause instead of rendering a broken shell over a 403 |
 | T-106 | Render and check the four unverified themes | `DONE` | Trevor | **None of the six had ever rendered** — a specificity bug made every theme resolve to Ledger. Fixed, all six driven, charts made theme-aware, Marigold's button contrast repaired |
-| T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | It still describes the old menu and mentions no roles or themes |
+| T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | **The only task left on the board.** It still describes the old menu, and A3/A5/A7 now quote wrong numbers because of T-090 — the exact corrections are tabulated in `current-state.md` §HALF-DONE |
+
+---
+
+## Session 06 — finishing the commission, and what it turned up
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-108 | Charts follow the active theme | `DONE` | Trevor | Recharts palette was a hand copy of Ledger's tokens. `lib/theme.js::useChartPalette` reads the live tokens and a `MutationObserver` re-colours on switch — proven Marigold → Console repaints the trend line without a reload |
+| T-109 | Route guard for screens reached by URL | `DONE` | Trevor | Reads the navigation tree the server already pruned, so it keeps no second copy of the capability table. Own-scoped detail routes (`/payslips/:id`) stay reachable where the list is not |
+| T-110 | Copy pass on Profile and Security against the design language | `DONE` | Trevor | §5 forbids explaining the system to the user. Rule applied: **state the effect, do not argue for it.** The reasoning moved to the docstrings, where it was actually aimed |
+| T-111 | Decide Ledger's 3.05:1 primary button | `TODO` | | **Needs the user.** White on Claude orange fails WCAG AA for 13px labels. Marigold had the same fault at 2.86:1 and was fixed because nobody had seen it; Ledger is the shipped signature look and is fixed by `ui-design-language.md` §2, so it was reported rather than changed. One token (`--on-primary` or `--primary-dark`) closes it |
+| T-112 | Walk demo steps A3 → A10 in the browser | `TODO` | | The criterion-4 numbers are proven by test and by a direct engine run; the wizard itself was not walked before MEGATRON LAUNCH. Do this **before** editing the demo script, and write down what you see |
+
+---
+
+## Priorities for the time actually remaining (~11h at 22:50)
+
+The board is complete apart from the demo. **The failure mode from here is not
+running out of time — it is breaking something that works.**
+
+| Order | What | Why |
+|---|---|---|
+| 1 | **T-112 then T-107** — walk A3 → A10, then correct the script in place | The only graded deliverable that is currently wrong. Four steps quote numbers that changed today |
+| 2 | **T-111** — put Ledger's button contrast to the user | One token, one question. Cheap now, and it is the product's most-seen colour pair |
+| 3 | Add the two new demo beats — the employee with no Payroll menu, and the theme switcher | Both are strong, both already work, neither needs code |
+| 4 | Capability assertions in `smoke_api.py` | Cheap and valuable; the harness touches none of the new endpoints |
+| 5 | T-075 frontend tests | Still the lowest value for a 24-hour build |
+
+**Do not open new feature work.** Every graded requirement is built and proven.
