@@ -41,3 +41,39 @@ On locale — a correction, telling Claude to stop asking and derive from the so
 
 **7.**
 > https://github.com/MeghRaval30/odoo_2026
+
+**8.** *(after the git-strategy work)*
+> loged in to github btw on the browser in claude repo open. commit from this acc on this chat btw
+
+**9.**
+> do not commit claude btw
+
+**10.** *(clarifying 9)*
+> i mean commint claude folder but not using claude acc only mine pls
+
+**11.** *(with a screenshot of the GitHub contributor list showing a "claude" avatar)*
+> remove this claude attribution
+
+**12.**
+> Okay go
+
+**13.**
+> yes
+
+**14.** *(mid-turn, while the Django scaffold was running)*
+> after that, start building and dont stop untill I tell you the launch word
+
+**15.** *(mid-turn)*
+> dont stop at all cost and run parallel stuff aswell, need you to burn up token fast for this next half an hour go on burning mode
+
+**16.** *(mid-turn)*
+> keep updating your task list and basically the whole state folder and the claude folder as you do work regularly when u feel like it
+
+**17.** *(reversing 16 — became D-012)*
+> um actually, just update the claude folder on the launch word
+
+**18.**
+> Sorry for the pause and stopage continue the work
+
+**19.** *(the trigger)*
+> complete the one thing u r doing and then megatron launch coz we hit 77 % limit

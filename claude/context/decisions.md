@@ -198,3 +198,44 @@ reintroduce it.
 and does contain the trailer. It was left as-is rather than amended, because
 rewriting pushed history is forbidden under D-008. Every commit from this point
 forward is clean.
+
+
+---
+
+## D-011 — SQLite for development and demo, PostgreSQL kept reachable
+
+**Decided by:** Michael, session 01 · 2026-09-05
+
+The backend runs on SQLite by default. `DATABASE_URL` switches it to
+PostgreSQL without a code change.
+
+**Rationale.** D-001 named PostgreSQL, but neither PostgreSQL nor Docker is
+installed on the build machine, and installing either costs time we do not have
+and creates a dependency every teammate would have to repeat before they could
+run anything. Zero install friction matters more than engine parity for a
+24-hour build whose demo must run on whichever laptop is in the room.
+
+The cost: the gist `EXCLUDE` constraint designed for contract overlap cannot be
+created on SQLite. That rule is instead enforced in `Contract.clean()`, which
+runs on every save path and is exercised by `verify_rules.py`. On PostgreSQL the
+database constraint can be layered back on top as belt and braces.
+
+Nothing else in the schema depends on PostgreSQL.
+
+---
+
+## D-012 — The context folder is updated only at MEGATRON LAUNCH
+
+**Decided by:** user, session 01 (Michael) · 2026-09-05
+
+Files under `claude/` are refreshed when the trigger phrase is given, not
+continuously through the session.
+
+**Rationale.** The user briefly asked for rolling context updates and then
+reversed it: session capacity should go into building, not bookkeeping. This
+partially overrides the heartbeat discipline in D-006 — **product code is still
+committed as work progresses**, which is what protects the actual deliverable.
+The accepted tradeoff is that context notes go stale between packs, so a session
+that dies without warning loses its notes rather than its code.
+
+Do not reintroduce rolling context updates unless the user asks.

@@ -82,3 +82,49 @@ there first before re-parsing.
 `UnicodeEncodeError` on characters like `▼` and `●`. Either write to a file with
 an explicit `encoding='utf-8'`, or launch with `python -X utf8` and call
 `sys.stdout.reconfigure(encoding='utf-8')`.
+
+
+---
+
+## RESOLVED — session 01
+
+### B-005 — PostgreSQL and Docker are both absent
+**Status:** worked around · see D-011
+
+`psql`, `pg_isready` and `docker` are all missing, and there is no PostgreSQL
+install directory. Rather than install anything, the project runs on SQLite with
+`DATABASE_URL` available to switch engines.
+
+Do not spend time installing PostgreSQL unless the user asks for it.
+
+### B-006 — The cp1252 console kills any non-ASCII print
+**Status:** recurring trap · hit twice in session 01
+
+Windows console encoding is cp1252. Printing the rupee sign, an en dash or a
+bullet from a Python script raises `UnicodeEncodeError` and aborts the command —
+once mid-way through the seed, after the data had already been written.
+
+**Rule: never print non-ASCII from a management command or script.** Write
+`INR` rather than the rupee sign in console output. The symbol is fine in files,
+API responses and PDFs — only the terminal breaks.
+
+For scripts that must print Unicode: `python -X utf8` plus
+`sys.stdout.reconfigure(encoding="utf-8")`, or write to a file opened with
+`encoding="utf-8"`.
+
+### B-007 — Chained heredocs in one Bash call fail to parse
+**Status:** avoid · session 01
+
+Writing several files in a single Bash command with chained `<<'EOF'` heredocs
+failed with `unexpected EOF while looking for matching quote`. Backticks and
+apostrophes inside the bodies interact badly with the shell.
+
+Use the Write tool for file creation. For scripted edits, write a `.py` file and
+run it rather than passing a long `python -c` string — inline quoting also ate a
+set of backticks while reconciling the task board.
+
+### B-008 — Django test client needs `testserver` in ALLOWED_HOSTS
+**Status:** fixed · session 01
+
+`smoke_api.py` drives the real HTTP stack, and Django's test client sends
+`Host: testserver`. `settings.py` now appends it when `DEBUG` is on.

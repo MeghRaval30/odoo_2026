@@ -26,31 +26,31 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-010 | Django project scaffold + DRF + Postgres config | `TODO` | | `project/backend/` |
-| T-011 | Auth: custom User linked to Employee | `TODO` | | users are separate from, but linked to, employees |
-| T-012 | Roles & permission classes (5 roles) | `TODO` | | see PRD §3 permission matrix |
-| T-013 | Core models: Company, Department, JobPosition | `TODO` | | |
-| T-014 | Employee model + serializers + viewset | `TODO` | | |
-| T-015 | WorkingSchedule + ScheduleLine, derived weekly hours | `TODO` | | **graded rule #2** |
-| T-016 | Contract model + period-overlap constraint | `TODO` | | **graded rule #1** |
-| T-017 | Attendance model, worked-hours computation | `TODO` | | |
-| T-018 | TimeOffType, Allocation, Request models | `TODO` | | |
-| T-019 | Leave balance engine (allocation gating + consumption) | `TODO` | | **graded rule #3** |
-| T-020 | SalaryStructure + SalaryRule models | `TODO` | | |
-| T-021 | **Rule computation engine** (fixed / percentage / formula) | `TODO` | | **graded rule #4** — the heart of the build |
-| T-022 | Payrun + Payslip + PayslipLine models | `TODO` | | |
-| T-023 | Payrun state machine: Draft→Compute→Validate→Paid | `TODO` | | |
-| T-024 | Payroll validation warnings | `TODO` | | **graded rule #5** — A/C missing, duplicate payslip |
-| T-025 | Dashboard aggregation endpoints | `TODO` | | must aggregate ≥5 models |
-| T-026 | Payslip PDF generation | `TODO` | | WeasyPrint |
-| T-027 | Bulk payslip email from Payrun | `TODO` | | console backend is acceptable for demo |
-| T-028 | Seed data command | `TODO` | | ~20 employees, 3 months of history |
+| T-010 | Django project scaffold + DRF + Postgres config | `DONE` | Michael | Django 6.1 + DRF 3.18, SQLite (D-011) |
+| T-011 | Auth: custom User linked to Employee | `DONE` | Michael | email-login User, OneToOne to Employee |
+| T-012 | Roles & permission classes (5 roles) | `DONE` | Michael | 5 role classes, enforced server-side |
+| T-013 | Core models: Company, Department, JobPosition | `DONE` | Michael | + WorkLocation, Holiday |
+| T-014 | Employee model + serializers + viewset | `DONE` | Michael | list/detail serializers, smart-button annotations |
+| T-015 | WorkingSchedule + ScheduleLine, derived weekly hours | `DONE` | Michael | **verified** 40h->41h on line edit |
+| T-016 | Contract model + period-overlap constraint | `DONE` | Michael | **verified** Dec=expired, Feb=running contract |
+| T-017 | Attendance model, worked-hours computation | `DONE` | Michael | derived worked_hours, one-open-session constraint |
+| T-018 | TimeOffType, Allocation, Request models | `DONE` | Michael |  |
+| T-019 | Leave balance engine (allocation gating + consumption) | `DONE` | Michael | **verified** gate blocks, balance derives, cancel restores |
+| T-020 | SalaryStructure + SalaryRule models | `DONE` | Michael | 14 rules seeded on Regular structure |
+| T-021 | **Rule computation engine** (fixed / percentage / formula) | `DONE` | Michael | **verified** sequenced, idempotent, sandboxed |
+| T-022 | Payrun + Payslip + PayslipLine models | `DONE` | Michael | + PayslipWarning |
+| T-023 | Payrun state machine: Draft→Compute→Validate→Paid | `DONE` | Michael | **verified** PAID is terminal and read-only |
+| T-024 | Payroll validation warnings | `DONE` | Michael | **verified** A/C missing fires on 2 employees |
+| T-025 | Dashboard aggregation endpoints | `DONE` | Michael | aggregates 6 models, filters re-drive data |
+| T-026 | Payslip PDF generation | `DONE` | Michael | ReportLab (pure wheel, no GTK) |
+| T-027 | Bulk payslip email from Payrun | `DONE` | Michael | console/locmem backend, PDF attached |
+| T-028 | Seed data command | `DONE` | Michael | 22 employees, 3 months, 840 payslip lines |
 
 ## Phase 2 — Frontend
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-030 | React scaffold, routing, API client, auth flow | `TODO` | | |
+| T-030 | React scaffold, routing, API client, auth flow | `IN PROGRESS` | Michael | api.js + index.css done; App.jsx untouched | |
 | T-031 | App shell: top nav with the 6 required menus | `TODO` | | Time Off items **only** in its dropdown |
 | T-032 | Login screen | `TODO` | | |
 | T-033 | Employee Kanban + List + Form, smart buttons | `TODO` | | both views open the same form |
@@ -71,9 +71,9 @@ A task you started but did not finish is `IN PROGRESS`, never `DONE`.
 
 | ID | Task | Status | Owner | Notes |
 |---|---|---|---|---|
-| T-050 | Attendance → worked days + LOP on payslip | `TODO` | | |
-| T-051 | Overtime hours → salary rule input | `TODO` | | |
-| T-052 | Approved unpaid leave → payroll deduction | `TODO` | | |
+| T-050 | Attendance → worked days + LOP on payslip | `DONE` | Michael | worked_days + LOP land on payslip |
+| T-051 | Overtime hours → salary rule input | `DONE` | Michael | OT rule pays 1.5x derived hourly rate |
+| T-052 | Approved unpaid leave → payroll deduction | `DONE` | Michael | unpaid leave -> LOP deduction |
 
 ## Phase 4 — Deliverables
 

@@ -76,6 +76,50 @@ Tagged `v0.1-planning`. Branch `docs/git-strategy` merged `--no-ff` into main.
 Claude co-author trailer. Left as-is rather than amended, since rewriting pushed
 history is forbidden. Every commit after it is clean.
 
-**Closed:** _(pending)_
-**Handoff SHA:** _(pending)_
-**Next up:** FRANKLIN
+### Build phase — the backend, end to end
+
+After the planning and git work, the whole Django backend was built and verified
+in roughly two and a half hours.
+
+- 7 apps, 21 models, all migrations clean on SQLite
+- `payroll/engine.py` — sequenced rule evaluation with sandboxed formulas
+- `core/management/commands/seed.py` — 22 employees, 3 months of payroll history
+- Full REST API with five role classes enforced server-side
+- Payslip PDF via ReportLab, bulk email, dashboard aggregating six models
+- Two proof harnesses: `verify_rules.py` (28/28) and `smoke_api.py` (51/51)
+
+Frontend was scaffolded (Vite, api.js, index.css) but **renders nothing** —
+`App.jsx` is still the Vite demo.
+
+### Bugs found by writing the harnesses
+
+Worth recording because each was a real defect, not a test artifact:
+
+1. `contract_for_period` filtered `state=RUNNING`, so a since-expired contract
+   could not be resolved for the period it governed. December produced 20
+   `NO_CONTRACT` errors and a zero payrun. Lifecycle state and period coverage
+   are different things.
+2. `compute_payrun` deleted payrun-level warnings, discarding the record of
+   employees skipped as duplicates at creation time.
+3. The dashboard's month-over-month delta walked back a rolling N-day window, so
+   a 28-day span from 1 February started on 4 January and excluded January
+   entirely, silently yielding a null delta.
+4. `AttendanceViewSet` gated every write behind `CanManageHR`, giving employees a
+   403 on check-in — the widget is explicitly employee-facing.
+5. Seed flush ordered Employee before Payrun, tripping `PROTECT` on
+   `Payslip.employee`.
+
+### Decisions added late
+
+- D-011 SQLite rather than PostgreSQL (neither Postgres nor Docker installed)
+- D-012 context folder updated only at MEGATRON LAUNCH, at the user's request
+
+### Handed off with
+
+- 27 of 45 tasks done, 1 in progress, 17 to go — all remaining work is frontend
+- No known bugs; both harnesses green
+- Hackathon start time still **unconfirmed** — flagged in three places
+
+**Closed:** 2026-09-05 ~13:20 IST (~4h session)
+**Handoff tag:** `handoff-michael-01`
+**Next up:** FRANKLIN — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`
