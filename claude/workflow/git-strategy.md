@@ -202,6 +202,47 @@ reintroduce it.
 
 ---
 
+## 4a. Commit granularity
+
+**One commit per logical unit of work, not one per work session.** A branch that
+adds six screens should carry six commits, not one called "frontend".
+
+The history is part of what gets presented. A reviewer scrolling
+`git log --oneline` should be able to read the build order of the product.
+
+| Do | Do not |
+|---|---|
+| `feat(timeoff-ui): requests, allocations and approval flow (T-038, T-039)` | `feat: frontend work` |
+| Separate the design-system change from the screens that consume it | Bundle a refactor into a feature commit |
+| Commit the fix and the feature separately even on the same branch | Squash a day into one commit |
+
+Rules of thumb:
+
+- If the subject line needs "and" twice, it is two commits.
+- A commit should leave the tree building. `main` must never be broken; a branch
+  should avoid it.
+- Write the body when the *why* is not obvious from the diff — a rejected
+  approach, a server behaviour you are working around, a spec clause you are
+  satisfying. Skip the body for a one-line obvious change.
+- Heartbeat commits (every 30-45 min) are a floor, not a target. Commit when a
+  unit is done even if that is every eight minutes.
+
+### Use `exp/` branches for real spikes
+
+The branch model in §2 includes `exp/<idea>` and it is under-used. When you are
+trying an approach you might abandon — a design language, a rendering strategy,
+a schema shape — branch `exp/`, commit the attempt, and either merge it with
+`--no-ff` or leave it pushed and unmerged with a note in `blockers.md`.
+
+An abandoned `exp/` branch is evidence of engineering judgement. Deleting it
+loses that and invites the next session to repeat the attempt.
+
+Worked example from session 02: `exp/design-language-spike` carried the light
+palette rewrite before any screen was converted to it, so the palette could be
+judged on its own and reverted in one merge if it had been wrong.
+
+---
+
 ## 5. Balancing contributions
 
 All three accounts should have a comparable share of commits, and each should

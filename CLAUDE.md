@@ -23,6 +23,9 @@ git pull --rebase
 3. Read `claude/state/current-state.md` — the clock, the phase, what is broken.
 4. Read `claude/state/task-board.md` — pick up the next unblocked task.
 5. Skim `claude/context/decisions.md` — do not relitigate settled choices.
+5a. **Writing any frontend code? Read `claude/context/ui-design-language.md`
+   first.** It is binding: palette, density, and the copy rules that keep the
+   interface from reading as machine-generated.
 6. Append your opening entry to `claude/workflow/session-log.md`.
 7. Announce to the user which character you are and what you are picking up.
 
@@ -95,7 +98,7 @@ mid-pack loses the handoff entirely.
 | Path | What it holds |
 |---|---|
 | `claude/workflow/` | How the relay operates; the session log |
-| `claude/context/` | Stable knowledge: problem statement, spec, PRD, data model, decisions |
+| `claude/context/` | Stable knowledge: problem statement, spec, PRD, data model, decisions, UI design language |
 | `claude/state/` | Volatile truth: clock, task board, blockers, runbook |
 | `claude/handoff/` | The briefing for the next session; verbatim prompt history |
 | `claude/deliverables/` | Demo script and future roadmap (graded deliverables) |
