@@ -230,6 +230,24 @@ class ContractViewSet(viewsets.ModelViewSet):
     search_fields = ["reference", "employee__first_name", "employee__last_name"]
     ordering_fields = ["start_date", "wage", "reference"]
 
+    def get_queryset(self):
+        """
+        An employee sees only their own contracts (PRD §3.2).
+
+        CanManageHR grants read to any authenticated user, and this viewset had
+        no queryset scoping — so a plain Employee could list every contract in
+        the company, wage column included. Every other personal-data viewset
+        already scopes this way; this one was the gap.
+        """
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.can_manage_hr:
+            return qs
+        # Fail closed: an account with no linked employee and no HR permission
+        # sees nothing, rather than falling through to the full queryset.
+        return qs.filter(employee_id=user.employee_id) if user.employee_id \
+            else qs.none()
+
 
 class WorkingScheduleViewSet(viewsets.ModelViewSet):
     queryset = WorkingSchedule.objects.prefetch_related("lines").select_related("company")
