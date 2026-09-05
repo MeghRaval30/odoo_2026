@@ -230,3 +230,38 @@ briefing §8.1.
 Four of the six themes have never been rendered. That is written down twice, in
 capitals, because "six themes" is the kind of claim that is easy to inherit and
 repeat without checking.
+
+---
+
+## Session 06 — Trevor — finishing the commission
+
+### 21:45 — booted, harnesses re-run before touching anything
+Inherited checkout proven green from a cold start: `manage.py test` **216/216**,
+`verify_rules.py` **28/28**, `smoke_api.py` **51/51**, `probe_forms.py` **26/26**,
+seed reproduces the pinned demo figures (22 employees, 60 payslips, December
+INR 14,73,360 / January 14,82,320 / February 15,58,667.87).
+
+B-021 caught something on the way in. Port 8000 was clear, but **port 5173 was
+held by a Vite from a different worktree** (`frontend-routing-setup-e9a159`),
+which would have served an older frontend under the right URL — the exact
+failure mode the blocker describes, one directory over. Killed it and started
+this worktree's own pair. Worth writing down: the check is worth running on the
+frontend port too, not just 8000.
+
+### 21:50 — T-101 login screen to the mockup's copy
+Branch `feat/ui-screen-pass`. "Welcome back", "Sign in to continue to your
+workspace", **Work Email** with a `name@company.com` placeholder, **Sign In**,
+and the access note the mockup carries: *Accounts are created by an
+administrator.*
+
+Two judgement calls:
+
+* **Forgot password?** — the mockup has the link and there is no anonymous reset
+  endpoint, deliberately: `POST /api/users/{id}/reset-password/` is admin-only
+  because the mockup's access note says accounts are administered. So the link
+  says the true thing in one clause rather than pretending at a flow that does
+  not exist.
+* **The five demo chips** are gated on `import.meta.env.DEV`. They are the
+  fastest way to switch persona in a live demo and wrong in a shipped product;
+  `npm run dev` keeps them, `npm run build` compiles them out. The email/password
+  prefill is gated the same way, so a production build opens on empty fields.
