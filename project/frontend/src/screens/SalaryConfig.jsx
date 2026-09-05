@@ -184,7 +184,9 @@ function RuleForm({ id, onClose, onSaved }) {
     delete payload.category_display;
     delete payload.computation_display;
     delete payload.structure_name;
-    if (payload.percentage_base === "") payload.percentage_base = null;
+    // percentage_base is blank=True but not null=True: blank means "contract
+    // wage", null is a 400.
+    if (payload.percentage_base == null) payload.percentage_base = "";
     try {
       if (id) await api.patch(`/api/salary-rules/${id}/`, payload);
       else await api.post("/api/salary-rules/", payload);
