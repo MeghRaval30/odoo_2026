@@ -24,7 +24,14 @@ import PayrunDetail from "./PayrunDetail";
 const today = new Date();
 const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-const iso = (d) => d.toISOString().slice(0, 10);
+
+// Local date parts, not toISOString(): east-of-UTC offsets push the UTC date
+// back a day, which defaulted the period to 31 Aug - 29 Sep instead of
+// 1 - 30 Sep.
+const iso = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 
 function Wizard({ onClose, onCreated }) {
   const [step, setStep] = useState(1);
@@ -107,7 +114,7 @@ function Wizard({ onClose, onCreated }) {
               onClick={preview}
               disabled={busy || !form.name || !form.salary_structure}
             >
-              {busy ? <span className="spinner" /> : "Next — find employees"}
+              {busy ? <span className="spinner" /> : "Next"}
             </button>
           </>
         ) : (
