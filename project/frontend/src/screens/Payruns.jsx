@@ -159,10 +159,7 @@ function Wizard({ onClose, onCreated }) {
               ))}
             </select>
           </Field>
-          <Field
-            label="Employee type"
-            hint="Leave blank to include every active employee."
-          >
+          <Field label="Employee type">
             <select value={form.employee_type} onChange={set("employee_type")}>
               <option value="">All employee types</option>
               {options.data?.employee_types?.map((t) => (
@@ -172,10 +169,6 @@ function Wizard({ onClose, onCreated }) {
               ))}
             </select>
           </Field>
-          <div className="alert warn tiny">
-            Nothing is created yet. The payrun record appears only when you
-            confirm step 2.
-          </div>
         </>
       ) : (
         <>
@@ -250,7 +243,7 @@ export default function Payruns({ route }) {
 
   return (
     <div className="page">
-      <PageHead title="Payruns" sub="Draft → Compute → Validate → Paid">
+      <PageHead title="Payruns" sub={`${payruns.rows.length} records`}>
         <button className="primary" onClick={() => setWizard(true)}>
           New Payrun
         </button>
