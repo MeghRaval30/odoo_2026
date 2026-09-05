@@ -99,11 +99,19 @@ export default function App() {
   // render the fallback menu forever.
   const [ready, setReady] = useState(() => Boolean(auth.user?.navigation));
 
+  // refreshMe writes the fresh account into storage, which React cannot see.
+  // Without bumping something, a session that already had a cached navigation
+  // rendered before the fetch resolved and then never re-rendered, so a role
+  // change showed up one reload late -- the menu was right in the response and
+  // wrong on the screen.
+  const [, setRevision] = useState(0);
+
   useEffect(() => {
     if (!signedIn) return;
     let cancelled = false;
     api
       .refreshMe()
+      .then(() => !cancelled && setRevision((n) => n + 1))
       .catch(() => null)
       .finally(() => !cancelled && setReady(true));
     return () => {

@@ -320,6 +320,12 @@ NAVIGATION = [
     {
         "key": "reports", "label": "Reports", "cap": DASHBOARD_PAYROLL,
         "items": [
+            # The money view lives here as well as at /dashboard, because for
+            # an Admin it is not the home screen -- their dashboard is the
+            # administration one -- and a payroll figure you can only reach by
+            # knowing a URL is a figure nobody looks at.
+            {"to": "/dashboard/payroll", "label": "Payroll Dashboard",
+             "cap": DASHBOARD_PAYROLL},
             {"to": "/reports", "label": "Payroll Register", "cap": PAYRUN_READ},
         ],
     },
