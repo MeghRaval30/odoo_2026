@@ -13,6 +13,8 @@ from accounts.selfservice_api import (AuditLogViewSet, NetworkPolicyViewSet,
 from attendance.api import AttendanceViewSet
 from core.api import HolidayViewSet
 from dashboard.api import dashboard_view, filter_options_view
+from dashboard.role_views import (admin_dashboard_view, hr_dashboard_view,
+                                 my_dashboard_view)
 from employees.api import (CompanyViewSet, ContractViewSet, DepartmentViewSet,
                            EmployeeViewSet, JobPositionViewSet,
                            WorkLocationViewSet, WorkingScheduleViewSet)
@@ -76,6 +78,9 @@ urlpatterns = [
 
     path("api/dashboard/", dashboard_view, name="dashboard"),
     path("api/dashboard/filters/", filter_options_view, name="dashboard-filters"),
+    path("api/dashboard/hr/", hr_dashboard_view, name="dashboard-hr"),
+    path("api/dashboard/me/", my_dashboard_view, name="dashboard-me"),
+    path("api/dashboard/admin/", admin_dashboard_view, name="dashboard-admin"),
 
     path("api/", include(router.urls)),
     path("api-auth/", include("rest_framework.urls")),

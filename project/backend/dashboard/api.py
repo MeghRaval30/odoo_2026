@@ -14,10 +14,13 @@ from decimal import Decimal
 
 from django.db.models import Avg, Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from accounts import capabilities as caps
 from attendance.models import Attendance
+from core.formatting import days_display, hours_minutes
 from core.models import Department
 from employees.models import Contract, Employee
 from payroll.models import Payrun, Payslip, PayslipLine, PayslipWarning
@@ -99,6 +102,21 @@ def _gross_total(payslip_qs):
 
 @api_view(["GET"])
 def dashboard_view(request):
+    """
+    The payroll dashboard — every figure on it is money or leads to money.
+
+    Gated on `dashboard.payroll` rather than merely on being signed in. The
+    problem statement gives the HR Manager role "no access to payroll
+    features", and total net paid, average salary and salary-by-department are
+    payroll features however they are framed. HR gets its own view below, built
+    from the same records with the money left out.
+    """
+    if not request.user.can(caps.DASHBOARD_PAYROLL):
+        return Response(
+            {"detail": "The payroll dashboard is available to payroll roles. "
+                       "Your workforce dashboard is at /api/dashboard/hr/."},
+            status=403)
+
     f = _filters(request)
     payslips = _payslip_qs(f)
     employees = _employee_qs(f)
@@ -185,6 +203,16 @@ def dashboard_view(request):
         .values_list("message", flat=True)[:8])
 
     # -------------------------------------------------- attendance overview
+    overtime_hours = attendance.aggregate(
+        t=Coalesce(Sum("overtime_hours"), ZERO,
+                   output_field=DecimalField()))["t"]
+    # Worked hours are derived from check in/out, so they cannot be summed in
+    # SQL. At a few thousand rows per period this is cheap; the alternative is
+    # storing a derived value, which the data model deliberately refuses to do.
+    worked_rows = [a.worked_hours for a in attendance if a.check_out]
+    average_worked = (sum(worked_rows, ZERO) / len(worked_rows)
+                      if worked_rows else ZERO)
+
     att_overview = {
         "present": attendance.filter(status=Attendance.PRESENT).count(),
         "overtime": attendance.filter(status=Attendance.OVERTIME).count(),
@@ -193,9 +221,15 @@ def dashboard_view(request):
         "missing_checkouts": attendance.filter(check_out__isnull=True).count(),
         "manual_edits": attendance.filter(is_manually_edited=True).count(),
         "coverage_pct": attendance_health,
-        "total_overtime_hours": attendance.aggregate(
-            t=Coalesce(Sum("overtime_hours"), ZERO,
-                       output_field=DecimalField()))["t"],
+        "total_overtime_hours": overtime_hours,
+        # Counting how many *times* overtime happened tells nobody anything —
+        # and neither does a decimal. Both figures below are the same number in
+        # the two forms a person can act on: how much overtime there was, and
+        # how many people it fell on.
+        "total_overtime_hm": hours_minutes(overtime_hours, blank="none"),
+        "overtime_employees": attendance.filter(overtime_hours__gt=0)
+        .values("employee").distinct().count(),
+        "average_worked_hm": hours_minutes(average_worked, blank="—"),
     }
 
     # ----------------------------------------------------- time off overview

@@ -151,3 +151,48 @@ can punch from your sofa is not attendance.
 
 **119 backend tests green** (86 accounts including 31 new security tests, 33
 attendance).
+
+### 22:45 — six design languages, and a UI that differs by role
+**`themes.css`** holds six complete design languages. Each one sets its own
+type pairing, corner geometry, border weight, shadow behaviour, density and
+label treatment — not just a palette. Switching theme changes how the product
+*reads*.
+
+| | Character |
+|---|---|
+| **Ledger** | Warm paper, serif figures, hairline rules, dense. A printed register. |
+| **Console** | Dark slate, cyan signal, monospaced numbers, caps micro-labels. An ops tool. |
+| **Atrium** | Cool white, indigo, 14px corners, layered shadows, roomy. Modern SaaS. |
+| **Blueprint** | Square corners, 2px rules, electric blue, maximum contrast. Reads from the back of a room. |
+| **Marigold** | Cream and cocoa, marigold, rounded, humanist serif. The friendliest. |
+| **Graphite** | Neutral dark, amber accent, grotesk display. Puts status colours in relief. |
+
+`index.css` was rewritten so that **nothing hard-codes a colour, radius, shadow
+or padding** — otherwise six languages would only be six palettes. Every theme's
+font stack ends in a real system fallback of the same class, so an offline demo
+machine still gets six distinguishable looks rather than six copies of Arial.
+The choice is per browser, not per account: it depends on where you are sitting.
+
+**The navigation is now built by the server.** `/api/auth/me/` returns a tree
+pruned to the account's capabilities and the shell renders whatever it is given.
+A menu a role cannot use is absent, exactly as the mockup's access note asks.
+
+**Four dashboards, four endpoints — not one endpoint with cards hidden.**
+Hiding a card in the browser leaks its numbers to anyone who opens the network
+tab, and the HR Manager role is defined as having *no access to payroll
+features*. So the payroll figures never leave the server for a role that may not
+see them. This also closed a real leak: `/api/dashboard/` had only been gated on
+being signed in, so an HR Manager could read total net paid.
+
+* **Employee** — am I clocked in, hours worked this month, leave balance with a
+  used-bar, my contract, my payslips. Everything scoped in the query itself.
+* **HR Manager** — leads with the queue: leave, allocations and personal-detail
+  changes waiting on *this person's* decision, approvable inline. Then
+  attendance quality, then contracts about to lapse. No money anywhere.
+* **Payroll** — the mockup's dashboard, unchanged in shape.
+* **Admin** — accounts by role, live sessions, and the security posture written
+  as sentences rather than booleans, because a false checkbox is easy to read
+  past. Plus the audit tail.
+
+New screens: **My profile** (details / change requests / password & sessions),
+**My payslips**, **Security**, **Audit log**. `npm run build` clean.
