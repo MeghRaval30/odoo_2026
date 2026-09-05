@@ -576,20 +576,30 @@ class PayrollRunAccessTests(RoleFixtureMixin, APITestCase):
                     {"name": f"March 2026 revised #{index}"}, format="json")
                 self.assertEqual(patched.status_code, status.HTTP_200_OK)
 
-    # PRODUCT BUG: product-spec §2 gives the HR Payroll User
-    # "Create / Read / Update" on payruns and payslips, while the HR Payroll
-    # Manager gets "Full CRUD" — delete is the difference between the two rows.
-    # `accounts.permissions.CanRunPayroll` collapses every unsafe method into a
-    # single `user.can_run_payroll` check, so a Payroll User can DELETE a
-    # payrun. Asserting the ACTUAL behaviour so the suite stays honest; fixing
-    # it would mean denying DELETE unless `user.can_configure_payroll`.
-    def test_payroll_user_can_delete_a_payrun_although_the_spec_says_cru_only(self):
+    # Regression guard. This test was written while the gap was open and
+    # asserted it: product-spec §2 gives the HR Payroll User "Create / Read /
+    # Update" and the HR Payroll Manager "Full CRUD", so delete is the whole
+    # difference between the two rows -- and CanRunPayroll collapsed every
+    # unsafe method into one can_run_payroll check, handing delete to both.
+    # DELETE is now checked on its own.
+    def test_a_payroll_user_may_not_delete_a_payrun(self):
         self.client.force_authenticate(user=self.payroll_user)
         response = self.client.delete(
             reverse("payrun-detail", args=[self.payrun.pk]))
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Payrun.objects.filter(pk=self.payrun.pk).exists())
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Payrun.objects.filter(pk=self.payrun.pk).exists())
+
+    def test_a_payroll_user_keeps_the_create_read_update_half_of_the_row(self):
+        """Narrowing delete must not cost the Payroll User anything else."""
+        self.client.force_authenticate(user=self.payroll_user)
+        patched = self.client.patch(
+            reverse("payrun-detail", args=[self.payrun.pk]),
+            {"name": "February 2026 revised"}, format="json")
+
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        self.payrun.refresh_from_db()
+        self.assertEqual(self.payrun.name, "February 2026 revised")
 
     def test_payroll_manager_may_delete_a_payrun(self):
         self.client.force_authenticate(user=self.payroll_manager)
