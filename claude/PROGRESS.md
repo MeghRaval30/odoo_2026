@@ -196,3 +196,37 @@ being signed in, so an HR Manager could read total net paid.
 
 New screens: **My profile** (details / change requests / password & sessions),
 **My payslips**, **Security**, **Audit log**. `npm run build` clean.
+
+### 21:25 — MEGATRON LAUNCH
+Feature work stopped mid-sentence, on the fourth of the six themes being checked
+in a browser. `claude/workflow/megatron-checklist.md` executed end to end.
+
+Two real fixes landed on the way out rather than being left for the next
+session, because both would have handed over a red suite or a misleading demo:
+
+* The employee dashboard windowed on the **current calendar month**. Seeded
+  attendance ends March 2026 and the machine clock reads September, so every
+  employee opened on a screen of zeroes — which reads as "the system is broken",
+  not "you have not clocked in yet". It now falls back to the month of their
+  most recent record and labels which month is on screen.
+* `core/tests.py::test_a_mid_period_joiner_is_prorated` failed in the full run
+  after passing standalone. The cause was real and worth fixing at the source:
+  the generated roster picked its four contract shapes by random draw, so at a
+  small N it could produce **no joiner at all**. A large-roster generator whose
+  interesting cases may simply be absent demonstrates nothing. The first three
+  generated people are now dealt one of each shape deterministically, and the
+  test builds its payrun around whichever month the joiner actually landed in
+  rather than a hard-coded March.
+
+**Where the commission stands: about 70% delivered.** Access control, security,
+self-service, the four dashboards, the six theme definitions and the new screens
+are done and merged. What remains is a screen-by-screen pass over the older
+frontend — Login, the attendance widget, the attendance list, the payroll
+dashboard's overtime tile, Users & Roles, and moving action-button gating from
+the four legacy booleans onto capabilities. Every one of those is itemised, with
+the file and the exact change, in `current-state.md` §HALF-DONE and in the
+briefing §8.1.
+
+Four of the six themes have never been rendered. That is written down twice, in
+capitals, because "six themes" is the kind of claim that is easy to inherit and
+repeat without checking.

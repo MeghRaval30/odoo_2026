@@ -153,5 +153,32 @@ refactoring.
 | T-086 | Prorate mid-period joiners and leavers | `DONE` | Michael | 20 Feb joiner was paid a full month |
 | T-087 | Seed attendance across Dec–Mar, skip holidays | `DONE` | Michael | Dec/Jan payslips read 0 worked days |
 | T-088 | Full browser QA of all 18 routes and both flows | `DONE` | Michael | zero failed requests; state machine verified |
-| T-089 | **Build a 200–300 employee dataset** | `TODO` | | **user-requested, deferred to now.** Keep demo employees intact; use `bulk_create`; measure payrun timing |
-| T-090 | Close PRD criterion 4 (two distinct warnings) | `TODO` | | only `AC_MISSING` fires; fold into T-089 |
+| T-089 | **Build a 200–300 employee dataset** | `DONE` | Franklin | `seed --employees N`. 250 seeds in 40s; payrun of 233 computes in 5.7s. Default 22-person seed byte-identical, pinned by `core/tests.py` |
+| T-090 | Close PRD criterion 4 (two distinct warnings) | `IN PROGRESS` | Franklin | **Met on `--employees 250`** (NO_CONTRACT + AC_MISSING). Still only `AC_MISSING` on the 22-person demo seed. Every fix damages the rehearsed demo — options and the reasoning are in `current-state.md` §"THE OPEN QUESTION". **Needs the user.** |
+
+---
+
+## Session 05 — the RBAC and UI commission
+
+The user's brief is in `claude/handoff/prompt-history.md` §Session 05, and the
+running diary is `claude/PROGRESS.md`.
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-091 | Capability matrix, `/api/me` navigation manifest, enforcement | `DONE` | Franklin | `accounts/capabilities.py`. Union over roles, not highest-wins |
+| T-092 | Self-service: own password, own profile, approval-gated fields | `DONE` | Franklin | `accounts/selfservice.py` + `selfservice_api.py` |
+| T-093 | Security: network policy, lockout, session expiry, audit log | `DONE` | Franklin | `accounts/security.py`, `authentication.py`. 31 tests |
+| T-094 | Anti-gaming: punch scope, back-dating, self-approval, escalation | `DONE` | Franklin | Each control has a test named after the attack it closes |
+| T-095 | Attendance in hours and minutes (API) | `DONE` | Franklin | `core/formatting.py`; `worked_hm` / `overtime_hm` / `elapsed_hm` |
+| T-096 | Six design languages | `DONE` | Franklin | `themes.css`. **Only Ledger and Console rendered — four unverified** |
+| T-097 | Role-aware navigation + profile menu + theme switcher | `DONE` | Franklin | Menu built server-side; verified for Employee, HR, Admin |
+| T-098 | Four role dashboards behind four endpoints | `DONE` | Franklin | Employee and HR verified in a browser; Admin verified by API |
+| T-099 | New screens: Profile, Security, Audit, My Payslips | `IN PROGRESS` | Franklin | Written and building; **none has been clicked** |
+| T-100 | **Screen-by-screen pass over the pre-existing screens** | `TODO` | | The remaining ~30% of the commission. File-by-file list in `current-state.md` §HALF-DONE |
+| T-101 | Login screen to the mockup's exact copy | `TODO` | | "Welcome back / Sign in to continue to your workspace / Work Email / Forgot password?" |
+| T-102 | Attendance list + widget to hours-and-minutes | `TODO` | | API already serves it; the screens still print decimals |
+| T-103 | Payroll dashboard overtime tile | `TODO` | | Still a count. Endpoint already returns `total_overtime_hm` and `overtime_employees` |
+| T-104 | Users & Roles screen for the capability matrix | `TODO` | | Multi-role checkboxes, reset-password action, capability grid endpoint exists |
+| T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `TODO` | | `auth.has("payrun.delete")` etc. Server already enforces; this is the UI catching up |
+| T-106 | Render and check the four unverified themes | `TODO` | | Atrium, Blueprint, Marigold, Graphite |
+| T-107 | Re-rehearse and update the demo script for the new UI | `TODO` | | It still describes the old menu and mentions no roles or themes |

@@ -83,7 +83,7 @@ npm run dev
 ```
 
 Serves on `http://localhost:5173`. CORS for that origin is already configured in
-`config/settings.py`. `npm run build` is also clean (613 modules, ~6s) and is
+`config/settings.py`. `npm run build` is also clean (621 modules, ~6s) and is
 worth running before a handoff.
 
 > **The frontend is complete** — 18 screens, all reachable from the six-menu top
@@ -104,7 +104,7 @@ cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py    # 28/28 — the five graded rules
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test     # 171/171 — Django suite, 7 apps
+./.venv/Scripts/python.exe manage.py test     # 216/216 — Django suite, 8 apps
 ```
 
 The fourth drives real HTTP and **needs a live server in another terminal**:

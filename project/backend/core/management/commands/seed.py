@@ -377,6 +377,14 @@ class Command(BaseCommand):
     #: raises NO_CONTRACT, which is what makes the check demonstrable.
     LEAVER_END = date(2026, 2, 28)
 
+    #: Dealt to the first generated people, in order, so that every roster above
+    #: 22 contains at least one of each interesting shape however small N is.
+    GUARANTEED_SHAPES = ["JOINER", "LEAVER", "RAISE"]
+
+    #: A guaranteed joiner starts here — inside March, so a March payrun shows
+    #: proration. Random joiners still land anywhere in the Feb–Mar window.
+    GUARANTEED_JOIN_DATE = date(2026, 3, 11)
+
     def _sequencer(self, model, field, prefix):
         """
         Hand back a `next(year) -> 'PREFIX/YYYY/NNNN'` callable.
@@ -433,19 +441,28 @@ class Command(BaseCommand):
             else:
                 etype, schedule = "FULL_TIME", schedules["40 Hours / Week"]
 
-            # Four contract shapes, in the proportions a real roster has.
-            shape = random.random()
-            if shape < 0.04:
-                profile = "JOINER"      # starts mid-period — proration
-            elif shape < 0.07:
-                profile = "LEAVER"      # contract closes 28 Feb 2026
-            elif shape < 0.18:
-                profile = "RAISE"       # expired + running pair
+            # Four contract shapes, in the proportions a real roster has —
+            # except that the first three are dealt out deterministically. At a
+            # small N the random draw can produce none of a shape at all, and a
+            # generated roster whose interesting cases may simply be absent
+            # demonstrates nothing and makes its tests probabilistic.
+            if i < len(self.GUARANTEED_SHAPES):
+                profile = self.GUARANTEED_SHAPES[i]
             else:
-                profile = "STANDARD"
+                shape = random.random()
+                if shape < 0.04:
+                    profile = "JOINER"      # starts mid-period — proration
+                elif shape < 0.07:
+                    profile = "LEAVER"      # contract closes 28 Feb 2026
+                elif shape < 0.18:
+                    profile = "RAISE"       # expired + running pair
+                else:
+                    profile = "STANDARD"
 
             if profile == "JOINER":
-                joined = date(2026, 2, 1) + timedelta(days=random.randint(8, 45))
+                joined = (self.GUARANTEED_JOIN_DATE
+                          if i < len(self.GUARANTEED_SHAPES)
+                          else date(2026, 2, 1) + timedelta(days=random.randint(8, 45)))
             else:
                 joined = date(2023, 1, 2) + timedelta(days=random.randint(0, 1060))
 

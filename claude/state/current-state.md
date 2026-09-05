@@ -11,15 +11,13 @@
 ```
 Hackathon start:   2026-09-05   10:00 IST   ✅ confirmed by the user
 Hackathon end:     2026-09-06   10:00 IST   ✅ confirmed by the user
-Session 04 closed: 2026-09-05   15:15 IST   (wall clock, `date`)
-Elapsed:           ~5h 15m  /  24h
-REMAINING:         ~18h 45m
-Phase:             BUILD
+Session 05 closed: 2026-09-05   21:30 IST   (wall clock, `date`)
+Elapsed:           ~11h 30m  /  24h
+REMAINING:         ~12h 30m
+Phase:             BUILD  (>8h)
 ```
 
 **Run `date` yourself** and recompute before making any scope call.
-
-### Scope gates — binding
 
 | Remaining | Phase | What you may do |
 |---|---|---|
@@ -32,157 +30,231 @@ Phase:             BUILD
 
 ## WHERE WE ARE
 
-**The product is complete and works end to end.** Session 04 audited it against
-the source documents, found and fixed four real defects that all 158 prior tests
-and four harnesses were green over, rehearsed the demo for the first time, and
-drove every screen in a browser.
+Sessions: 01 Michael (backend) · 02 Franklin (frontend) · 03 Trevor (tests,
+deliverables) · 04 Michael (audit, correctness fixes) · **05 Franklin (this
+one — large dataset, then a full RBAC + UI overhaul the user commissioned
+mid-session).**
 
-Sessions: 01 Michael (backend), 02 Franklin (frontend), 03 Trevor (tests,
-deliverables, bug fixes), 04 Michael (audit, rehearsal, correctness fixes).
+The product was already complete and verified end to end at the start of this
+session. Session 05 did two things:
 
-**No features from the spec are missing.** Remaining work is one requested
-feature — a large dataset, deliberately deferred — and optional polish.
+1. **Finished the queued work** — `seed --employees N` (T-089) and its tests.
+2. **Executed a large new commission** (see `claude/PROGRESS.md` for the running
+   diary, and §"THE COMMISSION" below). Roughly **70% delivered**; the remaining
+   30% is a screen-by-screen pass over the older screens, which is listed under
+   HALF-DONE and is the next session's job.
+
+**The commission is not finished.** Read `claude/handoff/NEXT-SESSION-PROMPT.md`
+in full — it is written specifically for finishing it.
 
 ---
 
 ## ✅ WHAT WORKS — verified, with the command or click-path that proves it
 
-### Four harnesses, all green at 15:10 IST
+### Harnesses
 
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe manage.py test          # 171 tests OK
-./.venv/Scripts/python.exe verify_rules.py         # 28/28
-./.venv/Scripts/python.exe smoke_api.py            # 51/51
-./.venv/Scripts/python.exe manage.py seed --flush  # smoke_api dirties the DB
-# probe_forms needs a live server in another terminal:
-./.venv/Scripts/python.exe manage.py runserver
-./.venv/Scripts/python.exe probe_forms.py          # 26/26
+./.venv/Scripts/python.exe manage.py migrate          # 0003 + 0004 are new
+./.venv/Scripts/python.exe manage.py test             # 216 tests — see note
+./.venv/Scripts/python.exe verify_rules.py            # 28/28  ✅ re-run this session
+./.venv/Scripts/python.exe smoke_api.py               # 51/51  ✅ re-run this session
+./.venv/Scripts/python.exe manage.py seed --flush     # smoke_api dirties the DB
 ```
 
-`npm run build` clean. **Always `seed --flush` after `smoke_api.py`** (B-010).
+> **The full `manage.py test` run was still executing when this session was cut
+> off.** Every app was green individually within the last hour: accounts 86
+> (incl. 31 new security tests), attendance 33, core 9 (new). **Re-run it first
+> — see §"YOUR FIRST ACTION".**
 
-> **Do not start the server with `--noreload`.** Session 04 did, then spent time
-> chasing a "bug" that was the server holding pre-fix code. See B-015.
+`npm run build` clean (742 kB bundle, 24 kB CSS).
 
 ### Driven by hand in a browser this session
 
-**All 18 routes** render real content — no "Not found", no error banner, and an
-instrumented sweep recorded **zero failed network requests**.
-
-**The payrun flow, clicked end to end as admin:**
-
-| Step | Observed |
+| Signed in as | Observed |
 |---|---|
-| Wizard step 1 → 2 | **3 payruns before the Create click, 4 after** — steps 1 and 2 create nothing |
-| Step 2 | 20 employees, contract resolved for the period (Aarav → 01 Jan 2026, ₹85,000) |
-| Before Compute | **Validate button disabled** |
-| Compute | `Pre-validation checks — 0 error(s), 2 warning(s)`, shown **before** Validate |
-| Validate → Mark Paid | State advances; at PAID all three action buttons disabled |
-| Send Payslips | "20 payslip(s) sent, 0 skipped" |
-| Payslip PDF | 200, `application/pdf`, 77 KB, valid `%PDF-` header |
+| `john@oxp.com` (Employee) | Top bar is **Dashboard · Attendance · Time Off ▾ · My Payslips** and nothing else. Employee dashboard renders his contract `CON/2026/0002` ₹1,10,000, leave 18 of 20, three payslips, expected weekly **40h 00m** |
+| `sara@oxp.com` (HR Manager) | Top bar is **Dashboard · Employees ▾ · Contracts ▾ · Attendance · Time Off ▾ · My Payslips** — **no Payroll, no Reports, no Administration**. Workforce dashboard: headcount 22, 4 waiting on her, coverage 100%, average day **8h 43m**, overtime **124h 38m carried by 22 employees**. No money anywhere on the screen |
+| `admin@oxp.com` (Admin) | `/api/auth/me/` returns all eight menu groups: dashboard, employees, contracts, attendance, timeoff, payroll, reports, admin |
 
-**Role scoping:** as `john@oxp.com` the Payroll menu is absent and all five
-permission flags are false. **Attendance widget:** `out` → Check In → `in` with
-a live session → Check Out.
+### The large dataset (T-089 — DONE)
 
-**Time off (Scenario B):** Comp Off refused with the server's exact wording,
-balance table reads 20 / 0 / 20, approving Priya's 08 Mar row moves her
-allocation to **20 / 2 / 18**.
+```bash
+./.venv/Scripts/python.exe manage.py seed --flush --employees 250
+```
 
-### Seed evidence — live, not hardcoded
+**Measured, 2026-09-05:**
 
-| Payrun | Net | Why it matters |
-|---|---|---|
-| Dec 2025 | ₹14,73,360 | Lower than Jan — two employees resolve to older, cheaper contracts |
-| Jan 2026 | ₹14,82,320 | |
-| Feb 2026 | ₹15,58,668 | Higher — February overtime reached payroll |
+| | |
+|---|---|
+| 250 employees seeded | **40 s** wall clock |
+| Rows written | 278 contracts, 250 allocations, **19,045 attendance**, 680 payslips |
+| Payrun of 20 (default seed) | **0.6–0.7 s** — PRD-7.2 asks for <5 s ✅ |
+| Payrun of 225–230 (Dec/Jan/Feb) | **6.9 / 7.4 / 7.6 s** |
+| Payrun of 233 (March, created live) | create 1.4 s, **compute 5.7 s** |
+| Dashboard at 250 | `/api/dashboard/` 2.9 s · `/api/employees/` 0.6 s · `/api/payruns/` 2.8 s |
 
-Feb filtered to Engineering alone: **₹5,03,589**. Worked days are realistic in
-every period (Dec 18–23 of 23, Jan 18–21 of 21, Feb 17–20 of 20).
+Scaling is linear: ~32 ms per payslip at both 20 and 233 employees.
 
-Counts: 22 employees, 24 contracts, 1,746 attendance, 11 leave requests,
-3 payruns, 60 payslips, 960 lines, 6 warnings.
+**PRD success criterion 4 is now met.** A March 2026 payrun over the 250-person
+roster raises **`NO_CONTRACT` ×8 and `AC_MISSING` ×13** — two distinct codes.
+The default 22-person demo seed still raises only `AC_MISSING` ×2; see
+"THE OPEN QUESTION" below.
+
+**The default seed is byte-identical to before.** 22 employees, 24 contracts,
+1,746 attendance, 3 payruns, 60 payslips, 960 lines, 6 warnings; December
+₹14,73,360 · January ₹14,82,320 · February ₹15,58,667.87. `core/tests.py` pins
+all of it, so a change that moves the demo's numbers fails there first.
 
 ---
 
 ## ❌ WHAT IS BROKEN
 
-**Nothing known.** All four harnesses green, build clean, and every flow above
-was driven by hand after the last commit.
+**Nothing known to be broken.** But note two things:
+
+1. **The full test suite has not been observed green since the security work
+   landed.** Every app passed individually; the combined run was still going.
+   Treat "216 green" as unverified until you re-run it.
+2. **Two stale `runserver` processes were found on port 8000** at 20:50 IST, one
+   serving pre-fix code and answering first. This wasted time — see B-021.
 
 ---
 
 ## 🚧 WHAT IS HALF-DONE
 
-**Nothing in the code.** Working tree clean, every branch merged into `main`,
-`main` pushed.
+Working tree clean, `feat/rbac-ui-overhaul` merged into `main`, `main` pushed.
+The *code* is not half-done; the **commission** is. What remains:
+
+### 1. The screen-by-screen pass (the big one)
+
+New screens are built to the new design language. **The pre-existing screens
+were not revisited** and still assume the old world:
+
+| File | What is stale |
+|---|---|
+| `project/frontend/src/screens/Login.jsx` | Says "Sign in to continue". The mockup says **"Welcome back" / "Sign in to continue to your workspace" / "Work Email" / "Password" / "Sign In" / "Forgot password?"**. Also still shows five demo-account shortcut buttons |
+| `screens/Attendance.jsx` | Renders `worked_hours` as a decimal. The API now serves `worked_hm` / `overtime_hm` — switch the columns over |
+| `screens/Dashboard.jsx` (payroll) | The Attendance Overview tile still shows an overtime **count**. The endpoint now returns `total_overtime_hm`, `overtime_employees` and `average_worked_hm` — use them |
+| `screens/Users.jsx` | Pre-dates the capability matrix. Should show the multi-role checkbox set, the account-status switch, the **Reset password** action (`POST /api/users/{id}/reset-password/`) and the capability grid from `GET /api/users/capability-matrix/` |
+| `screens/Employees.jsx`, `Contracts.jsx`, `TimeOff.jsx`, `Allocations.jsx`, `Payruns.jsx`, `Payslips.jsx`, `SalaryConfig.jsx`, `Schedules.jsx`, `Reference.jsx`, `Holidays.jsx`, `TimeOffTypes.jsx`, `Reports.jsx` | Work, and inherit the new tokens automatically, but were not re-checked against the mockup or against `auth.has(...)` for per-role action gating. **Action buttons are still gated on the four legacy booleans, not on capabilities** |
+| `components/AttendanceWidget.jsx` | Should read `elapsed_hm` / `total_today_hm` (the mockup's `6h56` form) and must surface `punch_blocked_reason` when the network policy refuses a punch |
+
+### 2. Not verified in a browser
+
+Only Ledger and (briefly) Console were seen. **The other four themes —
+Atrium, Blueprint, Marigold, Graphite — have never been rendered.** They are
+plausible but unproven; check every one before claiming six work.
+
+The Profile, Security, Audit, My Payslips and Admin-dashboard screens were
+written but **only the Admin dashboard's data was confirmed**; none of the four
+new screens has been clicked.
+
+### 3. Not written
+
+No tests for the four new frontend screens, and no test for
+`hr_dashboard_view` / `my_dashboard_view` / `admin_dashboard_view` beyond the
+capability gate. `verify_rules.py` and `smoke_api.py` do not touch any new
+endpoint.
 
 ---
 
 ## ⬜ NOT STARTED
 
-### 1. A 200–300 employee dataset — requested, deferred on purpose
-
-The user asked for a large roster to demonstrate scalability, then said: *"keep
-the dataset building for the end don't do it right now — let's first ensure that
-the software is running perfectly and the workflow is perfect."* **That
-verification is now done, so this is the next piece of work.**
-
-Notes for whoever picks it up:
-
-- The demo script depends on specific seeded people — **John Dsouza, Priya
-  Sharma, Audrey Peterson, Anita Oliver, Meera Iyer, Aarav Mehta**. They must
-  survive the expansion with their exact contracts and balances.
-- The seed inserts rows one at a time. At 250 employees the attendance loop
-  alone is ~20,000 inserts — use `bulk_create` or it will crawl.
-- Prefer a `--employees N` flag over replacing the roster, so the demo-safe
-  22-person set stays the default and the demo script stays true.
-- PRD-7.2 asks for a payrun of 20 in under 5 seconds. **Measure at 250 and
-  record the number** — scalability is the whole point of the exercise.
-
-### 2. PRD success criterion 4 — the one unmet criterion
-
-> "A payrun surfaces at least **two distinct** warnings before validation."
-
-Only `AC_MISSING` fires (×2). The engine supports six codes — `DUPLICATE`,
-`NO_CONTRACT`, `NEGATIVE_NET`, `NO_STRUCTURE`, `RULE_ERROR` — and the seed
-exercises none of them. A 250-person roster with joiners and leavers naturally
-produces more, so **fold this into the dataset work**.
-
-### 3. T-075 — frontend tests
-
-None exist. Lowest priority; `probe_forms.py` and the browser pass cover the
-same ground more cheaply for a 24-hour build.
+1. **`/profile` change-request approvals have never been exercised end to end**
+   in the UI. The backend path is tested (`accounts/test_security.py`), the
+   screens are not.
+2. **The demo script has not been updated** for any of this. It still describes
+   the old menu, and it never mentions roles, themes or the profile menu.
+   Whoever finishes the UI must re-rehearse it — see `§14` of the briefing.
+3. **T-075 frontend tests.** Still lowest priority.
 
 ---
 
-## ➡️ THE SINGLE NEXT ACTION
+## ➡️ YOUR FIRST ACTION
 
-Build the large dataset (item 1), keeping the demo-critical employees intact,
-and use the joiners and leavers it produces to close PRD criterion 4.
+```bash
+cd project/backend
+./.venv/Scripts/python.exe manage.py migrate
+./.venv/Scripts/python.exe manage.py test 2>&1 | tail -20
+```
+
+If that is green, start the screen-by-screen pass at
+`project/frontend/src/screens/Login.jsx` (smallest, most visible, and quoted
+verbatim in the mockup), then `AttendanceWidget.jsx`, then `Attendance.jsx`,
+then `Dashboard.jsx`'s overtime tile. Those four are the ones the user
+explicitly complained about.
 
 ---
 
-## ⚠️ OPEN DECISION FOR THE USER — do not act alone
+## THE COMMISSION — what the user actually asked for
 
-The user said **"remove your commits"** and the session ended before it was
-resolved. The facts, checked:
+Verbatim in `claude/handoff/prompt-history.md` under Session 05. In summary:
 
-- **Every commit in the repository is authored by one of the three teammates.**
-  There is no Claude-authored commit. Session 04's commits are all
-  `TheTeam404 <sohampanchal2229@gmail.com>` — the user's own account.
-- **Exactly one commit carries a Claude co-author trailer:** `12a632f`, the root
-  scaffold commit from session 01, written before D-010 was decided. That single
-  trailer is why `claude` appears in GitHub's contributor list.
-- Removing it means rewriting ~117 commits and force-pushing, which would break
-  the other teammates' clones and risk losing in-flight work. Force-push and
-  `filter-branch` are denied in `.claude/settings.json` by design.
+1. **Redo the UI completely**, strictly following the excalidraw mockup.
+2. **4–6 themes** — "not just colours … fonts style and boxes style and all the
+   stuff aswell full design language". ✅ **six built**, four unverified.
+3. **Rework account types** from the sources: who exists, what each may do, what
+   each *sees*, and what its dashboard looks like. ✅ **done**.
+4. "**all buttons wont be there for every account type login**" — an employee
+   gets only their own dashboard, with attendance and the rest as separate
+   tabs. ✅ **done and verified in a browser**.
+5. **A profile menu** with user settings and personal-detail changes, "some
+   might require approval". ✅ **built**, not clicked.
+6. "**can you add more than one account type?**" — **yes**, and the matrix takes
+   the union. Confirmed by the mockup's own access note.
+7. **Overtime as a count is useless, and decimal hours are wrong** — needs hours
+   and minutes. ✅ backend done; **the payroll Dashboard tile still shows the
+   count**.
+8. **Security**: login only from selected networks, plus "super critical cyber
+   security stuff … make sure no one can game the system". ✅ **done** — see the
+   briefing §5.
+9. **A user can change their own password.** ✅ **done**.
+10. **Keep committing, and keep `claude/PROGRESS.md` updated.** ✅ done.
 
-**Ask before touching history.** If the user confirms a rewrite, first confirm
-both other teammates have pushed and are idle. It is also possible they meant
-"revert session 04's code changes" — that would drop four live bug fixes, so
-establish which they mean rather than guessing.
+---
+
+## ⚠️ TWO PLACES THE USER'S EXAMPLES CONTRADICT THE SOURCES
+
+Both resolved **in favour of the PDF**, because the same message said to follow
+the sources strictly. Both are written down rather than settled silently, and
+**the next session should raise them with the user** if there is a chance to.
+
+1. The user said an HR Manager **cannot create an attendance record**. PDF §3
+   gives HR Manager *full CRUD on Attendance*. Resolved for the PDF, but split
+   by intent: an employee's own check-in is a **punch** (own record, today only,
+   network-gated); an HR Manager's is a **correction** (any record, any date,
+   flagged `is_manually_edited` and written to the audit log).
+2. The user said a **Payroll Manager sees only employee details and holidays**.
+   PDF §3 gives the Payroll Manager everything an HR Payroll User has *plus*
+   full CRUD on payruns, payslips, structures and rules. Resolved for the PDF.
+
+---
+
+## THE OPEN QUESTION — PRD criterion 4 in the *default* seed
+
+Criterion 4 wants "at least two distinct warnings before validation". It is met
+on the 250-person roster. On the **22-person demo seed only `AC_MISSING` fires**.
+
+Session 05 investigated and **deliberately did not fix it**, because every fix
+damages the rehearsed demo:
+
+- `NO_CONTRACT`, `NEGATIVE_NET` and `NO_STRUCTURE` are **ERROR** severity and
+  block Validate. Seeding one breaks demo steps A8/A9.
+- `DUPLICATE` is warning-severity and is the problem statement's own named
+  example — but it needs a pre-existing payslip for March 2026, and
+  `dashboard/api.py:49` defaults the dashboard period to `Payrun.objects
+  .order_by("-period_start").first()`. Seeding a March payrun would make the
+  dashboard open on March with one payslip, wrecking demo step C1.
+
+**Options for the next session**, in preference order:
+1. Demo on `--employees 250`, where both codes fire naturally. Costs: every
+   figure quoted in `demo-script.md` changes and must be re-measured.
+2. Seed the March off-cycle payrun anyway and change the dashboard's default
+   period to the newest **PAID** payrun rather than the newest one.
+3. Leave it and say so — one criterion of six, and the engine demonstrably
+   supports all six codes.
+
+**Ask the user.** Do not pick silently.
 
 ---
 
@@ -192,13 +264,25 @@ See `claude/context/decisions.md`. Do not reopen.
 
 | | |
 |---|---|
-| **Stack** | React + Django/DRF. **SQLite, not Postgres** *(D-011)* |
-| **Scope** | Full spec + 3 integration connections *(D-002)* — all built |
+| **Stack** | React 19 + Vite · Django 6.1 + DRF 3.18 · **SQLite** *(D-011)* |
+| **Scope** | Full spec + 3 integrations *(D-002)* — all built |
 | **Locale** | India, ₹, PF / ESIC / PT / LWF, single company *(D-003)* |
 | **Repo** | `https://github.com/MeghRaval30/odoo_2026` |
 | **Git identity** | Each session commits as its own teammate *(D-009)* |
 | **Commits** | No machine attribution *(D-010)*, no character tag *(D-018)* |
+| **Roles** | Five, from PDF §3; an account may hold several and gets the union *(D-025)* |
+| **Themes** | Six, per browser not per account *(D-027)* |
 | **Context folder** | Updated **only** at MEGATRON LAUNCH *(D-012)* |
 
-Contribution split at handoff: `Robo9327study` 75 · `TheTeam404` 25 ·
-`MeghRaval30` 17.
+---
+
+## STILL UNRESOLVED FROM SESSION 04 — "remove your commits"
+
+Untouched, because it needs the user. Every commit in the repository is authored
+by one of the three teammates; exactly one (`12a632f`, the root scaffold commit)
+carries a Claude co-author trailer, and that trailer is why `claude` appears in
+GitHub's contributor list. Removing it means rewriting ~120 commits and
+force-pushing, which would break the other teammates' clones. Force-push and
+`filter-branch` are denied in `.claude/settings.json` by design.
+
+**Ask before touching history.**

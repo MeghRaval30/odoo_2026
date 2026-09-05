@@ -13,7 +13,7 @@ matter, not the volume, and 250 employees inside a test transaction is thirty
 seconds nobody gets back.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from io import StringIO
 
@@ -140,18 +140,31 @@ class SeedGeneratedRosterTests(TestCase):
         self.assertGreaterEqual(len(codes), 2)
 
     def test_a_mid_period_joiner_is_prorated(self):
-        """A contract starting mid-March must not draw a full month."""
-        start, end = date(2026, 3, 1), date(2026, 3, 31)
-        joiners = Contract.objects.filter(start_date__gt=start,
-                                          start_date__lte=end)
-        self.assertTrue(joiners.exists(),
-                        "the generated roster should contain a March joiner")
+        """
+        A contract that starts part-way through a month must not draw a full
+        month's pay.
+
+        The payrun is built around whichever month the joiner actually landed
+        in rather than around a hard-coded March. Pinning the month made the
+        test depend on where in a Feb–Mar window one random draw fell, which is
+        a property of the generator, not of proration — and it duly failed once
+        the suite ran as a whole.
+        """
+        joiner = (Contract.objects
+                  .filter(start_date__gte=date(2026, 2, 1))
+                  .exclude(start_date__day=1)
+                  .order_by("start_date")
+                  .first())
+        self.assertIsNotNone(
+            joiner, "the generated roster should contain a mid-month joiner")
+
+        start = joiner.start_date.replace(day=1)
+        end = (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
         regular = SalaryStructure.objects.get(code="REGULAR")
         run = Payrun.objects.create(
-            name="March 2026", company=regular.company,
+            name=f"{start:%B %Y}", company=regular.company,
             salary_structure=regular, period_start=start, period_end=end)
-        joiner = joiners.first()
         engine.create_payrun_payslips(run, [joiner.employee])
         engine.compute_payrun(run)
 

@@ -330,3 +330,110 @@ and heredocs corrupting file content.
 **Handoff tag:** `handoff-michael-04`
 **Next up:** FRANKLIN — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`.
 His first action is the 200–300 employee dataset.
+
+---
+
+## Session 05 — FRANKLIN
+
+**Opened:** 2026-09-05 ~20:20 IST · **Closed:** 2026-09-05 21:35 IST
+**Duration:** ~1h 15m · **Committing as:** `Robo9327study <rajstudy9327@gmail.com>`
+**Handoff tag:** `handoff-franklin-05`
+
+### What happened
+
+The session opened on the queued task and was **redirected mid-flight** by a
+large new commission from the user. Both halves landed.
+
+### Part one — the large dataset (T-089, closed)
+
+`manage.py seed` grew an `--employees N` flag. The 22-person demo roster is
+created first and left completely alone — same 24 contracts, same 1,746
+attendance rows, same December/January/February nets — and everything above 22
+is appended after it, which also keeps the random stream the fixed roster draws
+from unchanged. `core/tests.py` now pins the demo's shape so a change that moves
+those figures fails there before it reaches the demo.
+
+Generated people carry the four contract shapes a real roster has: a plain
+running contract, a raise on 01 Jan 2026, a mid-period joiner, and a leaver whose
+contract closes 28 Feb 2026. That is what makes the pre-validation checks
+demonstrable at scale.
+
+**Measured:** 250 employees seed in 40 s (19,045 attendance rows, 680 payslips).
+A payrun of 20 computes in 0.6–0.7 s against PRD-7.2's 5 s budget; a payrun of
+233 computes in 5.7 s. Scaling is linear at ~32 ms per payslip. The dashboard at
+250 takes 2.9 s.
+
+**PRD success criterion 4 is met at scale** — a March payrun over 250 people
+raises `NO_CONTRACT` ×8 and `AC_MISSING` ×13. It is still unmet on the 22-person
+demo seed, deliberately: every available fix damages the rehearsed demo, and the
+options are written up in `current-state.md` for the user to choose from.
+
+### Part two — the RBAC and UI commission
+
+The user asked for the UI to be redone against the excalidraw, four to six full
+design languages, a rethink of account types and what each one sees, a profile
+menu with approval-gated changes, attendance in hours and minutes, real
+security including network-restricted sign-in, and self-service passwords.
+
+Both source documents were read end to end first — all 1,187 text elements of
+the excalidraw and the full PDF — rather than worked from memory. Roughly **70%
+of the commission was delivered**; the remainder is a screen-by-screen pass over
+the older screens and is itemised file-by-file in `current-state.md`.
+
+**Access control.** `accounts/capabilities.py` is now the single declarative home
+for who may do what. An account may hold several roles and gets the **union**,
+which is what the mockup's "one or more roles" actually requires. The four old
+booleans survive as views onto the matrix, so 86 existing account tests kept
+passing without edits. `/api/auth/me/` returns a server-built navigation tree, so
+the menu and the enforcement read the same table.
+
+**Security**, each control closing a named attack rather than ticking a box:
+CIDR-scoped sign-in re-checked on every request; expiring, optionally
+IP-bound sessions; lockout that leaks nothing; self-service split by blast
+radius so a bank-account change needs a second pair of eyes; an append-only
+audit log; and guards against changing your own roles, deactivating yourself or
+removing the last administrator. 31 new tests, each named after the attack.
+
+**Four dashboards behind four endpoints.** This closed a real leak: the payroll
+dashboard had only been gated on being signed in, so an HR Manager — a role the
+PDF gives *no access to payroll features* — could read total net paid.
+
+**Six design languages.** `index.css` was rewritten so nothing hard-codes a
+colour, radius, shadow or padding; otherwise six languages would have been six
+palettes.
+
+Verified in a browser: the Employee top bar is exactly Dashboard · Attendance ·
+Time Off · My Payslips; the HR Manager's has no Payroll, Reports or
+Administration anywhere and no money on the screen, with overtime reading
+**124h 38m carried by 22 employees** instead of an event count.
+
+### What was attempted and deliberately not done
+
+- **Closing PRD criterion 4 on the demo seed.** Investigated properly and left
+  alone: every fix breaks a rehearsed demo step. Written up for the user.
+- **The pre-existing screens.** Login, Attendance, the payroll Dashboard tile,
+  Users and the attendance widget all still speak the old language. They work;
+  they are just not finished. This is the next session's main job.
+- **Four of the six themes have never been rendered.** Ledger and Console were
+  seen. Do not claim six work until all six have been opened.
+
+### Traps recorded
+
+B-021 two `runserver` processes on one port, the stale one answering first ·
+B-022 browser refs go stale after a resize, and `form_input` does not reach
+React state · B-023 heredocs silently append nothing, confirmed twice more ·
+B-024 `bulk_create` skips `save()` so references must be minted by hand ·
+B-025 date windows anchored to `today` are empty on the demo machine.
+
+### Decisions added
+
+D-025 capabilities and role union · D-026 sources beat the user's examples where
+they conflict, flagged not buried · D-027 six themes, per browser · D-028
+server-built navigation · D-029 four dashboards, four endpoints · D-030
+self-service split by blast radius · D-031 sessions expire and the network is
+re-checked every request · D-032 decimal in the data, hours and minutes on
+screen.
+
+**Next up:** TREVOR — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`. His
+first action is to re-run the full test suite, then finish the screen-by-screen
+pass starting at `project/frontend/src/screens/Login.jsx`.

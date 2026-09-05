@@ -354,3 +354,95 @@ like.
 
 Write a `.py` file into the scratchpad and run it. Reserve inline `python -c` for
 one-liners containing no backslashes, backticks or quotes.
+
+---
+
+## TRAPS — session 05 (Franklin)
+
+### B-021 — Two `runserver` processes on port 8000, one serving stale code
+**Severity:** high · wasted ~15 minutes
+
+A `runserver` left over from an earlier session was still listening on 8000. A
+second one started this session bound to the same port, and **the stale process
+answered first**. `/api/auth/login/` returned the old payload with no
+`capabilities` or `navigation` field, which looked exactly like the serializer
+edit never having applied.
+
+Same family as B-016 (`--noreload`), and the tell is identical: the code on disk
+is right and the server disagrees.
+
+```bash
+netstat -ano | grep ":8000.*LISTENING"     # expect exactly ONE pid
+taskkill //PID <stale> //F
+```
+
+Check this **before** debugging any "my change did not take effect" symptom.
+
+### B-022 — Browser-pane element refs go stale after `resize_window`
+**Severity:** medium · wasted ~10 minutes
+
+After `resize_window`, `ref_N` handles captured from an earlier `read_page`
+still resolve, but to the **wrong screen position** — clicks landed on the
+neighbouring button. Symptom: clicking "HR Manager" filled in the Payroll User's
+email, and clicking "Sign in" did nothing at all.
+
+Two workarounds, both used successfully:
+
+1. Re-run `read_page` *after* every resize and use only the new refs.
+2. For a React form, skip the mouse entirely. `form_input` writes the DOM value
+   but **React's controlled state does not see it**, so drive the app through
+   `javascript_tool` instead:
+
+```js
+const r = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+  method: 'POST', headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({email: 'sara@oxp.com', password: 'demo1234'})});
+const d = await r.json();
+localStorage.setItem('pp360_token', d.token);
+localStorage.setItem('pp360_user', JSON.stringify(d.user));
+location.hash = '#/dashboard'; setTimeout(() => location.reload(), 50);
+```
+
+That is how every role was verified this session.
+
+### B-023 — Bash heredocs still corrupt multi-line appends — confirmed twice more
+**Severity:** medium
+
+B-020 warned about this and it bit twice in this session. A `cat >> file
+<< 'EOF'` block containing triple-quoted Python, backticks or an apostrophe
+failed with `unexpected EOF while looking for matching`, and **appended nothing
+while reporting nothing useful**. The file was silently unchanged; only a
+follow-up `grep` or `tail` caught it.
+
+**Use the Write or Edit tool for any multi-line source or document change.**
+Reserve Bash heredocs for short, quote-free text. Where a new block is large,
+give it its own module — that is why `dashboard/role_views.py`,
+`accounts/security.py`, `accounts/selfservice.py` and
+`accounts/selfservice_api.py` exist as separate files rather than as appends.
+
+For appending to an append-only document: write the new section to a file in the
+scratchpad with the Write tool, then `cat scratchpad/thing.md >> target.md`.
+
+### B-024 — `bulk_create` skips `save()`, so generated references come out blank
+**Severity:** medium · anticipated, not hit
+
+`Employee.save` and `Contract.save` mint `EMP/YYYY/NNNN` and `CON/YYYY/NNNN`
+themselves. `bulk_create` does not call `save()`, so any row written that way
+must carry its own reference. `seed.py`'s `_sequencer()` mints them, starting
+**above** whatever is already in the table so the fixed demo roster's codes —
+which the demo script quotes by name — are never reused or shifted.
+
+`core/tests.py::test_generated_rows_carry_their_own_references` guards it.
+
+### B-025 — The employee dashboard windowed on the current calendar month
+**Severity:** medium · **fixed** this session
+
+Seeded attendance ends March 2026; the machine clock reads September 2026. Every
+employee therefore opened on a screen of zeroes, which reads as "the system is
+broken" rather than "you have not clocked in yet". It now falls back to the
+month of the employee's most recent record and labels which month is on screen.
+
+**The same trap applies anywhere else a date window is anchored to `today`.**
+`dashboard/api.py::_filters` already falls back to the newest payrun's period,
+which is why the payroll and HR dashboards were unaffected — but any new panel
+that windows on "this month" will be empty on the demo machine.

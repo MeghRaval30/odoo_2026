@@ -496,3 +496,131 @@ Keeping the earlier months clean preserves both.
 
 Attendance is also no longer generated on public holidays, which had made worked
 days exceed expected days — January read 22 of 21.
+
+---
+
+## Session 05 — Franklin
+
+### D-025 — Roles are capabilities, and an account holds the union of its roles
+**Decided:** session 05 · **Status:** settled
+
+The five roles are exactly the ones PDF §3 names: Employee, HR Manager, HR
+Payroll User, HR Payroll Manager, Admin. They are defined once, declaratively,
+in `project/backend/accounts/capabilities.py`, and everything else — the
+permission classes, the navigation manifest, the frontend's `auth.has()` — reads
+that one table.
+
+**An account may hold several roles, and its effective permission is the union
+of them, not the highest single role.** The mockup's LOGIN / USER ACCESS NOTE
+says to assign "one or more roles", and "HR Manager + Payroll User" is a
+combination a real company grants; it has to behave as the sum of both.
+
+The four pre-existing booleans (`is_admin`, `can_manage_hr`, `can_run_payroll`,
+`can_configure_payroll`) survive as *views onto* the matrix rather than as a
+second copy of the rules, which is why 86 existing account tests kept passing
+untouched.
+
+**Do not** add a role check anywhere else. If a new rule is needed, it is a new
+capability in that file.
+
+### D-026 — Where the user's examples contradict the sources, the sources win
+**Decided:** session 05 · **Status:** settled, but flag it to the user
+
+The same message that gave examples also said "strictly follow the problem
+statement and excaildraw". Two examples contradict PDF §3:
+
+- "hr manager … cant create a new attendance record" — the PDF gives HR Manager
+  full CRUD on Attendance. Followed the PDF, but split by *intent*: an
+  employee's own check-in is a **punch** (own record, today only, network-gated);
+  an HR Manager's is a **correction** (any record, any date, flagged
+  `is_manually_edited`, written to the audit log). Both readings are satisfied.
+- "payroll amanger can see only employee details and holidays" — the PDF gives
+  the Payroll Manager everything the Payroll User has plus full CRUD on payruns,
+  payslips, structures and rules. Followed the PDF.
+
+Recorded rather than settled silently. If there is a chance to ask, ask.
+
+### D-027 — Six themes, chosen per browser rather than per account
+**Decided:** session 05 · **Status:** settled
+
+The user asked for four to six full design languages. Six exist in
+`project/frontend/src/themes.css`: Ledger, Console, Atrium, Blueprint, Marigold,
+Graphite. Each sets its own type pairing, corner geometry, border weight, shadow
+behaviour, density and label treatment — not merely a palette, which is why
+`index.css` was rewritten so that nothing hard-codes a colour, radius, shadow or
+padding.
+
+The choice lives in `localStorage`, not on the User model. Someone presenting on
+a projector wants Blueprint for its contrast; the same person at night wants
+Console. That is a property of where you are sitting, not of who you are — and
+it keeps the server out of a preference that has no business being audited.
+
+Every theme's font stack ends in a real system fallback **of the same class**
+(serif / grotesk / mono / humanist), so an offline demo machine still gets six
+distinguishable looks rather than six copies of Arial.
+
+### D-028 — A role's unusable menus are absent, and the menu is built server-side
+**Decided:** session 05 · **Status:** settled
+
+`/api/auth/me/` returns a navigation tree already pruned to the account's
+capabilities, and the shell renders whatever it is given. The mockup's access
+note asks to "show only the modules and actions allowed by the user's assigned
+role" — absent, not greyed out.
+
+Building the menu in the frontend would be a second copy of the rules, and
+second copies drift: eventually the menu offers a link that 403s. Hiding remains
+presentation only; every route is independently enforced server-side.
+
+### D-029 — Four dashboards behind four endpoints, not one endpoint with hidden cards
+**Decided:** session 05 · **Status:** settled
+
+`/api/dashboard/` (payroll), `/api/dashboard/hr/`, `/api/dashboard/me/`,
+`/api/dashboard/admin/`.
+
+Hiding a card in the browser leaks its numbers to anybody who opens the network
+tab. The HR Manager role is defined as having "no access to payroll features",
+so the payroll figures must never leave the server for that role. This also
+closed a real leak: `/api/dashboard/` had only been gated on being signed in, so
+an HR Manager could read total net paid.
+
+### D-030 — Self-service is split by blast radius, not by convenience
+**Decided:** session 05 · **Status:** settled
+
+Phone, personal email and address are the employee's own business and apply
+immediately. Name, date of birth, gender, PAN, **bank account number and IFSC**
+go through an HR approval queue.
+
+Repointing a bank account the day before a payrun is the single most attacked
+field in any payroll system, and a self-service change with no second pair of
+eyes makes the whole control decorative. Nobody may approve a change to their
+own record — HR rights or not — and that check lives on the model's `approve()`,
+at the write, not in the view.
+
+Department, manager, position, contract and wage are not self-service in either
+form. They are HR's records and appear on the profile screen as read-only.
+
+### D-031 — Sessions expire, and the network is re-checked on every request
+**Decided:** session 05 · **Status:** settled
+
+DRF's token never expires. `accounts/authentication.py` adds an idle timeout, an
+absolute lifetime and optional address binding, all driven by an
+Admin-editable settings row.
+
+The network policy is checked on **every request**, not only at sign-in.
+Checking once would make the control a formality: authenticate at the office,
+then use the token from anywhere. `X-Forwarded-For` is ignored unless
+`TRUSTED_PROXY_COUNT` says a proxy is genuinely in front — otherwise anyone
+claims to be on the office Wi-Fi by setting one header.
+
+### D-032 — Worked time is decimal in the data and hours-and-minutes on screen
+**Decided:** session 05 · **Status:** settled
+
+Payroll multiplies hours by rates, so the stored value stays decimal. But `8.45`
+is eight hours and **twenty-seven** minutes, not forty-five, and a timesheet
+that invites that misreading is a timesheet nobody trusts. `core/formatting.py`
+converts; the API serves `worked_hm` / `overtime_hm` / `elapsed_hm` beside the
+decimals. The mockup agrees — its attendance widget reads `6h56`.
+
+The same reasoning killed the old overtime tile. A count of how many *times*
+overtime happened answers no question anybody has; the useful pair is how much
+overtime there was and how many people carried it.
