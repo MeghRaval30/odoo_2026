@@ -265,3 +265,30 @@ Two judgement calls:
   fastest way to switch persona in a live demo and wrong in a shipped product;
   `npm run dev` keeps them, `npm run build` compiles them out. The email/password
   prefill is gated the same way, so a production build opens on empty fields.
+
+### 21:55 — T-102 attendance in hours and minutes, T-103 the overtime tile
+The API had served both forms since session 05; these two screens were still
+printing the decimal. Now:
+
+* **Attendance list** — `8h 46m` worked, `16m` overtime, straight off the
+  serializer's `worked_hm` / `overtime_hm`. The decimal stays on the payload
+  because payroll multiplies it.
+* **Check-in widget** — `elapsed_hm` and `total_today_hm`, the mockup's `6h56`.
+  It also surfaces `punch_blocked_reason` and disables the button when
+  `can_punch` is false. Proven by planting a policy for `10.20.30.0/24`,
+  switching `enforce_network_on_punch` on, and watching the widget refuse from
+  127.0.0.1 with the server's own sentence. Both the policy and the settings
+  flag were reverted afterwards, and the punch made during the test deleted —
+  attendance is back to the seeded 1,746 rows.
+* **Payroll dashboard, Attendance Overview** — the tile the user called out.
+  It read `Overtime  262` and `Overtime hours  124.63`. It now leads with
+  **124h 38m carried by 22 employees** and **average day worked 8h 43m**, the
+  same phrasing the HR dashboard already used. The count is not deleted, it is
+  relabelled **Days with overtime**, where a count is the honest unit — ten
+  six-minute overruns and one nine-hour one are the same count and a very
+  different payroll problem, which is exactly why the bare count was useless.
+
+One server-side copy fix went with it: a punch refused by the network policy
+said *"Sign-in from 127.0.0.1 is not permitted"*, which reads as though the
+session is about to be cut. `network_allows` now names the action it actually
+refused. `accounts` + `attendance` 119/119 still green.

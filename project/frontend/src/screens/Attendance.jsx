@@ -1,7 +1,9 @@
 // Attendance list and correction form (T-036).
 //
 // worked_hours and overtime_hours are derived from check-in/check-out on the
-// server, so they are shown but never edited. Saving a correction makes the
+// server, so they are shown but never edited. The screen reads the `_hm` pair
+// the serializer sends alongside them — decimal for payroll, hours and minutes
+// for people (D-032). Saving a correction makes the
 // viewset stamp is_manually_edited and record who did it, which is why the
 // Source column exists.
 
@@ -68,8 +70,8 @@ function AttendanceForm({ id, onClose, onSaved }) {
           check_out: toLocalInput(a.check_out),
           status: a.status,
           notes: a.notes || "",
-          worked_hours: a.worked_hours,
-          overtime_hours: a.overtime_hours,
+          worked_hm: a.worked_hm,
+          overtime_hm: a.overtime_hm,
           is_manually_edited: a.is_manually_edited,
         }),
       )
@@ -119,12 +121,12 @@ function AttendanceForm({ id, onClose, onSaved }) {
       {id && (
         <div className="smart-row">
           <div className="smart">
-            <span className="n">{form.worked_hours}</span>
-            <span className="l">Worked hours</span>
+            <span className="n">{form.worked_hm || "—"}</span>
+            <span className="l">Worked</span>
           </div>
           <div className="smart">
-            <span className="n">{form.overtime_hours}</span>
-            <span className="l">Overtime hours</span>
+            <span className="n">{form.overtime_hm || "—"}</span>
+            <span className="l">Overtime</span>
           </div>
           <div className="smart">
             <span className="n">{form.is_manually_edited ? "Manual" : "System"}</span>
@@ -257,8 +259,8 @@ export default function Attendance({ route }) {
                         <span className="badge amber">Open</span>
                       )}
                     </td>
-                    <td className="num mono">{a.worked_hours}</td>
-                    <td className="num mono">{a.overtime_hours}</td>
+                    <td className="num mono">{a.worked_hm || "—"}</td>
+                    <td className="num mono">{a.overtime_hm || "—"}</td>
                     <td>
                       <span className={`badge ${STATUS_TONE[a.status] || "grey"}`}>
                         {a.status_display}

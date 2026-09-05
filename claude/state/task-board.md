@@ -176,8 +176,8 @@ running diary is `claude/PROGRESS.md`.
 | T-099 | New screens: Profile, Security, Audit, My Payslips | `IN PROGRESS` | Franklin | Written and building; **none has been clicked** |
 | T-100 | **Screen-by-screen pass over the pre-existing screens** | `TODO` | | The remaining ~30% of the commission. File-by-file list in `current-state.md` §HALF-DONE |
 | T-101 | Login screen to the mockup's exact copy | `DONE` | Trevor | Mockup copy verbatim + "Accounts are created by an administrator." Demo chips now compile out of a production build |
-| T-102 | Attendance list + widget to hours-and-minutes | `TODO` | | API already serves it; the screens still print decimals |
-| T-103 | Payroll dashboard overtime tile | `TODO` | | Still a count. Endpoint already returns `total_overtime_hm` and `overtime_employees` |
+| T-102 | Attendance list + widget to hours-and-minutes | `DONE` | Trevor | List reads `8h 46m` / `16m`, widget reads `6h56`. Widget also surfaces `punch_blocked_reason` and disables the button — verified by planting a policy that excludes 127.0.0.1 |
+| T-103 | Payroll dashboard overtime tile | `DONE` | Trevor | Reads **124h 38m carried by 22 employees** plus average day 8h 43m. The count survives as "Days with overtime", where a count is the right unit |
 | T-104 | Users & Roles screen for the capability matrix | `TODO` | | Multi-role checkboxes, reset-password action, capability grid endpoint exists |
 | T-105 | Gate per-role action buttons on capabilities, not the four legacy booleans | `TODO` | | `auth.has("payrun.delete")` etc. Server already enforces; this is the UI catching up |
 | T-106 | Render and check the four unverified themes | `TODO` | | Atrium, Blueprint, Marigold, Graphite |

@@ -354,19 +354,41 @@ export default function Dashboard() {
 
             <div className="card">
               <div className="card-title">Attendance Overview</div>
+              {/*
+                Overtime is the one figure here that a count cannot carry. Ten
+                records of six minutes and one record of nine hours are the same
+                count and a different payroll problem, so it reads as a duration
+                and the number of people it landed on. Present, half day and
+                absent stay as counts: those are days, and a day is the unit.
+              */}
+              <div className="attendance-headline">
+                <div>
+                  <div className="tiny faint">Overtime</div>
+                  <div className="attendance-headline-value">
+                    {data.attendance_overview.total_overtime_hm}
+                  </div>
+                  <div className="tiny faint">
+                    carried by {data.attendance_overview.overtime_employees} employee
+                    {data.attendance_overview.overtime_employees === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <div>
+                  <div className="tiny faint">Average day worked</div>
+                  <div className="attendance-headline-value">
+                    {data.attendance_overview.average_worked_hm}
+                  </div>
+                  <div className="tiny faint">Across every closed session</div>
+                </div>
+              </div>
               <table>
                 <tbody>
                   {[
                     ["Present", data.attendance_overview.present],
-                    ["Overtime", data.attendance_overview.overtime],
                     ["Half day", data.attendance_overview.half_day],
                     ["Absent", data.attendance_overview.absent],
+                    ["Days with overtime", data.attendance_overview.overtime],
                     ["Missing check-outs", data.attendance_overview.missing_checkouts],
                     ["Manual edits", data.attendance_overview.manual_edits],
-                    [
-                      "Overtime hours",
-                      Number(data.attendance_overview.total_overtime_hours).toFixed(2),
-                    ],
                   ].map(([label, value]) => (
                     <tr key={label}>
                       <td className="muted">{label}</td>

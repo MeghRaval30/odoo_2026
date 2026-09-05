@@ -164,7 +164,10 @@ class SecuritySetting(TimeStampedModel):
             return True, ""
 
         names = ", ".join(sorted({p.name for p in applicable}))
-        return False, (f"Sign-in from {address} is not permitted. This account "
+        # Name the action that was actually refused. A punch refused with the
+        # words "sign-in" reads as though the session is about to end.
+        action = "Checking in or out" if for_punch else "Sign-in"
+        return False, (f"{action} from {address} is not permitted. This account "
                        f"is restricted to: {names}.")
 
 

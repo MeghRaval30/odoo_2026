@@ -630,6 +630,24 @@ label {
   color: var(--on-primary);
 }
 
+/* ------------------------------------------------ attendance headline */
+
+.attendance-headline {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: var(--border-width) solid var(--border);
+}
+.attendance-headline-value {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 19px;
+  letter-spacing: var(--display-tracking);
+  margin: 2px 0 1px;
+}
+
 /* ----------------------------------------------------------------- login */
 
 .login-wrap {
