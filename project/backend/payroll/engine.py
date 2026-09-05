@@ -243,19 +243,24 @@ def compute_payslip(payslip) -> Payslip:
                 continue
 
         try:
-            amount = evaluate_rule(rule, ctx)
+            rate = evaluate_rule(rule, ctx)
         except RuleEvaluationError as exc:
             # A failing rule must not abort the whole run (PRD-4.4.7)
             _warn(payslip, PayslipWarning.RULE_ERROR,
                   f"Rule {rule.code} failed: {exc}")
             continue
 
-        amount = money(amount * Decimal(rule.quantity or 1))
+        # rate is the per-unit figure and amount is rate x quantity, so the
+        # payslip's Quantity/Rate/Amount columns reconcile. Storing the
+        # multiplied value in rate made the line read as quantity x (rate x
+        # quantity) for any rule with a quantity other than 1.
+        quantity = Decimal(rule.quantity or 1)
+        amount = money(rate * quantity)
 
         lines.append(PayslipLine(
             payslip=payslip, rule=rule, name=rule.name, code=rule.code,
             category=rule.category, sequence=rule.sequence,
-            quantity=rule.quantity, rate=amount, amount=amount,
+            quantity=rule.quantity, rate=rate, amount=amount,
         ))
 
         # Make this result visible to every later rule

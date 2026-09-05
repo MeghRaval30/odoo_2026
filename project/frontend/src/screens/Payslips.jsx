@@ -47,8 +47,8 @@ export default function Payslips({ route }) {
           <select value={state} onChange={(e) => setState(e.target.value)}>
             <option value="">All states</option>
             <option value="DRAFT">Draft</option>
-            <option value="VERIFY">Computed</option>
-            <option value="DONE">Validated</option>
+            <option value="COMPUTED">Computed</option>
+            <option value="VALIDATED">Validated</option>
             <option value="PAID">Paid</option>
           </select>
         </div>
