@@ -102,6 +102,7 @@ Three of the four need nothing but the venv:
 ```bash
 cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py    # 28/28 — the five graded rules
+./.venv/Scripts/python.exe audit_permissions.py    # role matrix + row scoping
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
 ./.venv/Scripts/python.exe manage.py test     # 216/216 — Django suite, 8 apps
