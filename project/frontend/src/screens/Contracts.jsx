@@ -19,9 +19,16 @@ import {
   useResource,
 } from "../components/ui";
 
+// Local parts, not toISOString(): east of UTC that returns yesterday.
+const todayLocal = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 const BLANK = {
   employee: "",
-  start_date: new Date().toISOString().slice(0, 10),
+  start_date: todayLocal(),
   end_date: "",
   wage: "",
   salary_structure: "",
@@ -178,11 +185,110 @@ function ContractForm({ id, onClose, onSaved }) {
   );
 }
 
+// Period probe: reuses the payrun wizard's eligible-employees query, which is a
+// pure read that resolves each employee's contract for a given window. It is
+// the only place the resolution rule is directly observable without running
+// payroll, so it doubles as the demo of graded rule #1.
+function PeriodProbe({ onClose }) {
+  const [period, setPeriod] = useState({
+    start: "2025-12-01",
+    end: "2025-12-31",
+  });
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api.post("/api/payruns/eligible-employees/", {
+        period_start: period.start,
+        period_end: period.end,
+      });
+      setResult(rows(data));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      wide
+      title="Contract resolution by period"
+      onClose={onClose}
+      footer={<button onClick={onClose}>Close</button>}
+    >
+      <ErrorBox error={error} />
+
+      <div className="row fill mb">
+        <Field label="Period start">
+          <input
+            type="date"
+            value={period.start}
+            onChange={(e) => setPeriod((p) => ({ ...p, start: e.target.value }))}
+          />
+        </Field>
+        <Field label="Period end">
+          <input
+            type="date"
+            value={period.end}
+            onChange={(e) => setPeriod((p) => ({ ...p, end: e.target.value }))}
+          />
+        </Field>
+        <div style={{ alignSelf: "end", marginBottom: 14 }}>
+          <button className="primary" onClick={run} disabled={busy}>
+            {busy ? <span className="spinner" /> : "Resolve"}
+          </button>
+        </div>
+      </div>
+
+      {result === null ? (
+        <div className="empty">
+          Pick a period and resolve to see which contract governs it.
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Contract from</th>
+                <th className="num">Wage for this period</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.name}</td>
+                  <td className="muted">{r.department || "—"}</td>
+                  <td className="muted">{formatDate(r.start_date)}</td>
+                  <td className="num mono">
+                    {r.wage ? (
+                      money(r.wage)
+                    ) : (
+                      <span className="badge red">No contract</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export default function Contracts({ route }) {
   const [state, setState] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounced(search);
   const [editing, setEditing] = useState(undefined);
+  const [probing, setProbing] = useState(false);
   const employeeFilter = route?.query?.employee || "";
 
   const contracts = useResource("/api/contracts/", {
@@ -199,6 +305,7 @@ export default function Contracts({ route }) {
         title="Contracts"
         sub={`${contracts.rows.length} records`}
       >
+        <button onClick={() => setProbing(true)}>Resolve by period</button>
         <button className="primary" onClick={() => setEditing(null)}>
           New Contract
         </button>
@@ -283,6 +390,8 @@ export default function Contracts({ route }) {
           }}
         />
       )}
+
+      {probing && <PeriodProbe onClose={() => setProbing(false)} />}
     </div>
   );
 }
