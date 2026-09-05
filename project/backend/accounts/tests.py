@@ -315,7 +315,7 @@ class EmployeeOwnRecordsScopeTests(RoleFixtureMixin, APITestCase):
     """
     The Employee cell of the HR-data column reads *"Own records only; may
     create own attendance + time-off requests"*, over Employees, Attendance,
-    **Contracts**, Schedules and Time Off. Two of those five do not hold up.
+    **Contracts**, Schedules and Time Off. One of those five does not hold up.
     """
 
     @classmethod
@@ -387,27 +387,27 @@ class EmployeeOwnRecordsScopeTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(TimeOffRequest.objects.count(), 0)
 
-    # PRODUCT BUG: Contracts are named in the HR-data column, where the
-    # Employee cell is "own records only". EmployeeViewSet, AttendanceViewSet,
-    # AllocationViewSet and TimeOffRequestViewSet all narrow get_queryset to
-    # `user.employee_id`; ContractViewSet does not override get_queryset at
-    # all, and CanManageHR lets any authenticated user read. An Employee can
-    # therefore read every colleague's contract, wage included. Asserting the
-    # ACTUAL behaviour; the fix is the same three-line get_queryset filter.
-    def test_an_employee_can_read_every_contract_including_wages(self):
+    # Regression guard. This test was written while the leak was open and
+    # asserted it: ContractViewSet had no get_queryset override, and
+    # CanManageHR grants read to any authenticated user, so an Employee could
+    # list every colleague's contract with the wage column attached. The
+    # three-line scoping filter it called for has since been applied, so the
+    # test now asserts the closed behaviour and exists to keep it closed.
+    def test_an_employees_contract_list_is_narrowed_to_their_own(self):
         response = self.client.get(reverse("contract-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         ids = {row["id"] for row in response.data["results"]}
-        self.assertEqual(ids, {self.my_contract.pk, self.their_contract.pk})
+        self.assertEqual(ids, {self.my_contract.pk})
 
-        leaked = self.client.get(
+        # The colleague's wage is not merely absent from the list page; the
+        # detail route cannot reach it either.
+        blocked = self.client.get(
             reverse("contract-detail", args=[self.their_contract.pk]))
-        self.assertEqual(leaked.status_code, status.HTTP_200_OK)
-        self.assertEqual(Decimal(leaked.data["wage"]), Decimal("90000.00"))
+        self.assertEqual(blocked.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_an_employee_still_cannot_write_contracts(self):
-        """The leak is read-only; the write half of the cell holds."""
+        """Read scoping aside, the write half of the cell holds on its own."""
         response = self.client.patch(
             reverse("contract-detail", args=[self.their_contract.pk]),
             {"wage": "999999.00"}, format="json")
