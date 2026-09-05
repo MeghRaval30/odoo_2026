@@ -7,7 +7,7 @@
 // necessarily the employee's newest one.
 
 import { useCallback, useEffect, useState } from "react";
-import { api, formatDate, money } from "../api";
+import { api, formatDate, hoursMinutes, money } from "../api";
 import { ErrorBox, Loading, PageHead, StateBadge } from "../components/ui";
 import { href } from "../lib/router";
 
@@ -88,8 +88,8 @@ export default function PayslipDetail({ id }) {
           <span className="l">LOP days</span>
         </div>
         <div className="smart">
-          <span className="n">{Number(slip.overtime_hours || 0).toFixed(2)}</span>
-          <span className="l">Overtime hrs</span>
+          <span className="n">{hoursMinutes(slip.overtime_hours, "—")}</span>
+          <span className="l">Overtime</span>
         </div>
         <div className="smart">
           <span className="n">{money(slip.gross)}</span>

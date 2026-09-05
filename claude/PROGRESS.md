@@ -441,3 +441,102 @@ terracotta button is **3.05:1**, the same failure Marigold had. That colour pair
 is fixed by `ui-design-language.md` §2 and is the product's signature look, so
 it is being reported rather than altered at hour 13 — see the note in
 `current-state.md`.
+
+### 23:35 — T-099 the four screens nobody had clicked
+
+Profile, Security, Audit log, My Payslips and the Admin dashboard were written
+and building at the end of session 05; none had been driven. Every flow in the
+briefing was walked, plus the ones that were not listed. **Five real defects,
+all found by clicking rather than by reading.**
+
+**1. A refused security toggle flipped back in silence.** The single best control
+on the Security screen is the guard that refuses to switch network enforcement on
+while no active policy covers the address you are connected from — it stops an
+administrator locking the whole company out with one checkbox. The server refuses
+with a precise, actionable sentence. The screen threw it away: `patch()` set the
+error and then called `load()` to put the switch back, and `load()` cleared the
+error on success. So the switch flipped back with **no message at all** — the
+best feature on the page, rendered as a broken checkbox. `load({ keepError:
+true })` now leaves the refusal on screen. Verified: the message appears, the
+switch stays off, and following its advice (add a policy covering 127.0.0.0/8,
+then enforce) succeeds.
+
+**2. My Payslips printed `18.00 /` with nothing after the slash.** The screen
+reads the *list* endpoint and `expected_days` was on the *detail* serializer
+only, so the denominator was `undefined`. It is a stored column, so adding it to
+the list costs no query. Reads `18.00 / 20.00` now — and "18 of 20" is the
+figure, where a bare 18 is not.
+
+**3. My own route guard broke the employee's Open link.** The guard added an hour
+earlier judged `#/payslips/68` by its head, `payslips`, which is the payroll
+operator's index and gated on `payslip.read.all`. So the Open button on My
+Payslips — the one screen built for employees — refused the employee. Fixed with
+a rule rather than an exception: a *detail* route can be reachable where its
+*list* is not, when the server scopes the resource to the caller. Confirmed all
+three ways: John opens his own slip, `/payslips` still refuses him, and
+`/payslips/3` (someone else's) returns the server's own **"No Payslip matches the
+given query"** — enforcement, not hiding.
+
+**4. Overtime was still decimal in two more places** — `PayslipDetail` ("0.00
+Overtime hrs") and the payroll register ("5.49"). Both now read hours and
+minutes, and the register column is "Overtime" rather than "OT hrs". Grep
+confirms there is no longer a single decimal-hour render anywhere in the
+frontend. The CSV export keeps the decimal, deliberately: a spreadsheet is the
+one reader that wants it.
+
+**5. The request-a-change dialog gave bank advice about every field.** Asking to
+correct a date of birth was met with "a bank change without a reason will usually
+be queried".
+
+Everything else worked. Proven end to end, with the state restored afterwards
+each time:
+
+* **Direct field change** — work phone edited and saved, then restored.
+* **Approval round trip** — John requests a bank-account change, Sara approves
+  it, and the value lands on the employee record. A second request (date of
+  birth) refused, and it does not. Both cleared and the bank number restored.
+* **Nobody decides their own** — Sara raises a request against her own record and
+  is refused with "You cannot approve a change to your own record."
+* **Password change** — refuses a password identical to the current one, then
+  changes it, rotates the token, stores the new one and **keeps the session
+  alive**; an `/api/employees/` call on the rotated token succeeds. Changed back,
+  and all five demo accounts still sign in with `demo1234`.
+* **Audit log** — captured every action taken during this walk, including the
+  policy adds and the enforcement change. Action filter and free-text search both
+  work. (The briefing's "AuditLog export" is the JS named export, not a download
+  — nothing is missing.)
+* **Admin dashboard** — 5 accounts, live sessions, 24h sign-in counts, security
+  posture in sentences, audit tail. The refused-sign-ins tile switches from
+  "nothing unusual" to "worth a look" above ten.
+* **Payslip PDF** — 76 KB, magic bytes `%PDF-1.4`, served for the employee's own
+  slip and 404 for anyone else's.
+
+**One behaviour that is not a bug, and the demo needs to know about it.** Every
+sign-in deletes that account's existing token and issues a fresh one, on purpose,
+so `token.created` is the start of *this* session and the expiry means what it
+says. The consequence: **one account cannot hold two live sessions.** Signing in
+as `admin@oxp.com` in a second tab silently kills the first, which lands on the
+login screen at the worst possible moment. It caught me twice while driving the
+app. Use different accounts per tab, or one tab. Written into the demo script.
+
+### 23:45 — a copy pass over Profile and Security
+
+`ui-design-language.md` §5 is binding and blunt: write labels, not explanations;
+no reassurance; no narrating the system to the user. Both screens argued with the
+reader. The test applied was **state the effect, do not argue for it** — which
+keeps every fact a user cannot otherwise know, and drops the justification:
+
+| Was | Is |
+|---|---|
+| "These apply immediately. They affect how you are contacted, and nothing else." | "Applied immediately." |
+| "These change your identity or where you are paid, so somebody in HR has to confirm them. Nobody — including HR — can approve a change to their own record." | "Decided by HR. Nobody decides a change to their own record." |
+| "Your current password is required even though you are signed in — an unlocked laptop should not become a permanent account takeover. Changing it signs out every other session." | "Your current password is required. Changing it signs out every other session." |
+| "Checked on every request, not only at sign-in — otherwise you could authenticate at the office and use the session from anywhere." | "Checked on every request, not only at sign-in." |
+| "Separate switch, because a clock you can punch from your sofa is not attendance." | "A separate switch from sign-in." |
+
+The reasoning that was cut is not lost — it is where it belongs, in the
+docstrings of `accounts/security.py` and `capabilities.py`, which is who it was
+actually written for.
+
+216/216, 28/28, 51/51, 26/26 all still green afterwards, seed reset to the pinned
+demo figures.

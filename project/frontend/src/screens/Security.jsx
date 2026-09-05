@@ -19,7 +19,11 @@ export default function Security() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  // `keepError` matters more than it looks. A refused toggle re-reads to put the
+  // switch back where the server says it is, and a re-read that cleared the
+  // error would throw away the only explanation the user is going to get —
+  // leaving a switch that flips back in silence, which reads as broken.
+  const load = async ({ keepError = false } = {}) => {
     try {
       const [s, p, r] = await Promise.all([
         api.get("/api/security/settings/"),
@@ -29,7 +33,7 @@ export default function Security() {
       setSettings(s);
       setPolicies(rows(p));
       setRoles(rows(r));
-      setError(null);
+      if (!keepError) setError(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -49,8 +53,9 @@ export default function Security() {
       setMessage("Saved.");
     } catch (err) {
       setError(err.message);
-      // Re-read, so a refused toggle does not leave the switch looking flipped.
-      load();
+      // Re-read, so a refused toggle does not leave the switch looking flipped,
+      // but keep the refusal on screen — it says what to do about it.
+      load({ keepError: true });
     }
   };
 
@@ -90,10 +95,8 @@ export default function Security() {
         <div className="card">
           <div className="card-title">Permitted networks</div>
           <div className="card-sub">
-            Each row is a CIDR range. A policy scoped to a role only constrains
-            holders of that role — the usual shape is to pin payroll staff to the
-            office, because they can move money, and leave everyone else alone.
-            With no active policy at all, sign-in is unrestricted.
+            A policy scoped to a role constrains only holders of that role. With
+            no active policy, sign-in is unrestricted.
           </div>
 
           {!policies.length ? (
@@ -149,13 +152,13 @@ export default function Security() {
             <div className="card-title">Enforcement</div>
             <Toggle
               label="Restrict sign-in to permitted networks"
-              hint="Checked on every request, not only at sign-in — otherwise you could authenticate at the office and use the session from anywhere."
+              hint="Checked on every request, not only at sign-in."
               value={settings?.enforce_network_policy}
               onChange={(v) => patch({ enforce_network_policy: v })}
             />
             <Toggle
               label="Restrict attendance check-in to permitted networks"
-              hint="Separate switch, because a clock you can punch from your sofa is not attendance."
+              hint="A separate switch from sign-in."
               value={settings?.enforce_network_on_punch}
               onChange={(v) => patch({ enforce_network_on_punch: v })}
             />
@@ -356,7 +359,7 @@ function PolicyModal({ row, roles, onClose, onSaved }) {
       </Field>
       <Toggle
         label="Active"
-        hint="Inactive policies are ignored entirely, including when deciding whether any policy applies."
+        hint="Inactive policies are ignored entirely."
         value={form.is_active}
         onChange={(v) => setForm({ ...form, is_active: v })}
       />

@@ -54,6 +54,14 @@ const SCREENS = {
 // navigation tree the server built for this account.
 const ALWAYS = new Set(["dashboard", "profile", "my-payslips"]);
 
+// Routes whose *detail* view is legitimately reachable by someone who may not
+// see the list. `/payslips` is the payroll operator's index and is gated on
+// `payslip.read.all`; `/payslips/68` is one record, and the payslip queryset
+// narrows to the caller's own employee unless they hold that capability. So an
+// employee following Open from My Payslips reaches their own slip, and a
+// foreign id 404s at the server rather than being guessed at here.
+const OWN_SCOPED_DETAIL = new Set(["payslips"]);
+
 /**
  * Is this account allowed to open this screen?
  *
@@ -67,7 +75,8 @@ const ALWAYS = new Set(["dashboard", "profile", "my-payslips"]);
  * buys is that a refused screen says so in one clause instead of rendering an
  * empty payroll table above a permission error.
  */
-function reachable(head) {
+function reachable(route) {
+  const head = route.parts[0] || "";
   if (ALWAYS.has(head)) return true;
   const nav = auth.user?.navigation || [];
   const paths = new Set();
@@ -75,7 +84,8 @@ function reachable(head) {
     if (group.to) paths.add(group.to.replace(/^\//, ""));
     for (const item of group.items || []) paths.add(item.to.replace(/^\//, ""));
   }
-  return paths.has(head);
+  if (paths.has(head)) return true;
+  return OWN_SCOPED_DETAIL.has(head) && route.parts.length > 1;
 }
 
 export default function App() {
@@ -133,7 +143,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      ) : reachable(head) ? (
+      ) : reachable(route) ? (
         <Screen route={route} />
       ) : (
         <div className="page">

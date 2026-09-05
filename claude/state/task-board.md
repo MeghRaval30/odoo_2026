@@ -173,7 +173,7 @@ running diary is `claude/PROGRESS.md`.
 | T-096 | Six design languages | `DONE` | Franklin | `themes.css`. **Only Ledger and Console rendered — four unverified** |
 | T-097 | Role-aware navigation + profile menu + theme switcher | `DONE` | Franklin | Menu built server-side; verified for Employee, HR, Admin |
 | T-098 | Four role dashboards behind four endpoints | `DONE` | Franklin | Employee and HR verified in a browser; Admin verified by API |
-| T-099 | New screens: Profile, Security, Audit, My Payslips | `IN PROGRESS` | Franklin | Written and building; **none has been clicked** |
+| T-099 | New screens: Profile, Security, Audit, My Payslips | `DONE` | Trevor | All walked, every flow driven. Five defects found and fixed — a refused security toggle that reverted silently, a missing `expected_days`, a route-guard regression on the employee's own payslip, two more decimal-hour renders, and a bank-specific hint shown on every field |
 | T-100 | **Screen-by-screen pass over the pre-existing screens** | `DONE` | Trevor | T-101 to T-105 all closed and driven in a browser as all five roles |
 | T-101 | Login screen to the mockup's exact copy | `DONE` | Trevor | Mockup copy verbatim + "Accounts are created by an administrator." Demo chips now compile out of a production build |
 | T-102 | Attendance list + widget to hours-and-minutes | `DONE` | Trevor | List reads `8h 46m` / `16m`, widget reads `6h56`. Widget also surfaces `punch_blocked_reason` and disables the button — verified by planting a policy that excludes 127.0.0.1 |

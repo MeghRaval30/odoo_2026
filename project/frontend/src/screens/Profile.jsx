@@ -154,10 +154,7 @@ function DetailsTab({ profile, onSaved, onRequested }) {
     <div className="grid k2">
       <div className="card">
         <div className="card-title">Yours to change</div>
-        <div className="card-sub">
-          These apply immediately. They affect how you are contacted, and
-          nothing else.
-        </div>
+        <div className="card-sub">Applied immediately.</div>
 
         {message && <div className="alert ok">{message}</div>}
         <ErrorBox error={error} />
@@ -189,9 +186,7 @@ function DetailsTab({ profile, onSaved, onRequested }) {
         <div className="card">
           <div className="card-title">Needs HR approval</div>
           <div className="card-sub">
-            These change your identity or where you are paid, so somebody in HR
-            has to confirm them. Nobody — including HR — can approve a change to
-            their own record.
+            Decided by HR. Nobody decides a change to their own record.
           </div>
 
           <div className="table-wrap">
@@ -232,10 +227,7 @@ function DetailsTab({ profile, onSaved, onRequested }) {
 
         <div className="card">
           <div className="card-title">Set by HR</div>
-          <div className="card-sub">
-            Your position in the organisation. Changing any of it is an HR
-            action on your record, not a request from you.
-          </div>
+          <div className="card-sub">Changed by HR, not requested here.</div>
           <dl className="kv">
             {profile.read_only.map((f) => (
               <FragmentRow key={f.field} label={f.label} value={f.value} />
@@ -316,7 +308,7 @@ function RequestModal({ field, current, onClose, onDone }) {
           </Field>
           <Field
             label="Why"
-            hint="HR sees this when deciding. A bank change without a reason will usually be queried."
+            hint="HR sees this when deciding."
           >
             <textarea
               rows={3}
@@ -376,7 +368,7 @@ function RequestsTab() {
       </div>
       <div className="card-sub">
         {canApprove
-          ? "Everything waiting on HR, and everything already decided. A request marked sensitive changes where money goes — check the person, not just the form."
+          ? "Waiting and already decided. Sensitive requests change where money goes."
           : "What you have asked HR to change, and what they decided."}
       </div>
       <ErrorBox error={error} />
@@ -509,9 +501,8 @@ function SecurityTab() {
       <div className="card">
         <div className="card-title">Change your password</div>
         <div className="card-sub">
-          Your current password is required even though you are signed in — an
-          unlocked laptop should not become a permanent account takeover.
-          Changing it signs out every other session.
+          Your current password is required. Changing it signs out every other
+          session.
         </div>
 
         {message && <div className="alert ok">{message}</div>}
@@ -550,9 +541,8 @@ function SecurityTab() {
       <div className="card">
         <div className="card-title">Where you are signed in</div>
         <div className="card-sub">
-          Sessions expire on their own — after inactivity, and again at their
-          absolute lifetime. If you see an address you do not recognise, change
-          your password: that ends all of them.
+          Sessions expire after inactivity, and again at their absolute
+          lifetime. Changing your password ends all of them.
         </div>
 
         {!sessions.length ? (
