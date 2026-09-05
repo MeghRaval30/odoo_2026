@@ -539,9 +539,46 @@ class PayrollRunAccessTests(RoleFixtureMixin, APITestCase):
                 self.assertEqual(
                     self.client.get(reverse("payrun-list")).status_code,
                     status.HTTP_403_FORBIDDEN)
+
+    def test_anyone_signed_in_may_read_payslips_but_only_their_own(self):
+        """
+        PRD 3.2 grants the Employee role "R (own)" on payslips.
+
+        This previously asserted a flat 403, which encoded a bug: the viewset
+        was gated behind CanRunPayroll, so the queryset's own-rows branch was
+        unreachable and an employee could never see their own payslip. The
+        endpoint is read-only, so opening it up costs nothing; the scoping is
+        what does the work.
+        """
+        for user in (self.employee, self.hr):
+            with self.subTest(role=user.email):
+                self.client.force_authenticate(user=user)
+                response = self.client.get(reverse("payslip-list"))
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+                rows = response.json().get("results", response.json())
+                foreign = [r for r in rows
+                           if r.get("employee") != getattr(user, "employee_id", None)]
                 self.assertEqual(
-                    self.client.get(reverse("payslip-list")).status_code,
-                    status.HTTP_403_FORBIDDEN)
+                    foreign, [],
+                    "a non-payroll user must not see other people's payslips")
+
+    def test_payslips_stay_read_only_for_everyone(self):
+        """
+        No role may write a payslip — they are produced by computing a payrun.
+
+        The permission class denies unsafe methods before DRF reaches its own
+        method check, so this is a 403 rather than a 405. Either is a refusal;
+        what matters is that nothing gets through.
+        """
+        for user in (self.employee, self.hr, self.payroll_user,
+                     self.payroll_manager, self.admin):
+            with self.subTest(role=user.email):
+                self.client.force_authenticate(user=user)
+                self.assertIn(
+                    self.client.post(reverse("payslip-list"), {}).status_code,
+                    (status.HTTP_403_FORBIDDEN,
+                     status.HTTP_405_METHOD_NOT_ALLOWED))
 
     def test_employee_and_hr_manager_cannot_create_a_payrun(self):
         for user in (self.employee, self.hr):

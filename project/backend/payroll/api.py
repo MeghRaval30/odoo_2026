@@ -9,7 +9,8 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import CanConfigurePayroll, CanRunPayroll
+from accounts.permissions import (CanConfigurePayroll, CanReadOwnPayslips,
+                                  CanRunPayroll)
 from employees.models import Employee
 
 from . import engine
@@ -172,7 +173,10 @@ class SalaryRuleViewSet(viewsets.ModelViewSet):
 
 
 class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [CanRunPayroll]
+    # Read-only for everyone; get_queryset narrows non-payroll users to their
+    # own rows. CanRunPayroll here made the Employee role's "R (own)" grant in
+    # PRD 3.2 unreachable — the scoping branch below was dead code.
+    permission_classes = [CanReadOwnPayslips]
     filterset_fields = ["payrun", "employee", "state", "employee__department"]
     search_fields = ["number", "employee__first_name", "employee__last_name"]
 
