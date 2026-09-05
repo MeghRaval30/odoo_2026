@@ -100,12 +100,11 @@ export function Field({ label, children, hint }) {
 const STATE_TONE = {
   DRAFT: "grey",
   TO_APPROVE: "amber",
-  VERIFY: "amber",
+  COMPUTED: "amber",
   CONFIRM: "amber",
   RUNNING: "green",
   APPROVED: "green",
   VALIDATED: "green",
-  DONE: "blue",
   PAID: "green",
   EXPIRED: "grey",
   REFUSED: "red",

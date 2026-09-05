@@ -10,11 +10,14 @@ import { api, downloadBlob, formatDate, money } from "../api";
 import { ErrorBox, Loading, PageHead, StateBadge, rows } from "../components/ui";
 import { href, navigate } from "../lib/router";
 
-const STEPS = ["DRAFT", "VERIFY", "DONE", "PAID"];
+// Must match Payrun.STATES in payroll/models.py exactly. When these were
+// Odoo-style VERIFY/DONE, indexOf returned -1 after Compute and the whole
+// statusbar went unlit.
+const STEPS = ["DRAFT", "COMPUTED", "VALIDATED", "PAID"];
 const STEP_LABEL = {
   DRAFT: "Draft",
-  VERIFY: "Computed",
-  DONE: "Validated",
+  COMPUTED: "Computed",
+  VALIDATED: "Validated",
   PAID: "Paid",
 };
 

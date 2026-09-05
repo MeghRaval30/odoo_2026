@@ -36,20 +36,19 @@ const C = {
   dim: "#9c8f84",
 };
 
+// Keys must match Payrun.STATES in payroll/models.py.
 const STATE_COLOR = {
   PAID: C.green,
-  DONE: C.accent,
-  VERIFY: C.amber,
+  VALIDATED: C.accent,
+  COMPUTED: C.amber,
   DRAFT: C.dim,
-  CANCELLED: C.red,
 };
 
 const STATE_BADGE = {
   PAID: "green",
-  DONE: "blue",
-  VERIFY: "amber",
+  VALIDATED: "blue",
+  COMPUTED: "amber",
   DRAFT: "grey",
-  CANCELLED: "red",
 };
 
 const tooltipStyle = {
