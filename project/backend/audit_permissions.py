@@ -100,6 +100,42 @@ WRITE_PROBE = {
 DENIED = (401, 403, 404, 405)
 
 
+def cleanup():
+    """
+    Remove whatever the write probes actually managed to create.
+
+    Most of the payloads above are deliberately incomplete and are rejected at
+    validation, which is all the audit needs -- a 400 proves permission passed.
+    A few are complete enough to succeed, and the users one always does, so a
+    run left a `perm.probe@oxp.com` account sitting in User Management. Every
+    probe carries the same marker so the sweep can be exact.
+
+    probe_forms.py already tidies up after itself; this brings the permission
+    audit in line, so running the harnesses before a demo cannot dirty it.
+    """
+    from accounts.models import User
+    from employees.models import Employee, WorkingSchedule
+    from payroll.models import Payrun, SalaryRule, SalaryStructure
+    from timeoff.models import Allocation, TimeOffType
+
+    removed = 0
+    for queryset in (
+        User.objects.filter(email__startswith="perm.probe"),
+        Employee.objects.filter(first_name="Perm", last_name="Probe"),
+        Allocation.objects.filter(name="Perm Probe"),
+        Payrun.objects.filter(name="Perm Probe"),
+        WorkingSchedule.objects.filter(name="Perm Probe"),
+        TimeOffType.objects.filter(code="PERMPROBE"),
+        SalaryRule.objects.filter(code="PERMPROBE"),
+        SalaryStructure.objects.filter(code="PERMPROBE"),
+    ):
+        count = queryset.count()
+        if count:
+            queryset.delete()
+            removed += count
+    return removed
+
+
 def token_for(email):
     c = Client()
     r = c.post("/api/auth/login/", {"email": email, "password": "demo1234"},
@@ -360,6 +396,10 @@ def main():
                 problems.append((resource, role, msg))
             else:
                 print(f"    {role:<12} {resource:<18} {len(rows)} row(s), all own  OK")
+
+    removed = cleanup()
+    print("")
+    print(f"cleaned up {removed} probe record(s)")
 
     print("\n" + "=" * 78)
     if problems:
