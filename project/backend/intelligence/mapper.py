@@ -377,11 +377,28 @@ def _closest(value, candidates):
 _CLOSED_TAXONOMIES = {"department", "work_location", "employee_type", "gender"}
 
 _KNOWN_EXPANSIONS = {
-    "engg": "Engineering", "eng": "Engineering", "tech": "Technology",
+    # Abbreviations. A hand-kept sheet writes the short form.
+    "engg": "Engineering", "eng": "Engineering",
     "sls": "Sales", "mktg": "Marketing", "mkt": "Marketing",
     "ops": "Operations", "fin": "Finance", "acct": "Accounts",
-    "hr": "HR", "admin": "Administration", "it": "IT", "qa": "Quality",
+    "admin": "Administration", "qa": "Quality",
     "cs": "Customer Support", "bd": "Business Development",
+
+    # Whole-word synonyms across company vocabularies. These are the ones an
+    # acquisition actually turns up: two firms name the same unit differently
+    # and neither name is wrong. Handling them in the dictionary rather than
+    # leaving them to the model matters because the model answers some of them
+    # and silently omits the rest -- on one run it returned People and
+    # Technology and skipped Revenue and Operations, which left an operator
+    # with two departments merged and two duplicated for no visible reason.
+    # A dictionary is boring, complete, and the same every time.
+    "technology": "Engineering", "tech": "Engineering",
+    "engineering": "Engineering", "product engineering": "Engineering",
+    "revenue": "Sales", "commercial": "Sales", "business development": "Sales",
+    "people": "HR", "people ops": "HR", "people operations": "HR",
+    "human resources": "HR", "talent": "HR", "hr": "HR",
+    "information technology": "IT", "it": "IT",
+    "finance": "Finance", "accounts": "Finance", "accounting": "Finance",
 }
 
 

@@ -8,6 +8,7 @@ import Contracts from "./screens/Contracts";
 import DashboardRouter from "./screens/DashboardRouter";
 import Employees from "./screens/Employees";
 import Holidays from "./screens/Holidays";
+import ImportStudio from "./screens/ImportStudio";
 import Login from "./screens/Login";
 import MyPayslips from "./screens/MyPayslips";
 import Payruns from "./screens/Payruns";
@@ -43,6 +44,7 @@ const SCREENS = {
   "job-positions": JobPositions,
   "work-locations": WorkLocations,
   holidays: Holidays,
+  import: ImportStudio,
   reports: Reports,
   users: Users,
   security: Security,
