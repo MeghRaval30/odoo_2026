@@ -282,27 +282,73 @@ class AttendanceOwnershipTests(AttendanceFixtureMixin, APITestCase):
                                   [Role.EMPLOYEE])
         cls.hr_user = cls.build_user("hr@example.com", None, [Role.HR_MANAGER])
 
-    def _payload(self, employee):
-        check_in = timezone.now() - timedelta(hours=8)
+    def _payload(self, employee, *, day_offset=0):
+        # Anchored to 09:00 *today* rather than "eight hours ago", so the suite
+        # does not fail when it happens to run before 08:00 — an employee may
+        # only record attendance for the current day.
+        check_in = timezone.localtime().replace(
+            hour=9, minute=0, second=0, microsecond=0) + timedelta(days=day_offset)
         return {
             "employee": employee.pk,
             "check_in": check_in.isoformat(),
             "check_out": (check_in + timedelta(hours=8)).isoformat(),
         }
 
-    def test_posting_someone_elses_employee_id_records_it_against_yourself(self):
+    def test_an_employee_cannot_back_date_their_own_attendance(self):
+        """
+        Worked days feed straight into pay, so a back-dated record is a
+        self-service raise. HR can still correct history; that is a different
+        action, by a different person, and it is flagged and logged.
+        """
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("attendance-list"),
+            self._payload(self.employee, day_offset=-9), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only record attendance for today",
+                      str(response.data["detail"]))
+        self.assertEqual(Attendance.objects.count(), 0)
+
+    def test_hr_may_still_correct_an_earlier_day_and_it_is_flagged(self):
+        self.client.force_authenticate(user=self.hr_user)
+
+        response = self.client.post(
+            reverse("attendance-list"),
+            self._payload(self.employee, day_offset=-9), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        record = Attendance.objects.get()
+        self.assertTrue(record.is_manually_edited)
+        self.assertEqual(record.edited_by, self.hr_user)
+
+    def test_worked_time_is_reported_in_hours_and_minutes(self):
+        """
+        `8.45` is eight hours and twenty-seven minutes, not forty-five. The
+        decimal stays for payroll arithmetic; the screens read the other one.
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(reverse("attendance-list"),
+                                    self._payload(self.employee), format="json")
+        self.assertEqual(response.data["worked_hours"], "8.00")
+        self.assertEqual(response.data["worked_hm"], "8h 00m")
+
+    def test_posting_someone_elses_employee_id_is_refused_outright(self):
+        """
+        This used to be silently rewritten to the caller's own record, which
+        was safe but quiet. A refusal is better: nobody posts a colleague's id
+        by accident, so the attempt is worth naming and worth logging.
+        """
         self.client.force_authenticate(user=self.user)
 
         response = self.client.post(reverse("attendance-list"),
                                     self._payload(self.victim), format="json")
 
-        self.assertIn(response.status_code,
-                      (status.HTTP_200_OK, status.HTTP_201_CREATED))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only record your own", str(response.data["detail"]))
         self.assertEqual(self.victim.attendances.count(), 0)
-        self.assertEqual(self.employee.attendances.count(), 1)
-        created = Attendance.objects.get()
-        self.assertEqual(created.employee, self.employee)
-        self.assertEqual(response.data["employee"], self.employee.pk)
+        self.assertEqual(self.employee.attendances.count(), 0)
 
     def test_posting_your_own_employee_id_is_of_course_still_yours(self):
         self.client.force_authenticate(user=self.user)

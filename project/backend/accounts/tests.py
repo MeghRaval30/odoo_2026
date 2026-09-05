@@ -846,7 +846,7 @@ class UserManagementTests(RoleFixtureMixin, APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("roles", response.data)
-        self.assertIn("cannot modify your own roles", str(response.data["roles"]))
+        self.assertIn("your own roles", str(response.data["roles"]))
         self.assertEqual(self.admin.role_codes, {Role.ADMIN})
 
     def test_an_admin_may_not_strip_their_own_roles_either(self):

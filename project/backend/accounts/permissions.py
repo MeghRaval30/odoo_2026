@@ -8,6 +8,35 @@ The matrix these implement is in claude/context/prd.md §3.2.
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
+def RequiresCapability(read=None, write=None, delete=None):
+    """
+    Build a permission class straight from the capability matrix.
+
+    Pass the capability needed to read, the one needed to create or update, and
+    optionally a stricter one for delete — that last split is what separates an
+    HR Payroll User ("Create, Read, and Update access to Payruns and Payslips")
+    from an HR Payroll Manager ("full CRUD"), which is a distinction the problem
+    statement draws by hand and is easy to lose if every unsafe method is
+    checked against one flag.
+
+    `read=None` means any authenticated user may read; row-level narrowing to
+    "own records only" is the viewset queryset's job, not this class's.
+    """
+    class _Capability(BasePermission):
+        def has_permission(self, request, view):
+            user = request.user
+            if not (user and user.is_authenticated):
+                return False
+            if request.method in SAFE_METHODS:
+                return read is None or user.can(read)
+            if request.method == "DELETE" and delete is not None:
+                return user.can(delete)
+            return write is not None and user.can(write)
+
+    _Capability.__name__ = f"RequiresCapability({read or '-'}/{write or '-'})"
+    return _Capability
+
+
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated

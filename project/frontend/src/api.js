@@ -27,6 +27,20 @@ export const auth = {
   can(permission) {
     return Boolean(this.user?.permissions?.[permission]);
   },
+  /**
+   * Capability check against the matrix the server enforces with.
+   *
+   * `can()` reads the four legacy booleans and stays for screens written
+   * before the matrix existed; this reads the real thing. Both are UI hints —
+   * every route is gated server-side regardless of what is rendered.
+   */
+  has(...capabilities) {
+    const held = this.user?.capabilities || [];
+    return capabilities.some((c) => held.includes(c));
+  },
+  merge(user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
 };
 
 export class ApiError extends Error {
@@ -105,6 +119,15 @@ export const api = {
     });
     auth.set(data.token, data.user);
     return data.user;
+  },
+
+  // Re-read the signed-in account. The navigation tree and capability list
+  // come from the server, so a role change made by an administrator has to be
+  // able to reach a session that is already open.
+  async refreshMe() {
+    const user = await request("/api/auth/me/");
+    auth.merge(user);
+    return user;
   },
 
   async logout() {
@@ -194,3 +217,28 @@ export const formatTime = (value) =>
         minute: "2-digit",
       })
     : "—";
+
+
+/**
+ * Decimal hours as `8h 27m`.
+ *
+ * The API sends this pre-formatted on attendance rows, and this is the fallback
+ * for aggregates computed in the browser. Never render raw decimal hours to a
+ * person: `8.45` is eight hours and twenty-seven minutes, not forty-five, and a
+ * timesheet that invites that misreading is a timesheet nobody trusts.
+ */
+export function hoursMinutes(value, blank = "—") {
+  const total = Number(value || 0);
+  if (!Number.isFinite(total) || total === 0) return blank;
+  const sign = total < 0 ? "-" : "";
+  const minutes = Math.round(Math.abs(total) * 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return sign + (h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`);
+}
+
+/** `6h56` — the compact form the mockup's attendance widget uses. */
+export function hoursMinutesCompact(value) {
+  const minutes = Math.round(Math.abs(Number(value || 0)) * 60);
+  return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
+}

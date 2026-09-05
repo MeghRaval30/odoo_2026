@@ -1,0 +1,454 @@
+/* ==========================================================================
+   Six design languages.
+
+   A theme here is not a palette swap. Each one sets its own type pairing,
+   corner geometry, border weight, shadow behaviour, density and label
+   treatment, so switching theme changes how the product *reads*, not just
+   what colour it is. That is the whole point: the same payroll register can
+   feel like a printed ledger, an operations console or a technical drawing,
+   and different rooms want different ones.
+
+   Every theme sets the same token vocabulary, declared with its defaults in
+   index.css. A theme that forgets a token inherits the Ledger value rather
+   than breaking, which is why the defaults live there and not here.
+
+   Font families always end in a real system fallback. The demo machine may be
+   offline; a theme has to stay recognisably itself on Georgia and Segoe UI,
+   which is why the pairings differ by *class* (serif / grotesk / mono /
+   humanist) and not only by name.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1 — LEDGER  ·  warm paper, printed register
+   Bone and sand grounds, a single terracotta action colour, brown rather than
+   grey for text. Hairlines, no shadows, tight rows. Serif figures so money
+   looks considered.
+   ========================================================================== */
+
+[data-theme="ledger"] {
+  --espresso: #3b2e28;
+  --espresso-2: #4a3a32;
+  --bg: #f4efe9;
+  --surface: #fffcf9;
+  --surface-2: #f9ede8;
+  --surface-3: #f2ded7;
+
+  --border: #e7d9d1;
+  --border-2: #d9c5ba;
+
+  --text: #241e1a;
+  --text-dim: #6b5f55;
+  --text-faint: #9c8f84;
+
+  --primary: #d97757;
+  --primary-dark: #bd5c3d;
+  --primary-wash: #fbebe3;
+  --on-primary: #fffcf9;
+
+  --rose: #c0757b;      --rose-wash: #f7e4e5;
+  --green: #5b7d58;     --green-wash: #e8efe4;
+  --amber: #a97a24;     --amber-wash: #f7ebd6;
+  --red: #b5504a;       --red-wash: #f7e2e0;
+  --purple: #856b9c;    --purple-wash: #efe8f3;
+
+  --font-display: "Source Serif 4", "Iowan Old Style", Georgia, Cambria, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Source Serif 4", Georgia, serif;
+  --display-weight: 600;
+  --display-tracking: -0.005em;
+  --display-transform: none;
+  --label-transform: none;
+  --label-tracking: 0.01em;
+  --label-weight: 500;
+  --body-size: 13px;
+  --line: 1.55;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: none;
+  --shadow-raised: none;
+  --shadow-pop: 0 12px 32px rgba(59, 46, 40, 0.16);
+  --shadow-modal: 0 16px 48px rgba(36, 30, 26, 0.28);
+  --scrim: rgba(36, 30, 26, 0.42);
+
+  --pad-card: 15px 17px;
+  --pad-cell: 9px 12px;
+  --pad-control: 7px 11px;
+  --gap: 12px;
+  --page-pad: 22px 24px 56px;
+  --topbar-h: 46px;
+
+  --topbar-bg: var(--espresso);
+  --topbar-fg: #f6efe8;
+  --topbar-border: var(--espresso-2);
+  --nav-active-bg: var(--primary);
+  --nav-active-fg: #fff;
+
+  color-scheme: light;
+}
+
+
+/* ==========================================================================
+   2 — CONSOLE  ·  dark operations tool
+   Near-black slate, one cyan signal colour, monospaced figures. Micro-labels
+   in caps with wide tracking. Tight rows, hard-ish corners, borders that
+   carry a faint glow instead of a shadow.
+   ========================================================================== */
+
+[data-theme="console"] {
+  --bg: #0d1117;
+  --surface: #151b23;
+  --surface-2: #1b232d;
+  --surface-3: #232d39;
+
+  --border: #26303c;
+  --border-2: #33404f;
+
+  --text: #e4ecf4;
+  --text-dim: #9fb0c3;
+  --text-faint: #6b7d92;
+
+  --primary: #3fd0c9;
+  --primary-dark: #6fe3dd;
+  --primary-wash: #10312f;
+  --on-primary: #04191d;
+
+  --rose: #f08fa8;      --rose-wash: #33202a;
+  --green: #56d364;     --green-wash: #10281a;
+  --amber: #e3b341;     --amber-wash: #302713;
+  --red: #f8756a;       --red-wash: #351d1c;
+  --purple: #a98eff;    --purple-wash: #241f3a;
+
+  --font-display: "JetBrains Mono", "Cascadia Mono", ui-monospace, SFMono-Regular,
+    "SF Mono", Consolas, monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --display-weight: 600;
+  --display-tracking: -0.02em;
+  --display-transform: none;
+  --label-transform: uppercase;
+  --label-tracking: 0.09em;
+  --label-weight: 600;
+  --body-size: 13px;
+  --line: 1.5;
+
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-pill: 3px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: none;
+  --shadow-raised: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-pop: 0 0 0 1px var(--border-2), 0 14px 34px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 0 0 1px var(--border-2), 0 22px 60px rgba(0, 0, 0, 0.7);
+  --scrim: rgba(3, 6, 10, 0.72);
+
+  --pad-card: 14px 16px;
+  --pad-cell: 8px 12px;
+  --pad-control: 7px 10px;
+  --gap: 10px;
+  --page-pad: 20px 22px 56px;
+  --topbar-h: 44px;
+
+  --topbar-bg: #080c11;
+  --topbar-fg: #cfe0f0;
+  --topbar-border: #1d2530;
+  --nav-active-bg: var(--primary-wash);
+  --nav-active-fg: var(--primary-dark);
+
+  color-scheme: dark;
+}
+
+
+/* ==========================================================================
+   3 — ATRIUM  ·  light, roomy, modern product
+   Cool near-white ground, white cards floating on soft layered shadow, indigo
+   action. Geometric display face, generous padding, large corner radius. The
+   opposite of dense — for demos and presentation screens.
+   ========================================================================== */
+
+[data-theme="atrium"] {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-2: #f4f5fa;
+  --surface-3: #e9ebf5;
+
+  --border: #e6e8f0;
+  --border-2: #d3d7e4;
+
+  --text: #14161f;
+  --text-dim: #5a6076;
+  --text-faint: #8b91a6;
+
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --primary-wash: #eef0ff;
+  --on-primary: #ffffff;
+
+  --rose: #db2777;      --rose-wash: #fdf2f8;
+  --green: #059669;     --green-wash: #ecfdf5;
+  --amber: #d97706;     --amber-wash: #fffbeb;
+  --red: #dc2626;       --red-wash: #fef2f2;
+  --purple: #7c3aed;    --purple-wash: #f5f3ff;
+
+  --font-display: "Outfit", "DM Sans", "Segoe UI Variable", -apple-system,
+    "Segoe UI", sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.022em;
+  --display-transform: none;
+  --label-transform: none;
+  --label-tracking: 0;
+  --label-weight: 500;
+  --body-size: 13.5px;
+  --line: 1.6;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: 0 1px 2px rgba(20, 22, 31, 0.04), 0 6px 20px rgba(20, 22, 31, 0.05);
+  --shadow-raised: 0 2px 6px rgba(20, 22, 31, 0.06);
+  --shadow-pop: 0 10px 34px rgba(20, 22, 31, 0.14);
+  --shadow-modal: 0 24px 70px rgba(20, 22, 31, 0.22);
+  --scrim: rgba(20, 22, 31, 0.34);
+
+  --pad-card: 20px 22px;
+  --pad-cell: 12px 14px;
+  --pad-control: 9px 13px;
+  --gap: 16px;
+  --page-pad: 28px 30px 64px;
+  --topbar-h: 56px;
+
+  --topbar-bg: #ffffff;
+  --topbar-fg: #14161f;
+  --topbar-border: #e6e8f0;
+  --nav-active-bg: var(--primary-wash);
+  --nav-active-fg: var(--primary-dark);
+
+  color-scheme: light;
+}
+
+
+/* ==========================================================================
+   4 — BLUEPRINT  ·  technical drawing
+   Paper white, near-black ink, one electric blue. Square corners, 2px rules,
+   every label in caps with wide tracking, plan-grid body. Maximum contrast,
+   maximum density — built to be read from a projector at the back of a room.
+   ========================================================================== */
+
+[data-theme="blueprint"] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --surface-3: #e4e8ee;
+
+  --border: #0a0a0a;
+  --border-2: #0a0a0a;
+
+  --text: #0a0a0a;
+  --text-dim: #3d4450;
+  --text-faint: #6a7383;
+
+  --primary: #0040ff;
+  --primary-dark: #0033cc;
+  --primary-wash: #e6ecff;
+  --on-primary: #ffffff;
+
+  --rose: #c2185b;      --rose-wash: #fce4ec;
+  --green: #0a7d3c;     --green-wash: #e3f3e9;
+  --amber: #9a6700;     --amber-wash: #fbf1d8;
+  --red: #cc0000;       --red-wash: #ffe8e8;
+  --purple: #5b21b6;    --purple-wash: #ede7f9;
+
+  --font-display: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.015em;
+  --display-transform: none;
+  --label-transform: uppercase;
+  --label-tracking: 0.11em;
+  --label-weight: 600;
+  --body-size: 13px;
+  --line: 1.5;
+
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-pill: 0px;
+  --border-width: 1px;
+  --card-border-width: 2px;
+  --shadow-card: none;
+  --shadow-raised: none;
+  --shadow-pop: 4px 4px 0 var(--text);
+  --shadow-modal: 8px 8px 0 var(--text);
+  --scrim: rgba(10, 10, 10, 0.5);
+
+  --pad-card: 14px 16px;
+  --pad-cell: 8px 11px;
+  --pad-control: 7px 10px;
+  --gap: 10px;
+  --page-pad: 20px 22px 56px;
+  --topbar-h: 46px;
+
+  --topbar-bg: #0a0a0a;
+  --topbar-fg: #ffffff;
+  --topbar-border: #0a0a0a;
+  --nav-active-bg: var(--primary);
+  --nav-active-fg: #ffffff;
+
+  color-scheme: light;
+}
+
+
+/* ==========================================================================
+   5 — MARIGOLD  ·  warm humanist
+   Cream paper, cocoa ink, marigold and a teal counterweight. Rounded corners,
+   a soft warm shadow, a display serif with real personality. Middling density
+   — the friendliest of the six, and the one that suits an employee's own
+   screens rather than a payroll operator's.
+   ========================================================================== */
+
+[data-theme="marigold"] {
+  --bg: #fbf5ea;
+  --surface: #fffdf8;
+  --surface-2: #f7eeda;
+  --surface-3: #f0e2c8;
+
+  --border: #e8dcc4;
+  --border-2: #d8c8a8;
+
+  --text: #2e2317;
+  --text-dim: #6f5f47;
+  --text-faint: #9c8a6d;
+
+  --primary: #d98324;
+  --primary-dark: #b06614;
+  --primary-wash: #fdefdb;
+  --on-primary: #fffdf8;
+
+  --rose: #b5476b;      --rose-wash: #fbe6ec;
+  --green: #2f7d63;     --green-wash: #e2f1eb;
+  --amber: #a8720d;     --amber-wash: #fbeed4;
+  --red: #b23a2f;       --red-wash: #fae3df;
+  --purple: #7a5aa8;    --purple-wash: #efe9f7;
+
+  --font-display: "Fraunces", "Bookman Old Style", "Palatino Linotype",
+    Palatino, Georgia, serif;
+  --font-sans: "Nunito Sans", "Segoe UI", -apple-system, BlinkMacSystemFont,
+    Roboto, sans-serif;
+  --font-mono: "Nunito Sans", "Segoe UI", sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.01em;
+  --display-transform: none;
+  --label-transform: none;
+  --label-tracking: 0.015em;
+  --label-weight: 600;
+  --body-size: 13.5px;
+  --line: 1.62;
+
+  --radius: 13px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: 0 2px 10px rgba(120, 88, 40, 0.07);
+  --shadow-raised: 0 3px 12px rgba(120, 88, 40, 0.1);
+  --shadow-pop: 0 12px 32px rgba(92, 66, 28, 0.18);
+  --shadow-modal: 0 20px 56px rgba(92, 66, 28, 0.26);
+  --scrim: rgba(46, 35, 23, 0.4);
+
+  --pad-card: 18px 20px;
+  --pad-cell: 11px 13px;
+  --pad-control: 9px 12px;
+  --gap: 14px;
+  --page-pad: 26px 28px 60px;
+  --topbar-h: 52px;
+
+  --topbar-bg: #3a2c1c;
+  --topbar-fg: #f8eeda;
+  --topbar-border: #4c3b26;
+  --nav-active-bg: var(--primary);
+  --nav-active-fg: #2e2317;
+
+  color-scheme: light;
+}
+
+
+/* ==========================================================================
+   6 — GRAPHITE  ·  neutral dark
+   Zinc greys with a single amber. No colour temperature to speak of, which is
+   the point — it puts every coloured status pill on the screen in relief.
+   Grotesk display, medium density, one-pixel borders lifted by an inset
+   highlight rather than a drop shadow.
+   ========================================================================== */
+
+[data-theme="graphite"] {
+  --bg: #131316;
+  --surface: #1b1b1f;
+  --surface-2: #232328;
+  --surface-3: #2d2d33;
+
+  --border: #2e2e35;
+  --border-2: #3d3d46;
+
+  --text: #ececf0;
+  --text-dim: #a6a6b2;
+  --text-faint: #74747f;
+
+  --primary: #f5a524;
+  --primary-dark: #ffbe4d;
+  --primary-wash: #33270f;
+  --on-primary: #1a1206;
+
+  --rose: #f472b6;      --rose-wash: #33202b;
+  --green: #4ade80;     --green-wash: #122c1c;
+  --amber: #fbbf24;     --amber-wash: #33280f;
+  --red: #f87171;       --red-wash: #331c1c;
+  --purple: #a78bfa;    --purple-wash: #262038;
+
+  --font-display: "Space Grotesk", "Segoe UI Variable Display", "Segoe UI",
+    -apple-system, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Space Grotesk", ui-monospace, Consolas, monospace;
+  --display-weight: 600;
+  --display-tracking: -0.025em;
+  --display-transform: none;
+  --label-transform: uppercase;
+  --label-tracking: 0.07em;
+  --label-weight: 500;
+  --body-size: 13px;
+  --line: 1.55;
+
+  --radius: 7px;
+  --radius-sm: 5px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-raised: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-pop: 0 12px 34px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 22px 60px rgba(0, 0, 0, 0.66);
+  --scrim: rgba(8, 8, 10, 0.66);
+
+  --pad-card: 16px 18px;
+  --pad-cell: 10px 13px;
+  --pad-control: 8px 11px;
+  --gap: 13px;
+  --page-pad: 24px 26px 58px;
+  --topbar-h: 50px;
+
+  --topbar-bg: #0e0e11;
+  --topbar-fg: #dcdce4;
+  --topbar-border: #26262c;
+  --nav-active-bg: var(--primary-wash);
+  --nav-active-fg: var(--primary-dark);
+
+  color-scheme: dark;
+}

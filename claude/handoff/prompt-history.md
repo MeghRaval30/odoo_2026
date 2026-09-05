@@ -308,3 +308,57 @@ NEXT-SESSION-PROMPT.md)*
 
 **14.**
 > Megatron launchh!!!
+
+---
+
+## Session 05 — FRANKLIN
+
+**1.**
+> https://github.com/MeghRaval30/odoo_2026
+> pull the latest repo first and read claude folder and sources first
+
+**2.** *(with the excalidraw and the PDF attached)*
+> dont do all these first,
+>
+> so I need you to thoroughly go through the excaildraw sheet first and visually see how the ui is to be done for everything.
+>
+> so the goal of this chat now is to redo the ui completely
+>
+> strictly follow the guidelines given as per the excail draw
+>
+> now the colours, make 4 to 6 themes yourself and by themes I mean not just colours but fonts style and boxes style and all the stuff aswell full design language.
+>
+> now first of all lets get to account types, strictly follow the problem statement and excaildraw on what account types should be there and what access they should have.
+>
+> now all buttons wont be there for every account type login
+>
+> so for example for a employee login there will be only a dashboard which is the employee dashboard. and things like attendance and other stuff should have their own tabs only.
+>
+> now also need like a user profile menu with user settings and even change thinks like personal details (some might require approval)
+>
+> so like account types redo
+> what each account sees and the ui of each account type : redo
+>
+> btw even creating a new user role you can add more than one account type ?
+>
+> just for example I am saying a few things
+>
+> hr manager should be able to see tor, allocations, attendance, cant create a new attendance record (btw employee can legit create own new attendance record), can change contract and stuff.
+>
+> payroll amanger can see only employee details and holidays and stuff.
+>
+> so basically every user type has different set of what they can do and should see and how that should be presented on dashboard. rethink all that deeply for each user and strictly follow the given sources.
+>
+> also things like "overtime" in the current dashboard shows you how many times overtime has been done wtf bro how is that usefull and then there is overtime hours written below and that too in decimal bro wtf need hours and minutes.
+>
+> then need to do stuff on security like user can login only on selected wifi network and stuff and then need super critical cyber security stuff like make sure no one can game the system.
+>
+> Also a user should be able to change his own password and stuff
+>
+> ok so basically these are your tasks, dont stop untill you are done with these.
+>
+> keep committing everything u do
+>
+> in claude folder create a file named progess something and keep writing short progress of stuff u are doing with every commit.
+>
+> so like go on and dont stop untill this great vision is achieved
