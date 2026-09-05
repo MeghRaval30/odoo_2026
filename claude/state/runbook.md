@@ -3,8 +3,8 @@
 Get from a fresh clone to a running, seeded app. **Verify every command here at
 each MEGATRON LAUNCH** — a stale runbook costs the next session its first hour.
 
-Last verified: **session 04 (Michael), 2026-09-05 15:10 IST.** Every command below
-was run in that session, including the frontend build and all four harnesses.
+Last verified: **session 06 (Trevor), 2026-09-05 22:55 IST.** Every command below
+was re-run in that session, including the frontend build and all five harnesses.
 
 > **Do not add `--noreload` to `runserver`** (B-016). Session 04 did, then spent
 > minutes chasing a phantom bug that was the server holding pre-fix code while a
@@ -30,6 +30,21 @@ absolute, so this works:
 
 ```bash
 PY="C:/Users/raval/Desktop/odoo_2026/project/backend/.venv/Scripts/python.exe"
+```
+
+A worktree also needs its own `npm install` — `node_modules` is gitignored too —
+and it gets its own `db.sqlite3`, created from `BASE_DIR`, so `migrate` and
+`seed` must be run there before anything works.
+
+**`main` cannot be checked out in a second worktree** (B-029). It is held by
+`.claude/worktrees/frontend-routing-setup-e9a159`, whose local `main` ref is
+stale. Work against `origin/main` and push to it explicitly:
+
+```bash
+git fetch origin
+git checkout -b integrate/<something> origin/main
+git merge --no-ff <your-branch> -m "merge: ..."
+git push origin HEAD:main
 ```
 
 ---
@@ -71,6 +86,16 @@ Serves on `http://127.0.0.1:8000`.
 | `john@oxp.com` | Employee | proves self-service scoping |
 
 `manage.py seed --flush` is idempotent and reproducible (`random.seed(360)`).
+It produces **22 employees · 24 contracts · 1746 attendance · 11 leave requests ·
+4 payruns · 61 payslips · 976 lines · 6 warnings**, with December ₹14,73,360,
+January ₹14,82,320 and February ₹15,58,667.87. `core/tests.py` pins all of it, so
+a change that moves the demo's numbers fails there first.
+
+The fourth payrun is `March 2026 (off-cycle correction)` — one payslip, left at
+**Computed** on purpose, so the March payrun the demo creates finds a `DUPLICATE`
+alongside the two `AC_MISSING` warnings and PRD criterion 4 is met on stage
+(D-033). Do not mark it paid: the dashboard opens on the newest *paid* period
+(D-034), and paying it would make a one-payslip run the default view.
 
 ---
 
@@ -83,11 +108,13 @@ npm run dev
 ```
 
 Serves on `http://localhost:5173`. CORS for that origin is already configured in
-`config/settings.py`. `npm run build` is also clean (621 modules, ~6s) and is
+`config/settings.py`. `npm run build` is also clean (~748 kB JS, 24 kB CSS) and is
 worth running before a handoff.
 
-> **The frontend is complete** — 18 screens, all reachable from the six-menu top
-> bar. Sign in with any account below; the login card has one-click role chips.
+> **The frontend is complete** — 22 screens, and the top bar is built by the
+> server from the signed-in account's capabilities, so it differs per role
+> (D-028). Sign in with any account below; the login card's one-click role chips
+> appear in `npm run dev` only and are compiled out of `npm run build` (D-038).
 
 > **Do not pipe `npm run dev` into `tail`.** The pipe buffers Vite's output, so
 > the server looks like it failed to start when it is actually running. Session
@@ -105,7 +132,7 @@ cd project/backend
 ./.venv/Scripts/python.exe audit_permissions.py    # role matrix + row scoping
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test     # 216/216 — Django suite, 8 apps
+./.venv/Scripts/python.exe manage.py test     # 218/218 — Django suite, 8 apps
 ```
 
 The fourth drives real HTTP and **needs a live server in another terminal**:

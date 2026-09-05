@@ -485,3 +485,92 @@ Ports were clear beforehand — no repeat of B-021.
 The stale-screen list in `current-state.md` is confirmed from the browser:
 `Login.jsx` still reads "Sign in to continue" and still carries the five demo
 chips, exactly as the handoff describes.
+
+---
+
+## Session 06 — TREVOR (concurrent with the Michael entry above)
+
+**Opened 2026-09-05 21:41 IST · closed 22:55 IST · ~1h 15m.**
+Identity set and verified as `MeghRaval30` / `meghraval306@gmail.com` before the
+first commit — Trevor's row in `git-strategy.md` §1, matching the account
+authenticated in this chat.
+
+### ⚠️ READ THIS FIRST — two sessions ran at once, on the same work
+
+The entry immediately above is **another live session**, opened four minutes
+after this one, running as Michael on Soham's account. Both are numbered 06.
+This was not discovered until the handoff merge, when `origin/main` turned out to
+have moved from `6a9b0f4` to `a1ae6a7` underneath a session that had already
+been working for an hour.
+
+**Michael's entry ends by confirming, from the browser, that `Login.jsx` still
+reads "Sign in to continue" and still carries the five demo chips** — i.e. that
+session was about to start T-101. **T-101 through T-107 are now all done and
+merged to `main` at `1437c25`.** Whoever reads this next: pull before you write a
+line of frontend code, and check `task-board.md` rather than the briefing you
+were handed.
+
+The merge itself was clean only by luck — Michael touched `runbook.md` and
+`session-log.md`, this session touched neither. See **B-030**.
+
+### What was accomplished
+
+The session-05 commission is **finished**. Every board task is `DONE` except
+T-107 (the demo script).
+
+| | |
+|---|---|
+| **T-101** | Login screen to the mockup's copy. Demo chips gated on `import.meta.env.DEV` so they survive the demo and vanish from a production build (D-038) |
+| **T-102** | Attendance list and widget in hours and minutes. The widget now surfaces `punch_blocked_reason` and disables the button — proven by planting a policy that excludes 127.0.0.1 |
+| **T-103** | The overtime tile the user called out: **124h 38m carried by 22 employees**, not a count |
+| **T-104** | Users & Roles — the mockup's five columns, search, role filter, the Active switch that had state but no control, Reset password, and the capability grid |
+| **T-105 / T-100** | Every control moved onto `auth.has(...)`, plus a route guard so a typed URL refuses in one clause instead of rendering a broken shell over a 403 (D-037) |
+| **T-106** | **All six themes were broken**, not four. See below |
+| **T-099** | The four unclicked screens walked end to end; five defects found and fixed |
+| **T-090** | PRD criterion 4 met on the demo seed (D-033, D-034) |
+
+Suite grew 216 → **218**, all green. verify_rules 28/28, smoke_api 51/51,
+probe_forms 26/26, `npm run build` clean.
+
+### The find of the session
+
+**Not one of the six themes had ever applied.** The briefing warned that four
+were unverified; the truth was that all six resolved to Ledger. `index.css` must
+`@import themes.css` at the top and then declares Ledger's defaults on a bare
+`:root` — identical specificity to `[data-theme="x"]`, so the *fallback* won
+every time. The switcher highlighted the correct swatch and stored the choice,
+and not one token changed.
+
+Session 05 had checked it by watching the swatch highlight. **A control that
+visibly responds is not evidence that anything downstream of it happened** — four
+lines of `getComputedStyle` settle it, and that is now written into D-035.
+
+Fixing it exposed two more: the Recharts palette was a hand copy of Ledger's
+tokens (a terracotta line on Blueprint's electric blue; invisible axes on both
+dark themes), and Marigold's button labels measured 2.86:1, below AA.
+
+### What was attempted and left
+
+* **Walking the payrun wizard in the browser.** MEGATRON LAUNCH arrived with the
+  New Payrun modal open at step 1. The criterion-4 numbers are proven by test and
+  by a direct engine run, not by the wizard. That is **T-112**, and it should be
+  done before T-107.
+* **Ledger's 3.05:1 primary button.** White on Claude orange fails WCAG AA for
+  13px labels — the same fault Marigold had. Marigold was fixed because nobody
+  had ever seen it; Ledger is the shipped signature look, fixed by
+  `ui-design-language.md` §2, so it was **reported rather than changed at hour
+  13**. That is **T-111**, and it needs the user, not a session.
+* **Git history** — the user was asked and chose to leave it alone (D-040).
+  Closed, do not reopen.
+
+### Handoff
+
+Merge commit **`1437c25`** on `main`; handoff tagged **`handoff-trevor-06`**.
+`main` could not be checked out in this worktree (B-029) — the merge was made on
+`integrate/session-06-trevor` from `origin/main` and pushed with
+`git push origin HEAD:main`.
+
+**Next up:** whoever holds the next slot — and given B-030, *check who else is
+running first*. The first action is T-112: start both servers, sign in as
+`aarav@oxp.com`, and walk demo steps A3 → A10, writing the real numbers into
+`claude/deliverables/demo-script.md` as you go.
