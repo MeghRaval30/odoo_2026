@@ -39,13 +39,30 @@ export function useDebounced(value, delay = 300) {
   return settled;
 }
 
+/**
+ * Fetch a list resource.
+ *
+ * `path` may be null, meaning "there is nothing to ask for" -- the request is
+ * skipped and the hook settles empty rather than loading forever. That is the
+ * honest shape for a screen whose subject does not exist for this account: an
+ * account with no employee record has no payslips of its own, and the
+ * alternative is either an unfiltered request that returns everybody's or a
+ * sentinel filter value the server rejects as an invalid choice. Hooks cannot
+ * be called conditionally, so the condition belongs here.
+ */
 export function useResource(path, params) {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(path));
   const [error, setError] = useState(null);
   const key = JSON.stringify(params || {});
 
   const reload = useCallback(async () => {
+    if (!path) {
+      setData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

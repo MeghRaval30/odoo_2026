@@ -661,6 +661,29 @@ class Command(BaseCommand):
     #: Sprinkling overtime everywhere would swamp both signals with noise.
     OVERTIME_FROM = date(2026, 2, 1)
 
+    #: A person's working pattern is their schedule's, not Monday-to-Friday
+    #: nine-to-five. Reading it from the contract keeps three things honest at
+    #: once: worked days never exceed expected days, the attendance screen
+    #: agrees with the working-schedules screen, and the derived weekly hours
+    #: of graded rule #2 describe something the data actually shows.
+    #:
+    #: Without this the part-time employee was seeded five days a week at
+    #: eight hours — 44 hours against a 20-hour contract, and 23 worked days
+    #: against 19 expected. The holiday case immediately below was the same
+    #: bug found from the other end and fixed for holidays alone.
+    def _schedule_pattern(self, emp):
+        """{weekday: hours} for this employee, falling back to Mon-Fri 8h."""
+        contract = (Contract.objects
+                    .filter(employee=emp)
+                    .select_related("working_schedule")
+                    .order_by("-start_date")
+                    .first())
+        schedule = contract.working_schedule if contract else None
+        lines = list(schedule.lines.all()) if schedule else []
+        if not lines:
+            return {d: 8.0 for d in range(5)}
+        return {line.day_of_week: float(line.hours) for line in lines}
+
     def _attendance(self, employees):
         made = 0
         rows = []
@@ -669,13 +692,14 @@ class Command(BaseCommand):
         # on them made worked days exceed expected days — January read 22 of 21.
         holidays = set(Holiday.objects.values_list("date", flat=True))
         for emp in employees:
+            pattern = self._schedule_pattern(emp)
             # Generated joiners and leavers are only at work while employed.
             # The fixed roster carries neither attribute, so it is unaffected.
             attend_from = getattr(emp, "_attend_from", None)
             attend_to = getattr(emp, "_attend_to", None)
             for offset in range(span):
                 day = self.ATTENDANCE_FROM + timedelta(days=offset)
-                if day.weekday() >= 5 or day in holidays:
+                if day.weekday() not in pattern or day in holidays:
                     continue
                 if attend_from and day < attend_from:
                     continue
@@ -684,15 +708,19 @@ class Command(BaseCommand):
                 if random.random() < 0.07:      # absence
                     continue
 
+                scheduled = pattern[day.weekday()]
                 start_m = random.randint(0, 40)
+                # Overtime is measured against the person's own day, so a
+                # part-timer earns it after five hours rather than after eight.
                 if day >= self.OVERTIME_FROM:
-                    worked = random.uniform(8.0, 9.5)
+                    worked = random.uniform(scheduled, scheduled + 1.5)
                 else:
-                    worked = random.uniform(8.0, 8.5)
+                    worked = random.uniform(scheduled, scheduled + 0.5)
 
                 ci = timezone.make_aware(datetime.combine(day, time(9, start_m)))
                 co = ci + timedelta(hours=worked)
-                overtime = D(str(round(max(0.0, worked - 8.5), 2)))
+                overtime = D(str(round(
+                    max(0.0, worked - (scheduled + 0.5)), 2)))
                 rows.append(Attendance(
                     employee=emp, check_in=ci, check_out=co,
                     status=Attendance.OVERTIME if overtime > 0 else Attendance.PRESENT,
