@@ -14,6 +14,7 @@ import {
   PageHead,
   StateBadge,
   rows,
+  useDefaultCompany,
   useResource,
 } from "../components/ui";
 
@@ -24,6 +25,7 @@ function ReferenceForm({ title, path, fields, id, onClose, onSaved }) {
   const [refs, setRefs] = useState({});
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const defaultCompany = useDefaultCompany();
 
   useEffect(() => {
     const needed = fields.filter((f) => f.type === "fk");
@@ -54,7 +56,7 @@ function ReferenceForm({ title, path, fields, id, onClose, onSaved }) {
   const save = async () => {
     setBusy(true);
     setError(null);
-    const payload = { ...form };
+    const payload = { ...form, company: form.company || defaultCompany };
     for (const f of fields) {
       if (f.type === "fk" && payload[f.key] === "") payload[f.key] = null;
     }

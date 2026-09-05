@@ -9,6 +9,23 @@ import { api } from "../api";
 export const rows = (payload) =>
   Array.isArray(payload) ? payload : payload?.results || [];
 
+// Department, JobPosition, WorkLocation and WorkingSchedule all carry a
+// required company FK that no create form asks for, because the product is
+// single-company (D-003). Without this, every one of those "New" buttons failed
+// with "company: This field is required."
+export function useDefaultCompany() {
+  const [company, setCompany] = useState(null);
+
+  useEffect(() => {
+    api
+      .get("/api/companies/")
+      .then((payload) => setCompany(rows(payload)[0]?.id ?? null))
+      .catch(() => setCompany(null));
+  }, []);
+
+  return company;
+}
+
 // Search boxes feed straight into useResource, so without this every keystroke
 // fired a request and the responses could land out of order.
 export function useDebounced(value, delay = 300) {
