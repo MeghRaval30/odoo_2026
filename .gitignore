@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+*.sqlite3
+
+# Django
+media/
+staticfiles/
+local_settings.py
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-error.log*
+tmp/
+scratch/
