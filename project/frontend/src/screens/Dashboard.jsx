@@ -79,6 +79,7 @@ export default function Dashboard() {
     period: "",
     department: "",
     employee_type: "",
+    company: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -110,6 +111,7 @@ export default function Dashboard() {
           period_end: period?.period_end,
           department: filters.department,
           employee_type: filters.employee_type,
+          company: filters.company,
         }),
       );
     } catch (err) {
@@ -179,6 +181,17 @@ export default function Dashboard() {
             ))}
           </select>
         </div>
+        <div>
+          <label htmlFor="f-company">Company</label>
+          <select id="f-company" value={filters.company} onChange={set("company")}>
+            <option value="">All companies</option>
+            {options?.companies?.map((c) => (
+              <option key={c.company__id} value={c.company__id}>
+                {c.company__name}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="spacer" />
         <button onClick={load} disabled={loading}>
           Refresh
@@ -213,9 +226,9 @@ export default function Dashboard() {
               foot={`Gross ${compactMoney(k.total_gross)}`}
             />
             <Kpi
-              label="Headcount"
-              value={k.headcount}
-              foot={`${k.approved_timeoff_days} approved leave days`}
+              label="Approved Time Off Days"
+              value={k.approved_timeoff_days}
+              foot={`${k.headcount} active employees`}
             />
             <Kpi
               label="Attendance Health"

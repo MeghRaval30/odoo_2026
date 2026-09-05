@@ -4,8 +4,18 @@
 // evaluates them in, and later rules read earlier results. Showing them in any
 // other order would misrepresent the computation.
 
-import { useState } from "react";
-import { ErrorBox, Loading, PageHead, StateBadge, useResource } from "../components/ui";
+import { useEffect, useState } from "react";
+import { api } from "../api";
+import {
+  ErrorBox,
+  Field,
+  Loading,
+  Modal,
+  PageHead,
+  StateBadge,
+  rows,
+  useResource,
+} from "../components/ui";
 
 const CATEGORY_TONE = {
   BASIC: "blue",
@@ -115,8 +125,206 @@ export function SalaryStructures() {
   );
 }
 
+const RULE_BLANK = {
+  structure: "",
+  name: "",
+  code: "",
+  category: "ALLOWANCE",
+  sequence: 10,
+  computation: "FIXED",
+  amount: "0",
+  percentage: "0",
+  percentage_base: "",
+  formula: "",
+  condition: "",
+  quantity: "1",
+  appears_on_payslip: true,
+  is_employer_cost: false,
+  active: true,
+};
+
+function RuleForm({ id, onClose, onSaved }) {
+  const [form, setForm] = useState(RULE_BLANK);
+  const [structures, setStructures] = useState([]);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/api/salary-structures/")
+      .then((r) => setStructures(rows(r)))
+      .catch(() => setStructures([]));
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    api
+      .get(`/api/salary-rules/${id}/`)
+      .then((r) =>
+        setForm({
+          ...RULE_BLANK,
+          ...Object.fromEntries(
+            Object.entries(r).map(([k, v]) => [k, v === null ? "" : v]),
+          ),
+        }),
+      )
+      .catch((err) => setError(err.message));
+  }, [id]);
+
+  const set = (key) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value,
+    }));
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    const payload = { ...form };
+    delete payload.category_display;
+    delete payload.computation_display;
+    delete payload.structure_name;
+    if (payload.percentage_base === "") payload.percentage_base = null;
+    try {
+      if (id) await api.patch(`/api/salary-rules/${id}/`, payload);
+      else await api.post("/api/salary-rules/", payload);
+      onSaved();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={id ? form.name || "Salary Rule" : "New Salary Rule"}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary" onClick={save} disabled={busy}>
+            {busy ? <span className="spinner" /> : "Save"}
+          </button>
+        </>
+      }
+    >
+      <ErrorBox error={error} />
+
+      <Field label="Salary structure">
+        <select value={form.structure || ""} onChange={set("structure")}>
+          <option value="">&#8212;</option>
+          {structures.map((st) => (
+            <option key={st.id} value={st.id}>
+              {st.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <div className="row fill">
+        <Field label="Name">
+          <input value={form.name} onChange={set("name")} />
+        </Field>
+        <Field label="Code">
+          <input value={form.code} onChange={set("code")} />
+        </Field>
+      </div>
+
+      <div className="row fill">
+        <Field label="Category">
+          <select value={form.category} onChange={set("category")}>
+            <option value="BASIC">Basic</option>
+            <option value="ALLOWANCE">Allowance</option>
+            <option value="GROSS">Gross</option>
+            <option value="DEDUCTION">Deduction</option>
+            <option value="NET">Net</option>
+          </select>
+        </Field>
+        <Field label="Sequence">
+          <input type="number" value={form.sequence} onChange={set("sequence")} />
+        </Field>
+      </div>
+
+      <Field label="Computation">
+        <select value={form.computation} onChange={set("computation")}>
+          <option value="FIXED">Fixed Amount</option>
+          <option value="PERCENTAGE">Percentage of Wage</option>
+          <option value="FORMULA">Python Code</option>
+        </select>
+      </Field>
+
+      {form.computation === "FIXED" && (
+        <Field label="Amount">
+          <input type="number" step="0.01" value={form.amount} onChange={set("amount")} />
+        </Field>
+      )}
+
+      {form.computation === "PERCENTAGE" && (
+        <div className="row fill">
+          <Field label="Percentage">
+            <input
+              type="number"
+              step="0.01"
+              value={form.percentage}
+              onChange={set("percentage")}
+            />
+          </Field>
+          <Field label="Base code">
+            <input
+              value={form.percentage_base || ""}
+              onChange={set("percentage_base")}
+              placeholder="WAGE"
+            />
+          </Field>
+        </div>
+      )}
+
+      {form.computation === "FORMULA" && (
+        <Field label="Formula">
+          <textarea
+            rows={3}
+            className="mono"
+            value={form.formula}
+            onChange={set("formula")}
+            placeholder="result = categories['BASIC'] * 0.4"
+          />
+        </Field>
+      )}
+
+      <Field label="Condition">
+        <input value={form.condition || ""} onChange={set("condition")} />
+      </Field>
+
+      <div className="row">
+        <label className="row" style={{ gap: 6, marginBottom: 0 }}>
+          <input
+            type="checkbox"
+            checked={!!form.appears_on_payslip}
+            onChange={set("appears_on_payslip")}
+          />
+          <span>Appears on payslip</span>
+        </label>
+        <label className="row" style={{ gap: 6, marginBottom: 0 }}>
+          <input
+            type="checkbox"
+            checked={!!form.is_employer_cost}
+            onChange={set("is_employer_cost")}
+          />
+          <span>Employer cost</span>
+        </label>
+        <label className="row" style={{ gap: 6, marginBottom: 0 }}>
+          <input type="checkbox" checked={!!form.active} onChange={set("active")} />
+          <span>Active</span>
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
 export function SalaryRules() {
   const [category, setCategory] = useState("");
+  const [editing, setEditing] = useState(undefined);
   const rules = useResource("/api/salary-rules/", {
     category,
     ordering: "sequence",
@@ -125,7 +333,11 @@ export function SalaryRules() {
 
   return (
     <div className="page">
-      <PageHead title="Salary Rules" sub={`${rules.rows.length} records`} />
+      <PageHead title="Salary Rules" sub={`${rules.rows.length} records`}>
+        <button className="primary" onClick={() => setEditing(null)}>
+          New Rule
+        </button>
+      </PageHead>
 
       <div className="toolbar">
         <div>
@@ -161,7 +373,7 @@ export function SalaryRules() {
               </thead>
               <tbody>
                 {rules.rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className="clickable" onClick={() => setEditing(r.id)}>
                     <td className="num mono faint">{r.sequence}</td>
                     <td>{r.name}</td>
                     <td className="mono tiny muted">{r.code}</td>
@@ -177,7 +389,7 @@ export function SalaryRules() {
                         ? `${r.percentage}%`
                         : r.computation === "FIXED"
                           ? r.amount
-                          : "—"}
+                          : "\u2014"}
                     </td>
                   </tr>
                 ))}
@@ -186,6 +398,17 @@ export function SalaryRules() {
           </div>
         )}
       </div>
+
+      {editing !== undefined && (
+        <RuleForm
+          id={editing}
+          onClose={() => setEditing(undefined)}
+          onSaved={() => {
+            setEditing(undefined);
+            rules.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
