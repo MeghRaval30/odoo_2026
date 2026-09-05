@@ -123,7 +123,32 @@ export const api = {
     if (!response.ok) throw new ApiError(response.status, "Could not render PDF");
     return response.blob();
   },
+
+  // Payroll register CSV — also a blob, and the filename comes from the server
+  async payrunRegister(id) {
+    const response = await fetch(`${BASE}/api/payruns/${id}/register/`, {
+      headers: { Authorization: `Token ${auth.token}` },
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, "Could not export the register");
+    }
+    const disposition = response.headers.get("content-disposition") || "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    return { blob: await response.blob(), filename: match?.[1] || "register.csv" };
+  },
 };
+
+// Hand a blob to the browser as a download.
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
 
 // -- formatting helpers ----------------------------------------------------
 
