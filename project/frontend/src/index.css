@@ -498,6 +498,26 @@ label {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Form tabs — Work Information / Private Information / HR Settings. */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.tab {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-faint);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  user-select: none;
+}
+.tab:hover { color: var(--text-dim); }
+.tab.on { color: var(--primary-dark); border-bottom-color: var(--primary); }
+
 .steps { display: flex; gap: 6px; align-items: center; margin-bottom: 16px; font-size: 12px; }
 .step {
   padding: 5px 13px;

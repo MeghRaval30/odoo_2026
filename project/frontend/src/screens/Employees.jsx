@@ -50,6 +50,7 @@ function EmployeeForm({ id, onClose, onSaved }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refs, setRefs] = useState({});
+  const [tab, setTab] = useState("work");
 
   useEffect(() => {
     Promise.all([
@@ -169,80 +170,158 @@ function EmployeeForm({ id, onClose, onSaved }) {
         </div>
       )}
 
-      <div className="row fill">
-        <Field label="First name">
-          <input value={form.first_name} onChange={set("first_name")} />
-        </Field>
-        <Field label="Last name">
-          <input value={form.last_name} onChange={set("last_name")} />
-        </Field>
+      <div className="tabs">
+        {[
+          ["work", "Work Information"],
+          ["private", "Private Information"],
+          ["hr", "HR Settings"],
+        ].map(([key, label]) => (
+          <div
+            key={key}
+            className={`tab${tab === key ? " on" : ""}`}
+            onClick={() => setTab(key)}
+          >
+            {label}
+          </div>
+        ))}
       </div>
-      <div className="row fill">
-        <Field label="Work email">
-          <input type="email" value={form.work_email} onChange={set("work_email")} />
-        </Field>
-        <Field label="Work phone">
-          <input value={form.work_phone} onChange={set("work_phone")} />
-        </Field>
-      </div>
-      <div className="row fill">
-        <Field label="Department">
-          <select value={form.department || ""} onChange={set("department")}>
-            {opts(refs.departments)}
-          </select>
-        </Field>
-        <Field label="Job position">
-          <select value={form.job_position || ""} onChange={set("job_position")}>
-            {opts(refs.positions)}
-          </select>
-        </Field>
-      </div>
-      <div className="row fill">
-        <Field label="Manager">
-          <select value={form.manager || ""} onChange={set("manager")}>
-            {opts(refs.employees, "full_name")}
-          </select>
-        </Field>
-        <Field label="Work location">
-          <select value={form.work_location || ""} onChange={set("work_location")}>
-            {opts(refs.locations)}
-          </select>
-        </Field>
-      </div>
-      <div className="row fill">
-        <Field label="Working schedule">
-          <select value={form.working_schedule || ""} onChange={set("working_schedule")}>
-            {opts(refs.schedules)}
-          </select>
-        </Field>
-        <Field label="Employee type">
-          <select value={form.employee_type} onChange={set("employee_type")}>
-            <option value="FULL_TIME">Full Time</option>
-            <option value="PART_TIME">Part Time</option>
-            <option value="INTERN">Intern</option>
-            <option value="CONTRACTOR">Contractor</option>
-          </select>
-        </Field>
-      </div>
-      <div className="row fill">
-        <Field label="Date of joining">
-          <input type="date" value={form.date_of_joining || ""} onChange={set("date_of_joining")} />
-        </Field>
-        <Field label="PAN">
-          <input value={form.pan_number || ""} onChange={set("pan_number")} />
-        </Field>
-      </div>
-      <div className="row fill">
-        <Field label="Bank account">
-          <input
-            value={form.bank_account_number || ""}
-            onChange={set("bank_account_number")}
-          />
-        </Field>
-        <Field label="IFSC">
-          <input value={form.bank_ifsc || ""} onChange={set("bank_ifsc")} />
-        </Field>
-      </div>
+
+      {tab === "work" && (
+        <>
+          <div className="row fill">
+            <Field label="First name">
+              <input value={form.first_name} onChange={set("first_name")} />
+            </Field>
+            <Field label="Last name">
+              <input value={form.last_name} onChange={set("last_name")} />
+            </Field>
+          </div>
+          <div className="row fill">
+            <Field label="Work email">
+              <input type="email" value={form.work_email} onChange={set("work_email")} />
+            </Field>
+            <Field label="Work phone">
+              <input value={form.work_phone} onChange={set("work_phone")} />
+            </Field>
+          </div>
+          <div className="row fill">
+            <Field label="Department">
+              <select value={form.department || ""} onChange={set("department")}>
+                {opts(refs.departments)}
+              </select>
+            </Field>
+            <Field label="Job position">
+              <select value={form.job_position || ""} onChange={set("job_position")}>
+                {opts(refs.positions)}
+              </select>
+            </Field>
+          </div>
+          <div className="row fill">
+            <Field label="Manager">
+              <select value={form.manager || ""} onChange={set("manager")}>
+                {opts(refs.employees, "full_name")}
+              </select>
+            </Field>
+            <Field label="Work location">
+              <select value={form.work_location || ""} onChange={set("work_location")}>
+                {opts(refs.locations)}
+              </select>
+            </Field>
+          </div>
+        </>
+      )}
+
+      {tab === "private" && (
+        <>
+          <div className="row fill">
+            <Field label="Date of birth">
+              <input
+                type="date"
+                value={form.date_of_birth || ""}
+                onChange={set("date_of_birth")}
+              />
+            </Field>
+            <Field label="Gender">
+              <select value={form.gender || ""} onChange={set("gender")}>
+                <option value="">—</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </Field>
+          </div>
+          <div className="row fill">
+            <Field label="Personal email">
+              <input
+                type="email"
+                value={form.personal_email || ""}
+                onChange={set("personal_email")}
+              />
+            </Field>
+            <Field label="Personal phone">
+              <input
+                value={form.personal_phone || ""}
+                onChange={set("personal_phone")}
+              />
+            </Field>
+          </div>
+          <Field label="Address">
+            <textarea rows={2} value={form.address || ""} onChange={set("address")} />
+          </Field>
+          <div className="row fill">
+            <Field label="Bank account">
+              <input
+                value={form.bank_account_number || ""}
+                onChange={set("bank_account_number")}
+              />
+            </Field>
+            <Field label="IFSC">
+              <input value={form.bank_ifsc || ""} onChange={set("bank_ifsc")} />
+            </Field>
+          </div>
+          <Field label="PAN">
+            <input value={form.pan_number || ""} onChange={set("pan_number")} />
+          </Field>
+        </>
+      )}
+
+      {tab === "hr" && (
+        <>
+          <div className="row fill">
+            <Field label="Working schedule">
+              <select value={form.working_schedule || ""} onChange={set("working_schedule")}>
+                {opts(refs.schedules)}
+              </select>
+            </Field>
+            <Field label="Employee type">
+              <select value={form.employee_type} onChange={set("employee_type")}>
+                <option value="FULL_TIME">Full Time</option>
+                <option value="PART_TIME">Part Time</option>
+                <option value="INTERN">Intern</option>
+                <option value="CONTRACTOR">Contractor</option>
+              </select>
+            </Field>
+          </div>
+          <div className="row fill">
+            <Field label="Date of joining">
+              <input
+                type="date"
+                value={form.date_of_joining || ""}
+                onChange={set("date_of_joining")}
+              />
+            </Field>
+            <Field label="Employee code">
+              <input value={form.employee_code || ""} readOnly />
+            </Field>
+          </div>
+          <Field label="Active">
+            <div className="row">
+              <input type="checkbox" checked={!!form.active} onChange={set("active")} />
+              <span className="tiny muted">Inactive employees are excluded from payruns</span>
+            </div>
+          </Field>
+        </>
+      )}
     </Modal>
   );
 }
