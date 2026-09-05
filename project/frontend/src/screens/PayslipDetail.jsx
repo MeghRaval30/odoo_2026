@@ -26,6 +26,9 @@ export default function PayslipDetail({ id }) {
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const load = useCallback(async () => {
+    // Clear first: navigating between payslips keeps this component mounted, so
+    // a failed load's banner otherwise stays on screen above the next payslip.
+    setError(null);
     try {
       setSlip(await api.get(`/api/payslips/${id}/`));
     } catch (err) {
