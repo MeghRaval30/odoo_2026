@@ -624,3 +624,141 @@ decimals. The mockup agrees — its attendance widget reads `6h56`.
 The same reasoning killed the old overtime tile. A count of how many *times*
 overtime happened answers no question anybody has; the useful pair is how much
 overtime there was and how many people carried it.
+
+### D-033 — PRD criterion 4 is met with an off-cycle correction payslip
+**Decided:** session 06 · **Status:** settled · **The user was asked and said "decide urself"**
+
+Criterion 4 wants at least two distinct warning codes before validation. The
+22-person demo roster raised only `AC_MISSING`, twice.
+
+Three options were put to the user. `NO_CONTRACT`, `NEGATIVE_NET` and
+`NO_STRUCTURE` were all rejected for the same reason: they are **ERROR**
+severity, and an errored payrun cannot be validated, so seeding one would break
+demo steps A8 and A9 two beats after the warning is read out.
+
+`DUPLICATE` is the exception. It is warning severity, so Validate still
+proceeds; it needs nothing but a payslip that already covers the period; and it
+is the **problem statement's own named example**. So the seed leaves one —
+`March 2026 (off-cycle correction)`, a single payslip for Vikram Rao, computed
+and deliberately not paid, exactly as a real correction sits mid-month. Vikram
+appears nowhere in the demo script, so the three warnings name three different
+people.
+
+Cost, accepted knowingly: the demo's March run now creates 19 payslips rather
+than 20 and reads "3 warning(s)" rather than 2. The button still says
+`Create payrun (20)` — twenty are selected, one is skipped, and the skip is the
+point.
+
+### D-034 — The dashboard opens on the newest *paid* period, named by the server
+**Decided:** session 06 · **Status:** settled
+
+Following from D-033: the correction run is the newest period and holds one
+payslip, so a dashboard defaulting to "newest payrun" would open on it with
+every KPI reading as a collapse. Paid means finished, and finished is what a
+dashboard should show. This is a better default independently of D-033 — any
+month half-computed would have caused the same.
+
+The important half is that **two** places were deciding it. `_filters` picked
+the period when none was passed, and `Dashboard.jsx` separately seeded its
+filter state from `periods[0]`. Fixing only the backend would have left the
+screen asking for the off-cycle period anyway. `/api/dashboard/filters/` now
+returns `default_period` and both read that one value.
+
+**The general rule this is an instance of:** when a screen and its API both
+decide the same thing, they will eventually decide it differently. Name the
+answer once, on the server, and have the screen read it.
+
+### D-035 — A theme selector must outrank the fallback that backs it up
+**Decided:** session 06 · **Status:** settled
+
+`index.css` has to `@import "./themes.css"` at the top — CSS permits `@import`
+nowhere else — and then declares Ledger's values on a bare `:root` so a theme
+that forgets a token degrades instead of breaking. But `:root` and
+`[data-theme="x"]` have **identical specificity**, so the later block wins, and
+the later block is always the fallback. Every one of the six themes silently
+resolved to Ledger: the attribute was set, the choice was stored, the swatch
+highlighted, and not one token changed.
+
+Every theme block is therefore written `:root[data-theme="x"]`, which is (0,2,0)
+and beats the fallback. **Never flatten those selectors back.** The reasoning is
+written into the top of `themes.css` as well as here.
+
+The wider lesson, which cost this session an hour to learn and is worth more
+than the fix: **a control that visibly responds is not evidence that anything
+downstream of it happened.** Session 05 checked the theme switcher by watching
+the swatch highlight. Four lines of `getComputedStyle` settle it properly.
+
+### D-036 — Chart colours are read from the live tokens, never mirrored by hand
+**Decided:** session 06 · **Status:** settled · supersedes the Recharts note in `ui-design-language.md` §2
+
+Recharts needs concrete colour strings, so its palette used to be a hand copy of
+Ledger's tokens at the top of `Dashboard.jsx`, with a comment telling future
+sessions to keep the two in step. That is fragile with one theme and simply
+wrong with six: it drew a terracotta line across Blueprint's electric blue, and
+on both dark themes the axes were a light-theme grey that vanished into the
+card.
+
+`lib/theme.js` now exposes `chartPalette()` and `useChartPalette()`, which read
+the tokens back out of the document, with a `MutationObserver` on `data-theme`
+so charts re-colour **live** when the theme is switched with a dashboard open —
+which is exactly what a demo does.
+
+### D-037 — Route reachability is derived from the server's navigation tree
+**Decided:** session 06 · **Status:** settled
+
+Typing `#/payroll` as an HR Manager rendered the Payruns screen: empty table,
+"0 records", a permission error underneath. It looked broken rather than
+refused.
+
+The guard in `App.jsx` deliberately keeps **no second copy of the capability
+table**. It reads the navigation tree `/api/auth/me/` has already pruned for
+this account: a menu the account cannot use is absent (D-028), so a route absent
+from that tree is a route it may not open. This is presentation, not
+enforcement — the server 403s regardless.
+
+One carve-out, and it is a rule rather than an exception: a **detail** route can
+be reachable where its **list** is not, when the server scopes the resource to
+the caller. `/payslips` is the operator's index; `/payslips/68` is one record,
+and the queryset narrows to the caller's own employee. Without this the Open
+button on My Payslips refused the very employee it was built for.
+
+### D-038 — Demo-only affordances compile out of a production build
+**Decided:** session 06 · **Status:** settled
+
+The five one-click role chips on the login screen are the fastest way to switch
+persona on stage and plainly wrong in a shipped product. They are gated on
+`import.meta.env.DEV`, so `npm run dev` — which is how the demo runs — keeps
+them and `npm run build` removes them. The email and password prefill is gated
+the same way, so a production build opens on empty fields.
+
+This is the general answer for "useful in the demo, wrong in the product":
+neither delete it nor ship it, compile it out.
+
+### D-039 — Screen copy states the effect and does not argue for it
+**Decided:** session 06 · **Status:** settled · refines `ui-design-language.md` §5
+
+§5 says write labels, not explanations, and both Profile and Security argued
+with the reader — "an unlocked laptop should not become a permanent account
+takeover", "a clock you can punch from your sofa is not attendance".
+
+The test now applied: **keep every fact the user cannot otherwise know, drop the
+justification.** "Your current password is required. Changing it signs out every
+other session." keeps both consequences and loses the sermon. Security's
+switches keep their one-clause effects, because the effect of a security switch
+is invisible and expensive to guess wrong.
+
+The reasoning that was cut is not lost — it lives in the docstrings of
+`accounts/security.py` and `capabilities.py`, which is who it was written for.
+
+### D-040 — Git history is left exactly as it is
+**Decided:** session 06 · **Status:** settled · **the user's own decision, asked and answered**
+
+Session 04 left an open question about removing Claude's commits. Every commit
+is authored by one of the three teammates; exactly one (`12a632f`, the root
+scaffold) carries a Claude co-author trailer, and that trailer is why `claude`
+appears in GitHub's contributor list.
+
+Removing it means rewriting ~120 commits and force-pushing, which breaks the
+other teammates' clones. Both operations are denied at tool level in
+`.claude/settings.json` by design. The user was asked directly and chose
+**"Leave history alone."** Do not reopen this.

@@ -496,3 +496,74 @@ powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter 'ProcessId
 The second command is the one that matters — the pid alone does not tell you
 *which checkout* it is serving, and on a machine with several worktrees that is
 the only question worth asking.
+
+### B-028 — One account cannot hold two live sessions, and the demo needs to know
+**Severity:** medium · **not a bug — deliberate, and it bit twice anyway**
+
+`accounts/api.py` deletes the account's existing token on **every** sign-in and
+issues a fresh one, so `token.created` is the start of *this* session and the
+expiry in `ExpiringTokenAuthentication` means what it says. That is correct and
+worth keeping.
+
+The consequence is not obvious: **signing in as an account that is already
+signed in silently kills the first session.** The older tab 401s on its next
+call and lands on the login screen. It happened twice this session while driving
+the app, and both times looked like a product bug — the second time in the
+middle of an approval flow.
+
+**On stage this would be fatal.** If the presenter has the app open on a laptop
+and someone opens the same account on the projector machine, the laptop drops
+out mid-demo.
+
+* Use **one tab per account**. Different accounts in different tabs is fine.
+* When scripting the browser, sign in **once** per account and reuse the token,
+  rather than re-issuing a login before each step.
+
+### B-029 — `main` is held by an abandoned worktree, and its local ref is stale
+**Severity:** high · hit during the session 06 handoff
+
+`git checkout main` fails in this worktree:
+
+```
+fatal: 'main' is already used by worktree at
+'.claude/worktrees/frontend-routing-setup-e9a159'
+```
+
+Worse, that worktree's `main` is at **`ba294be`**, far behind the real branch.
+The local `main` ref is therefore **not** main, and anything reasoning from it
+will merge into the wrong place.
+
+**Work against `origin/main` and push to it explicitly:**
+
+```bash
+git fetch origin
+git checkout -b integrate/<something> origin/main
+git merge --no-ff <your-branch> -m "merge: ..."
+git push origin HEAD:main
+```
+
+That is how session 06's work reached `main` at `1437c25`. Do not delete the
+other worktree — it is not yours, and the stale ref is harmless as long as you
+never read it.
+
+### B-030 — Two sessions numbered 06 ran at the same time
+**Severity:** high · **live at the moment this was written**
+
+`origin/main` gained two commits mid-session from another session calling itself
+**session 06, as Michael** (`a7c4d3d`, `a1ae6a7`). This session is also 06, as
+Trevor. The relay's assumption — one session at a time, the repository as the
+only channel — no longer holds.
+
+They touched `claude/state/runbook.md` and `claude/workflow/session-log.md`;
+this session touched neither, so the merge was clean. **That was luck.**
+
+Before writing any `claude/` file:
+
+```bash
+git fetch origin && git log --oneline -5 origin/main
+```
+
+Expect `session-log.md`, `PROGRESS.md`, `current-state.md` and `task-board.md`
+to have been edited by somebody who is not you. **Merge, never overwrite** — and
+prefer appending a clearly-headed section over rewriting a shared one. Push small
+and often; a large unpushed batch is what turns this into a real conflict.

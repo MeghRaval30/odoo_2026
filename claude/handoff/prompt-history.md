@@ -362,3 +362,134 @@ NEXT-SESSION-PROMPT.md)*
 > in claude folder create a file named progess something and keep writing short progress of stuff u are doing with every commit.
 >
 > so like go on and dont stop untill this great vision is achieved
+
+---
+
+## Session 06 — Trevor · 2026-09-05, 21:41 → 22:50 IST
+
+> https://github.com/MeghRaval30/odoo_2026
+>
+> You are TREVOR, session 06 of a three-account Claude relay building
+> PeoplePay360 for the Odoo 24-hour hackathon. You have no memory of the previous
+> sessions — the repository is the only channel.
+>
+> FIRST, IN THIS ORDER:
+>
+> 1. git pull --rebase
+> 2. Read claude/handoff/NEXT-SESSION-PROMPT.md IN FULL. It was written for you
+>    and it replaces the normal boot sequence. Everything below is a summary of
+>    it; the file is authoritative.
+> 3. Read claude/state/current-state.md, claude/state/task-board.md and
+>    claude/PROGRESS.md.
+> 4. Set and VERIFY your git identity before your first commit:
+>      git config user.name  "MeghRaval30"
+>      git config user.email "meghraval306@gmail.com"
+>      git config user.name && git config user.email
+>    Identity follows the session, not the machine — if the account authenticated
+>    in your chat is not Trevor's, use the matching row in
+>    claude/workflow/git-strategy.md §1 and say so.
+> 5. Announce which character you are and what you are picking up.
+>
+> WHAT THE PROJECT IS
+>
+> PeoplePay360 — an integrated HR & Payroll platform. Employee → period-scoped
+> Contract → Working Schedule / Attendance / Time Off → ordered Salary Rules →
+> Payrun → Payslips → PDF → live Dashboard. React 19 + Vite frontend, Django 6.1 +
+> DRF backend, SQLite. The product is COMPLETE and works end to end. Do not
+> rebuild it.
+>
+> WHAT YOU ARE FINISHING
+>
+> Session 05 was commissioned mid-session to redo the UI, rework account types,
+> add themes, add a profile menu with approval-gated changes, fix attendance
+> units, and add real security. About 70% is DONE AND MERGED:
+>
+>   - accounts/capabilities.py — one declarative permission matrix. Five roles
+>     from the PDF; an account may hold several and gets the UNION.
+>   - Server-built navigation: /api/auth/me/ returns the menu tree, so a role's
+>     unusable menus are ABSENT, not greyed out. Verified in a browser.
+>   - Four dashboards behind four endpoints (employee / hr / payroll / admin) —
+>     not one endpoint with hidden cards. This closed a real leak: an HR Manager
+>     could previously read total net paid.
+>   - Security: CIDR-restricted sign-in re-checked on every request, expiring
+>     sessions, lockout, append-only audit log, self-service password change,
+>     bank-account changes gated behind HR approval, and escalation guards.
+>     31 new tests, each named after the attack it closes.
+>   - Six complete design languages in frontend/src/themes.css.
+>   - New screens: Profile, Security, Audit log, My Payslips, Admin dashboard.
+>   - seed --employees N: 250 employees in 40s, payrun of 233 in 5.7s.
+>
+> THE REMAINING 30% IS YOUR JOB — a screen-by-screen pass over the OLDER frontend
+> screens, itemised file by file with the exact change in NEXT-SESSION-PROMPT.md
+> §8.1. In priority order:
+>
+>   T-101  screens/Login.jsx — the mockup's exact copy ("Welcome back",
+>          "Sign in to continue to your workspace", "Work Email", "Forgot password?")
+>   T-102  components/AttendanceWidget.jsx + screens/Attendance.jsx — hours and
+>          minutes (6h56), not decimals. The API already serves worked_hm /
+>          elapsed_hm / overtime_hm.
+>   T-103  screens/Dashboard.jsx — the overtime tile still shows a COUNT, which
+>          is the exact thing the user called out. Use total_overtime_hm and
+>          overtime_employees.
+>   T-104  screens/Users.jsx — multi-role checkboxes, reset-password action,
+>          capability grid (GET /api/users/capability-matrix/).
+>   T-105  Move every action button from the four legacy booleans onto
+>          auth.has("<capability>").
+>   T-106  FOUR OF THE SIX THEMES HAVE NEVER BEEN RENDERED — Atrium, Blueprint,
+>          Marigold, Graphite. Open each one before claiming six work.
+>   T-099  The four new screens have never been clicked. Walk them.
+>   T-107  Re-rehearse and update claude/deliverables/demo-script.md.
+>
+> TWO THINGS THAT NEED THE USER — ask, do not decide silently. Both are written
+> up with full reasoning in NEXT-SESSION-PROMPT.md §11:
+>   a) PRD success criterion 4 is met on the 250-person roster but NOT on the
+>      22-person demo seed. Every available fix damages the rehearsed demo.
+>      Three options are laid out; the user picks.
+>   b) Session 04's unresolved "remove your commits" question. Do not touch git
+>      history without explicit confirmation.
+>
+> TRAPS THAT WILL COST YOU TIME (full list in claude/state/blockers.md):
+>   - B-021: check `netstat -ano | grep ":8000.*LISTENING"` returns ONE pid before
+>     debugging any "my change did not take effect" symptom. A stale runserver
+>     answered first and served pre-fix code.
+>   - B-023: Bash heredocs silently append NOTHING when the content has triple
+>     quotes, backticks or an apostrophe. Use the Write/Edit tools.
+>   - B-022: browser refs go stale after resize_window, and form_input does not
+>     reach React state. Drive the app via javascript_tool + localStorage — the
+>     exact snippet is in §13.
+>   - B-025: date windows anchored to today() are empty (seeded data ends March
+>     2026, the clock reads September).
+>
+> RULES:
+>   - Work on branches, merge --no-ff, never force-push, never rewrite history.
+>   - Heartbeat commit every 30–45 min. Keep claude/PROGRESS.md updated with every
+>     commit — the user asked for this explicitly.
+>   - Leave claude/context/ alone until the user says MEGATRON LAUNCH.
+>   - Do not relitigate D-001 to D-032 in claude/context/decisions.md.
+>   - Respect the scope gates in current-state.md.
+>
+> YOUR FIRST ACTION AFTER READING: run the harnesses (manage.py test — expect
+> 216/216, verify_rules.py 28/28, smoke_api.py 51/51, then seed --flush), start
+> both servers, sign in as admin@oxp.com / demo1234, then begin T-101 on branch
+> feat/ui-screen-pass.
+
+**Answering the two questions that were put to the user** (asked through the
+options picker, early in the session):
+
+> **PRD criterion 4 — which of the three options?**
+>
+> decide urself
+
+> **Session 04's "remove your commits" question?**
+>
+> Leave history alone
+
+Then, mid-session:
+
+> extra high on
+
+> max on
+
+> megatron launch !!
+
+> commit everything asap all the claude files are ready and like in general all files are ready. first always ready file and then push first
