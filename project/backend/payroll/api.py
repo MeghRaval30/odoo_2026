@@ -60,7 +60,8 @@ class PayslipLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = PayslipLine
         fields = ["id", "name", "code", "category", "category_display",
-                  "sequence", "quantity", "rate", "amount"]
+                  "sequence", "quantity", "rate", "amount",
+                  "is_employer_cost", "appears_on_payslip"]
 
 
 class PayslipWarningSerializer(serializers.ModelSerializer):
@@ -110,12 +111,17 @@ class PayslipDetailSerializer(PayslipListSerializer):
                                           read_only=True)
     deductions = serializers.DecimalField(max_digits=12, decimal_places=2,
                                           read_only=True)
+    employer_cost = serializers.DecimalField(max_digits=12, decimal_places=2,
+                                             read_only=True)
+    ctc = serializers.DecimalField(max_digits=12, decimal_places=2,
+                                   read_only=True)
 
     class Meta(PayslipListSerializer.Meta):
         fields = PayslipListSerializer.Meta.fields + [
             "contract", "contract_reference", "contract_wage",
             "salary_structure", "structure_name", "expected_days", "lop_days",
-            "overtime_hours", "allowances", "deductions", "lines", "warnings"]
+            "overtime_hours", "allowances", "deductions", "employer_cost",
+            "ctc", "lines", "warnings"]
 
 
 # ==========================================================================

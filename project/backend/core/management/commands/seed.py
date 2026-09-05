@@ -166,7 +166,14 @@ class Command(BaseCommand):
                 (90, "ESIC", "ESIC", "DEDUCTION", "FORMULA", None, None, ""),
                 (100, "Professional Tax", "PT", "DEDUCTION", "FIXED", D("200"), None, ""),
                 (110, "Net Salary", "NET", "NET", "FORMULA", None, None, ""),
+                # Employer contributions — a cost to the company, never a
+                # deduction from the employee. Flagged is_employer_cost so the
+                # engine keeps them out of gross and net and rolls them into
+                # CTC instead.
+                (120, "Provident Fund (Employer)", "PF_ER", "DEDUCTION", "PERCENTAGE", None, D("12"), "BASIC"),
+                (130, "ESIC (Employer)", "ESIC_ER", "DEDUCTION", "FORMULA", None, None, ""),
             ]
+            employer_cost_codes = {"PF_ER", "ESIC_ER"}
             formulas = {
                 # Overtime paid at 1.5x the derived hourly rate
                 "OT": "(wage / Decimal('173.33')) * overtime_hours * Decimal('1.5')",
@@ -175,12 +182,15 @@ class Command(BaseCommand):
                 "LOP": "(rules['GROSS'] / expected_days) * lop_days if expected_days > 0 else Decimal('0')",
                 "ESIC": "rules['GROSS'] * Decimal('0.0075') if rules['GROSS'] <= 21000 else Decimal('0')",
                 "NET": "categories['GROSS'] - categories['DEDUCTION']",
+                # Employer ESIC is 3.25% on the same ceiling as the employee's
+                "ESIC_ER": "rules['GROSS'] * Decimal('0.0325') if rules['GROSS'] <= 21000 else Decimal('0')",
             }
             for seq, name, code, cat, comp, amt, pct, base in rules:
                 SalaryRule.objects.create(
                     structure=regular, sequence=seq, name=name, code=code,
                     category=cat, computation=comp, amount=amt, percentage=pct,
-                    percentage_base=base, formula=formulas.get(code, ""))
+                    percentage_base=base, formula=formulas.get(code, ""),
+                    is_employer_cost=code in employer_cost_codes)
 
         intern, created = SalaryStructure.objects.get_or_create(
             code="INTERN", company=company, defaults={"name": "Intern Salary"})

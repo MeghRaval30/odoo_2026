@@ -178,6 +178,7 @@ def evaluate_rule(rule, ctx) -> Decimal:
 
 def build_context(payslip, contract, facts):
     categories = defaultdict(lambda: ZERO)
+    employer_categories = defaultdict(lambda: ZERO)
     rules_by_code = {}
     return {
         "contract": contract,
@@ -189,6 +190,10 @@ def build_context(payslip, contract, facts):
         "lop_days": facts["lop_days"],
         "overtime_hours": facts["overtime_hours"],
         "categories": categories,
+        # Employer contributions accumulate separately so they never move the
+        # employee's gross or net. Exposed to formulas so a rule can reference
+        # the employer side if it needs to.
+        "employer_categories": employer_categories,
         "rules": rules_by_code,
         "Decimal": Decimal,
     }
@@ -261,11 +266,25 @@ def compute_payslip(payslip) -> Payslip:
             payslip=payslip, rule=rule, name=rule.name, code=rule.code,
             category=rule.category, sequence=rule.sequence,
             quantity=rule.quantity, rate=rate, amount=amount,
+            is_employer_cost=rule.is_employer_cost,
+            appears_on_payslip=rule.appears_on_payslip,
         ))
 
-        # Make this result visible to every later rule
-        ctx["categories"][rule.category] += amount
+        # Every rule's result is visible to later rules by code, employer cost
+        # included — an employer PF rule may well want to reference the
+        # employee's PF figure.
         ctx["rules"][rule.code] = amount
+
+        if rule.is_employer_cost:
+            # Employer contributions are a cost to the company, not money the
+            # employee receives or forfeits. Accumulating them into
+            # `categories` made an employer-side PF rule categorised DEDUCTION
+            # reduce the employee's net pay, which is simply wrong: the flag
+            # was stored, serialized and editable in the UI, and nothing read
+            # it. They go into a parallel bucket that feeds CTC instead.
+            ctx["employer_categories"][rule.category] += amount
+        else:
+            ctx["categories"][rule.category] += amount
 
     PayslipLine.objects.bulk_create(lines)
     payslip.save()
