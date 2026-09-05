@@ -95,8 +95,13 @@ class RoleHelperTests(RoleFixtureMixin, TestCase):
 
     def test_roles_stack_so_the_widest_grant_wins(self):
         """Two roles on one account union their permissions."""
-        self.assertTrue(self.dual.can_manage_hr)   # from HR_MANAGER
-        self.assertTrue(self.dual.can_run_payroll)  # from PAYROLL_USER
+        from . import capabilities as caps
+        self.assertTrue(self.dual.can_manage_hr)          # from HR_MANAGER
+        self.assertTrue(self.dual.can(caps.PAYRUN_READ))  # from PAYROLL_USER
+        # Running payroll is no longer part of the Payroll User row, so the
+        # union does not grant it either. Reading payruns is what that role
+        # contributes; the HR half contributes the writes.
+        self.assertFalse(self.dual.can_run_payroll)
         self.assertFalse(self.dual.can_configure_payroll)
         self.assertFalse(self.dual.is_admin)
 
@@ -147,17 +152,43 @@ class PermissionMatrixTests(RoleFixtureMixin, TestCase):
             can_approve_leave=True, can_run_payroll=False,
             can_configure_payroll=False)
 
-    def test_payroll_user_runs_payroll_but_cannot_configure_it(self):
+    def test_payroll_user_reads_payroll_but_neither_runs_nor_configures_it(self):
+        """
+        Separation of duties, stated at the property level.
+
+        Every one of these is a writing power, and this role has none. It
+        reads the whole organisation -- employees, contracts, attendance,
+        leave, payruns, payslips -- and changes none of it. Its own
+        self-service is unaffected, because that lives in BASELINE rather
+        than in the role.
+        """
         self.assertMatrixRow(
-            self.payroll_user, is_admin=False, can_manage_hr=True,
-            can_approve_leave=True, can_run_payroll=True,
+            self.payroll_user, is_admin=False, can_manage_hr=False,
+            can_approve_leave=False, can_run_payroll=False,
             can_configure_payroll=False)
 
-    def test_payroll_manager_adds_configuration_rights(self):
+    def test_the_payroll_user_can_still_see_what_it_must_check(self):
+        """Read-only must not mean blind: the reads are the job."""
+        from . import capabilities as caps
+        held = self.payroll_user.capabilities
+        for capability in (caps.EMPLOYEE_READ_ALL, caps.CONTRACT_READ_ALL,
+                           caps.ATTENDANCE_READ_ALL, caps.TIMEOFF_READ_ALL,
+                           caps.ALLOCATION_READ_ALL, caps.PAYRUN_READ,
+                           caps.PAYSLIP_READ_ALL, caps.DASHBOARD_PAYROLL):
+            with self.subTest(capability=capability):
+                self.assertIn(capability, held)
+
+    def test_payroll_manager_runs_payroll_and_owns_none_of_its_inputs(self):
+        """
+        Every one of these but can_run_payroll is false, and that is the whole
+        design: this role creates, computes, validates, pays and deletes a
+        payrun, and every number the payrun consumes -- wages, worked days,
+        leave, salary rules -- is set by somebody else.
+        """
         self.assertMatrixRow(
-            self.payroll_manager, is_admin=False, can_manage_hr=True,
-            can_approve_leave=True, can_run_payroll=True,
-            can_configure_payroll=True)
+            self.payroll_manager, is_admin=False, can_manage_hr=False,
+            can_approve_leave=False, can_run_payroll=True,
+            can_configure_payroll=False)
 
     def test_admin_gets_everything(self):
         self.assertMatrixRow(
@@ -166,18 +197,35 @@ class PermissionMatrixTests(RoleFixtureMixin, TestCase):
             can_configure_payroll=True)
 
     def test_approve_leave_tracks_hr_management_exactly(self):
-        """The two are the same grant in the spec; keep them in step."""
+        """
+        The two are the same grant, and they stayed together through the
+        narrowing: both payroll roles lost employee maintenance and leave
+        approval in one move, so the pairing holds across all five personas.
+        """
         for user in (self.employee, self.hr, self.payroll_user,
                      self.payroll_manager, self.admin):
             with self.subTest(user=user.email):
                 self.assertEqual(user.can_approve_leave, user.can_manage_hr)
 
-    def test_configure_is_strictly_narrower_than_run_for_payroll_roles(self):
-        """The Payroll User / Payroll Manager split, stated as one rule."""
-        self.assertTrue(self.payroll_user.can_run_payroll)
-        self.assertFalse(self.payroll_user.can_configure_payroll)
+    def test_running_payroll_is_the_managers_signature_alone(self):
+        """
+        The Payroll User / Payroll Manager split, stated as one rule.
+
+        It used to be a delete-shaped difference; it is now the whole
+        operating half. The User checks a payrun, the Manager runs it, and
+        neither configures the rules the run applies -- that is the Admin's,
+        so that adding a rule and running the payrun which applies it cannot
+        be done by one person.
+        """
+        from . import capabilities as caps
+        self.assertTrue(self.payroll_user.can(caps.PAYRUN_READ))
+        self.assertFalse(self.payroll_user.can_run_payroll)
         self.assertTrue(self.payroll_manager.can_run_payroll)
-        self.assertTrue(self.payroll_manager.can_configure_payroll)
+
+        for user in (self.payroll_user, self.payroll_manager):
+            with self.subTest(role=user.email):
+                self.assertFalse(user.can_configure_payroll)
+        self.assertTrue(self.admin.can_configure_payroll)
 
 
 class MeEndpointTests(RoleFixtureMixin, APITestCase):
@@ -202,8 +250,8 @@ class MeEndpointTests(RoleFixtureMixin, APITestCase):
         expected = {
             "emp@example.com": (False, False, False, False, False),
             "hr@example.com": (False, True, True, False, False),
-            "puser@example.com": (False, True, True, True, False),
-            "pmgr@example.com": (False, True, True, True, True),
+            "puser@example.com": (False, False, False, False, False),
+            "pmgr@example.com": (False, False, False, True, False),
             "admin@example.com": (True, True, True, True, True),
         }
         for user in (self.employee, self.hr, self.payroll_user,
@@ -283,9 +331,32 @@ class HRDataAccessTests(RoleFixtureMixin, APITestCase):
         self.assertEqual([row["id"] for row in response.data["results"]],
                          [self.record.pk])
 
+    def test_a_payroll_user_may_not_add_or_edit_an_employee(self):
+        """
+        Reading the roster and maintaining it are different jobs. This role
+        needs every employee record to reconcile a payrun against it; it does
+        not need to create one, and an employee record is where bank details
+        and the link to a contract live.
+        """
+        self.client.force_authenticate(user=self.payroll_user)
+        before = Employee.objects.count()
+
+        created = self.client.post(reverse("employee-list"), {
+            "first_name": "Should", "last_name": "NotExist",
+            "work_email": "should.not@example.com",
+            "company": self.company.pk,
+            "date_of_joining": "2026-01-01",
+        }, format="json")
+        self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Employee.objects.count(), before)
+
+        patched = self.client.patch(
+            reverse("employee-detail", args=[self.record.pk]),
+            {"work_phone": "1234567890"}, format="json")
+        self.assertEqual(patched.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_every_hr_capable_role_may_create_and_edit_employees(self):
-        for index, user in enumerate((self.hr, self.payroll_user,
-                                      self.payroll_manager, self.admin)):
+        for index, user in enumerate((self.hr, self.admin)):
             with self.subTest(role=user.email):
                 self.client.force_authenticate(user=user)
                 created = self.client.post(reverse("employee-list"), {
@@ -590,9 +661,28 @@ class PayrollRunAccessTests(RoleFixtureMixin, APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Payrun.objects.count(), 1)
 
+    def test_a_payroll_user_may_read_payruns_but_not_create_one(self):
+        """
+        The role's whole job is checking a run it did not produce, so the
+        reads must work and the writes must not.
+        """
+        self.client.force_authenticate(user=self.payroll_user)
+        self.assertEqual(
+            self.client.get(reverse("payrun-list")).status_code,
+            status.HTTP_200_OK)
+        self.assertEqual(
+            self.client.get(reverse("payslip-list")).status_code,
+            status.HTTP_200_OK)
+
+        before = Payrun.objects.count()
+        created = self.client.post(reverse("payrun-list"),
+                                   self._payrun_payload("Should not exist"),
+                                   format="json")
+        self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Payrun.objects.count(), before)
+
     def test_payroll_roles_may_read_create_and_update_payruns(self):
-        for index, user in enumerate((self.payroll_user, self.payroll_manager,
-                                      self.admin)):
+        for index, user in enumerate((self.payroll_manager, self.admin)):
             with self.subTest(role=user.email):
                 self.client.force_authenticate(user=user)
                 self.assertEqual(
@@ -627,16 +717,29 @@ class PayrollRunAccessTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Payrun.objects.filter(pk=self.payrun.pk).exists())
 
-    def test_a_payroll_user_keeps_the_create_read_update_half_of_the_row(self):
-        """Narrowing delete must not cost the Payroll User anything else."""
+    def test_a_payroll_user_may_not_rename_a_payrun_either(self):
+        """
+        Update goes the same way as create. A payrun's name is what a period
+        is reconciled by, so renaming one is editing the record of what was
+        paid -- not something the checker of that record should be able to do.
+
+        The read in the same breath is the point: refusing the write must not
+        cost the role its view of the run.
+        """
         self.client.force_authenticate(user=self.payroll_user)
+        self.assertEqual(
+            self.client.get(
+                reverse("payrun-detail", args=[self.payrun.pk])).status_code,
+            status.HTTP_200_OK)
+
+        original = self.payrun.name
         patched = self.client.patch(
             reverse("payrun-detail", args=[self.payrun.pk]),
             {"name": "February 2026 revised"}, format="json")
 
-        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        self.assertEqual(patched.status_code, status.HTTP_403_FORBIDDEN)
         self.payrun.refresh_from_db()
-        self.assertEqual(self.payrun.name, "February 2026 revised")
+        self.assertEqual(self.payrun.name, original)
 
     def test_payroll_manager_may_delete_a_payrun(self):
         self.client.force_authenticate(user=self.payroll_manager)
@@ -689,7 +792,13 @@ class StructureAndRuleAccessTests(RoleFixtureMixin, APITestCase):
                     self.client.get(reverse("salaryrule-list")).status_code,
                     status.HTTP_403_FORBIDDEN)
 
-    def test_payroll_user_may_read_structures_and_rules(self):
+    def test_payroll_user_cannot_reach_salary_configuration_at_all(self):
+        """
+        The PRD gives this role read access here. This build withholds it,
+        along with the menu entries, so that salary configuration belongs to
+        one rank only: the rules that turn a wage into a payslip are set by
+        the person who signs the payrun, not by the person who checks it.
+        """
         self.client.force_authenticate(user=self.payroll_user)
 
         structures = self.client.get(reverse("salarystructure-list"))
@@ -697,10 +806,9 @@ class StructureAndRuleAccessTests(RoleFixtureMixin, APITestCase):
         detail = self.client.get(
             reverse("salarystructure-detail", args=[self.structure.pk]))
 
-        self.assertEqual(structures.status_code, status.HTTP_200_OK)
-        self.assertEqual(rules.status_code, status.HTTP_200_OK)
-        self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        self.assertEqual(detail.data["name"], "Regular Salary")
+        self.assertEqual(structures.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(rules.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(detail.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_payroll_user_may_not_write_structures_or_rules(self):
         self.client.force_authenticate(user=self.payroll_user)
@@ -728,8 +836,21 @@ class StructureAndRuleAccessTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(self.rule.sequence, 1)
         self.assertEqual(SalaryStructure.objects.count(), 1)
 
-    def test_payroll_manager_may_write_structures_and_rules(self):
+    def test_payroll_manager_reads_structures_and_rules_but_writes_neither(self):
+        """
+        A salary rule is the formula that turns a wage into a payslip, so
+        writing one is deciding pay. This role runs the payrun that applies
+        the rules and must be able to read them to check its own output --
+        and must not be able to add a rule and then run it.
+        """
         self.client.force_authenticate(user=self.payroll_manager)
+
+        self.assertEqual(
+            self.client.get(reverse("salarystructure-list")).status_code,
+            status.HTTP_200_OK)
+        self.assertEqual(
+            self.client.get(reverse("salaryrule-list")).status_code,
+            status.HTTP_200_OK)
 
         created = self.client.post(reverse("salarystructure-list"), {
             "name": "Intern Salary", "code": "INT", "company": self.company.pk,
@@ -740,13 +861,14 @@ class StructureAndRuleAccessTests(RoleFixtureMixin, APITestCase):
         new_rule = self.client.post(reverse("salaryrule-list"),
                                     self._rule_payload("HRA"), format="json")
 
-        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(patched.status_code, status.HTTP_200_OK)
-        self.assertEqual(new_rule.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(patched.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(new_rule.status_code, status.HTTP_403_FORBIDDEN)
 
+        # The refusals were real, not cosmetic: nothing moved.
         self.structure.refresh_from_db()
-        self.assertEqual(self.structure.name, "Regular Salary 2026")
-        self.assertEqual(self.structure.rules.count(), 2)
+        self.assertEqual(self.structure.name, "Regular Salary")
+        self.assertEqual(self.structure.rules.count(), 1)
 
     def test_admin_may_write_structures_and_rules_too(self):
         self.client.force_authenticate(user=self.admin)
@@ -754,19 +876,28 @@ class StructureAndRuleAccessTests(RoleFixtureMixin, APITestCase):
                                     self._rule_payload("STD"), format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_the_read_only_split_is_exactly_one_role_wide(self):
-        """Same GET for both payroll roles, different POST outcome."""
-        for user, expected in ((self.payroll_user, status.HTTP_403_FORBIDDEN),
-                               (self.payroll_manager, status.HTTP_201_CREATED)):
+    def test_salary_configuration_belongs_to_the_manager_rank_alone(self):
+        """
+        Both halves of the door, for both payroll roles: the User is refused
+        the GET as well as the POST, the Manager gets both.
+        """
+        cases = (
+            (self.payroll_user, status.HTTP_403_FORBIDDEN,
+             status.HTTP_403_FORBIDDEN),
+            (self.payroll_manager, status.HTTP_200_OK,
+             status.HTTP_403_FORBIDDEN),
+            (self.admin, status.HTTP_200_OK, status.HTTP_201_CREATED),
+        )
+        for user, expected_read, expected_write in cases:
             with self.subTest(role=user.email):
                 self.client.force_authenticate(user=user)
                 self.assertEqual(
                     self.client.get(reverse("salaryrule-list")).status_code,
-                    status.HTTP_200_OK)
+                    expected_read)
                 response = self.client.post(
                     reverse("salaryrule-list"),
                     self._rule_payload(f"X{user.pk}"), format="json")
-                self.assertEqual(response.status_code, expected)
+                self.assertEqual(response.status_code, expected_write)
 
 
 # ==========================================================================
@@ -903,7 +1034,9 @@ class LoginTests(RoleFixtureMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["token"])
         permissions = response.data["user"]["permissions"]
-        self.assertTrue(permissions["can_configure_payroll"])
+        self.assertTrue(permissions["can_run_payroll"])
+        # configuring the rules is the Admin's, even for this role
+        self.assertFalse(permissions["can_configure_payroll"])
         self.assertFalse(permissions["is_admin"])
 
     def test_a_bad_password_is_rejected(self):

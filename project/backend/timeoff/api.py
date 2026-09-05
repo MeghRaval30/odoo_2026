@@ -8,7 +8,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import CanManageHR
+from accounts import capabilities as caps
+from accounts.permissions import RequiresCapability
 
 from .models import Allocation, TimeOffRequest, TimeOffType
 
@@ -95,21 +96,23 @@ class TimeOffRequestSerializer(serializers.ModelSerializer):
 class TimeOffTypeViewSet(viewsets.ModelViewSet):
     queryset = TimeOffType.objects.all()
     serializer_class = TimeOffTypeSerializer
-    permission_classes = [CanManageHR]
+    # Readable by anyone -- the self-service leave form needs the
+    # dropdown. Writing one is configuration.
+    permission_classes = [RequiresCapability(write=caps.TIMEOFF_TYPE_WRITE)]
     filterset_fields = ["active", "requires_allocation", "unit"]
     search_fields = ["name", "code"]
 
 
 class AllocationViewSet(viewsets.ModelViewSet):
     serializer_class = AllocationSerializer
-    permission_classes = [CanManageHR]
+    permission_classes = [RequiresCapability(write=caps.ALLOCATION_WRITE)]
     filterset_fields = ["employee", "time_off_type", "state"]
     search_fields = ["name", "employee__first_name", "employee__last_name"]
 
     def get_queryset(self):
         qs = Allocation.objects.select_related("employee", "time_off_type")
         user = self.request.user
-        if not user.can_manage_hr and user.employee_id:
+        if not user.can(caps.ALLOCATION_READ_ALL) and user.employee_id:
             qs = qs.filter(employee_id=user.employee_id)
         return qs
 
@@ -131,14 +134,17 @@ class AllocationViewSet(viewsets.ModelViewSet):
 
 class TimeOffRequestViewSet(viewsets.ModelViewSet):
     serializer_class = TimeOffRequestSerializer
-    permission_classes = [CanManageHR]
+    # Managing other people's leave is the same authority as deciding it,
+    # so editing a request needs the capability that approves one --
+    # otherwise refusing a request could be done by editing it instead.
+    permission_classes = [RequiresCapability(write=caps.TIMEOFF_APPROVE)]
     filterset_fields = ["employee", "time_off_type", "state"]
     search_fields = ["employee__first_name", "employee__last_name", "reason"]
     ordering_fields = ["date_from", "duration"]
 
     # An Employee may raise their own request (product-spec section 2, the same
     # cell that gives them their own attendance). Reads are already open to any
-    # authenticated user via CanManageHR and narrowed by get_queryset below, so
+    # authenticated user, and narrowed by get_queryset below, so
     # POST is the only method that needs the carve-out.
     SELF_SERVICE_ACTIONS = {"create"}
 
@@ -166,7 +172,7 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
         """
         user = request.user
         data = request.data
-        if not user.can_manage_hr:
+        if not user.can(caps.TIMEOFF_APPROVE):
             if user.employee_id is None:
                 raise PermissionDenied("No employee linked to this account.")
             data = data.copy()
@@ -182,7 +188,7 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
         qs = TimeOffRequest.objects.select_related(
             "employee", "time_off_type", "allocation_used", "approver")
         user = self.request.user
-        if not user.can_manage_hr and user.employee_id:
+        if not user.can(caps.TIMEOFF_READ_ALL) and user.employee_id:
             qs = qs.filter(employee_id=user.employee_id)
         if self.request.query_params.get("my_team") and user.employee_id:
             qs = qs.filter(employee__manager_id=user.employee_id)

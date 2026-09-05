@@ -9,8 +9,8 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import (CanConfigurePayroll, CanReadOwnPayslips,
-                                  CanRunPayroll)
+from accounts import capabilities as caps
+from accounts.permissions import CanReadOwnPayslips, RequiresCapability
 from employees.models import Employee
 
 from . import engine
@@ -161,7 +161,8 @@ class PayrunSerializer(serializers.ModelSerializer):
 class SalaryStructureViewSet(viewsets.ModelViewSet):
     queryset = SalaryStructure.objects.prefetch_related("rules")
     serializer_class = SalaryStructureSerializer
-    permission_classes = [CanConfigurePayroll]
+    permission_classes = [RequiresCapability(read=caps.SALARY_CONFIG_READ,
+                                             write=caps.SALARY_CONFIG_WRITE)]
     filterset_fields = ["company", "active"]
     search_fields = ["name", "code"]
 
@@ -169,7 +170,8 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
 class SalaryRuleViewSet(viewsets.ModelViewSet):
     queryset = SalaryRule.objects.select_related("structure")
     serializer_class = SalaryRuleSerializer
-    permission_classes = [CanConfigurePayroll]
+    permission_classes = [RequiresCapability(read=caps.SALARY_CONFIG_READ,
+                                             write=caps.SALARY_CONFIG_WRITE)]
     filterset_fields = ["structure", "category", "computation", "active"]
     search_fields = ["name", "code"]
     ordering_fields = ["sequence", "name"]
@@ -189,7 +191,10 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                               "salary_structure", "payrun")
               .prefetch_related("lines", "warnings"))
         user = self.request.user
-        if not user.can_run_payroll and user.employee_id:
+        # Breadth of read is a read question. This asked can_run_payroll,
+        # which is PAYRUN_WRITE -- so a role allowed to read every payslip
+        # but not to run payroll was silently narrowed to its own three.
+        if not user.can(caps.PAYSLIP_READ_ALL) and user.employee_id:
             qs = qs.filter(employee_id=user.employee_id)
         return qs
 
@@ -209,7 +214,14 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
 class PayrunViewSet(viewsets.ModelViewSet):
     queryset = Payrun.objects.select_related("salary_structure", "company")
     serializer_class = PayrunSerializer
-    permission_classes = [CanRunPayroll]
+    # Reading a payrun and running one are different jobs. The read
+    # capability opens the list, every payslip and every warning; the
+    # write capability is what creates, computes, validates and pays.
+    # The POST-shaped actions below (compute, validate, mark-paid,
+    # send-payslips, create-with-employees) all land on the write branch.
+    permission_classes = [RequiresCapability(read=caps.PAYRUN_READ,
+                                             write=caps.PAYRUN_WRITE,
+                                             delete=caps.PAYRUN_DELETE)]
     filterset_fields = ["state", "company", "salary_structure"]
     search_fields = ["name"]
     ordering_fields = ["period_start", "name"]

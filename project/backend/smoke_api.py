@@ -76,14 +76,29 @@ structure_pk = _SS.objects.first().id
 payroll_user = Client()
 r = auth(payroll_user, "rahul@oxp.com")
 PH = {"HTTP_AUTHORIZATION": f"Token {r.json()['token']}"}
+# Salary configuration is a rank above this role in this build: the rules that
+# turn a wage into a payslip are set by whoever signs the payrun, not by
+# whoever checks it. The read is refused along with the write.
 r = payroll_user.get("/api/salary-structures/", **PH)
-check("Payroll User can READ salary structures", r.status_code == 200)
+check("Payroll User is kept out of salary structures entirely",
+      r.status_code == 403, f"HTTP {r.status_code}")
 r = payroll_user.post("/api/salary-rules/",
                       {"structure": structure_pk, "name": "X", "code": "X",
                        "category": "ALLOWANCE", "sequence": 5},
                       content_type="application/json", **PH)
-check("Payroll User is blocked from WRITING salary rules (read-only)",
+check("Payroll User is blocked from WRITING salary rules",
       r.status_code == 403, f"HTTP {r.status_code}")
+
+# ...but the payroll it exists to check stays fully readable.
+r = payroll_user.get("/api/payruns/", **PH)
+check("Payroll User can still READ payruns", r.status_code == 200,
+      f"HTTP {r.status_code}")
+r = payroll_user.post("/api/payruns/",
+                      {"name": "Nope", "period_start": "2026-05-01",
+                       "period_end": "2026-05-31"},
+                      content_type="application/json", **PH)
+check("Payroll User cannot CREATE a payrun", r.status_code == 403,
+      f"HTTP {r.status_code}")
 
 
 print("\n" + "=" * 72)

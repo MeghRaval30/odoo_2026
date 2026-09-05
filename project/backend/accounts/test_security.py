@@ -72,13 +72,21 @@ class CapabilityMatrixTests(SecurityFixture):
         """
         The mockup's access note says an account may be given "one or more
         roles". A user with HR Manager *and* Payroll User must therefore be
-        able to do everything either can — not merely what the higher one can.
+        able to do everything either can, not merely what the higher one can.
+
+        This is also where the separation of duties can be legitimately
+        undone: the Payroll User alone cannot write a contract, but an account
+        granted HR Manager as well can, because it is the union that governs.
+        That is a deliberate grant by an administrator, not a hole -- and it is
+        exactly why the union is asserted rather than assumed.
         """
         from . import capabilities as caps
         combined = self.make_user("both@oxp.com", Role.HR_MANAGER,
                                   Role.PAYROLL_USER)
-        self.assertIn(caps.EMPLOYEE_WRITE, combined.capabilities)
-        self.assertIn(caps.PAYRUN_WRITE, combined.capabilities)
+        self.assertIn(caps.EMPLOYEE_WRITE, combined.capabilities)   # from HR
+        self.assertIn(caps.CONTRACT_WRITE, combined.capabilities)   # from HR
+        self.assertIn(caps.PAYRUN_READ, combined.capabilities)      # from payroll
+        self.assertNotIn(caps.PAYRUN_WRITE, combined.capabilities)
         self.assertNotIn(caps.PAYRUN_DELETE, combined.capabilities)
         self.assertNotIn(caps.USER_MANAGE, combined.capabilities)
 
@@ -92,17 +100,116 @@ class CapabilityMatrixTests(SecurityFixture):
             with self.subTest(capability=capability):
                 self.assertNotIn(capability, held)
 
-    def test_a_payroll_user_may_write_a_payrun_but_never_delete_one(self):
+    def test_a_payroll_user_reads_payroll_without_being_able_to_run_it(self):
         """
-        "Create, Read, and Update access to Payruns and Payslips" — the absent
-        D is the entire difference from the Payroll Manager row.
+        Separation of duties: this role checks payroll, it does not operate it.
+
+        Deliberately narrower than PRD 3.2, which would grant CRU on payruns
+        and payslips on top of every HR Manager power. That combination lets
+        one login raise a wage, approve the leave that offsets it, correct the
+        attendance behind it and then compute and pay the run -- every input to
+        a payslip and the payslip itself, unwitnessed.
+
+        What must survive the restriction is the reading, which is the whole
+        job: without it the role could not check the run it is responsible for.
         """
         from . import capabilities as caps
         user = self.make_user("puser@oxp.com", Role.PAYROLL_USER)
-        self.assertIn(caps.PAYRUN_WRITE, user.capabilities)
-        self.assertNotIn(caps.PAYRUN_DELETE, user.capabilities)
-        self.assertIn(caps.SALARY_CONFIG_READ, user.capabilities)
-        self.assertNotIn(caps.SALARY_CONFIG_WRITE, user.capabilities)
+        held = user.capabilities
+
+        for readable in (caps.PAYRUN_READ, caps.PAYSLIP_READ_ALL,
+                         caps.CONTRACT_READ_ALL, caps.ATTENDANCE_READ_ALL,
+                         caps.TIMEOFF_READ_ALL, caps.DASHBOARD_PAYROLL):
+            with self.subTest(keeps=readable):
+                self.assertIn(readable, held)
+
+        for withheld in (caps.PAYRUN_WRITE, caps.PAYRUN_DELETE,
+                         caps.PAYSLIP_WRITE, caps.CONTRACT_WRITE,
+                         caps.ATTENDANCE_CORRECT, caps.TIMEOFF_APPROVE,
+                         caps.TIMEOFF_TYPE_WRITE, caps.SCHEDULE_WRITE,
+                         caps.REFERENCE_WRITE, caps.REFERENCE_READ,
+                         caps.EMPLOYEE_WRITE, caps.EMPLOYEE_DELETE,
+                         caps.ALLOCATION_WRITE, caps.PROFILE_APPROVE,
+                         caps.SALARY_CONFIG_READ, caps.SALARY_CONFIG_WRITE):
+            with self.subTest(withholds=withheld):
+                self.assertNotIn(withheld, held)
+
+    def test_nothing_the_payroll_user_lost_left_the_product(self):
+        """
+        The powers removed from the Payroll User were redistributed, not
+        deleted. Each one now sits with whichever rank owns that subject --
+        and every one of them is still reachable by somebody.
+        """
+        from . import capabilities as caps
+        hr = self.make_user("hrm@oxp.com", Role.HR_MANAGER).capabilities
+        payroll = self.make_user("pmgr@oxp.com", Role.PAYROLL_MANAGER).capabilities
+
+        for capability in (caps.PAYRUN_WRITE, caps.PAYRUN_DELETE,
+                           caps.PAYSLIP_WRITE, caps.CONTRACT_WRITE,
+                           caps.ATTENDANCE_CORRECT, caps.TIMEOFF_APPROVE,
+                           caps.TIMEOFF_TYPE_WRITE, caps.SCHEDULE_WRITE,
+                           caps.REFERENCE_WRITE, caps.REFERENCE_READ,
+                           caps.EMPLOYEE_WRITE, caps.EMPLOYEE_DELETE,
+                           caps.ALLOCATION_WRITE, caps.PROFILE_APPROVE,
+                           caps.SALARY_CONFIG_READ, caps.SALARY_CONFIG_WRITE):
+            with self.subTest(capability=capability):
+                self.assertTrue(
+                    capability in hr or capability in payroll
+                    or capability in self.admin.capabilities,
+                    f"{capability} is now unreachable by every role")
+
+    def test_hr_and_payroll_management_are_siblings_not_a_ladder(self):
+        """
+        The PRD makes the Payroll Manager a superset of the HR Manager, which
+        hands one login both the payrun and every input to it. Here the two
+        ranks own different subjects and neither contains the other.
+        """
+        from . import capabilities as caps
+        hr = self.make_user("hrm2@oxp.com", Role.HR_MANAGER).capabilities
+        payroll = self.make_user("pmgr2@oxp.com", Role.PAYROLL_MANAGER).capabilities
+
+        self.assertFalse(hr <= payroll, "payroll swallowed HR again")
+        self.assertFalse(payroll <= hr, "HR swallowed payroll")
+
+        # HR owns people
+        for capability in (caps.EMPLOYEE_DELETE, caps.TIMEOFF_APPROVE,
+                           caps.ATTENDANCE_CORRECT, caps.PROFILE_APPROVE,
+                           caps.SCHEDULE_WRITE, caps.REFERENCE_WRITE,
+                           caps.TIMEOFF_TYPE_WRITE):
+            with self.subTest(hr_only=capability):
+                self.assertIn(capability, hr)
+                self.assertNotIn(capability, payroll)
+
+        # HR also owns the employee record and the contract on it, because a
+        # wage is a term of employment rather than a payroll setting
+        for capability in (caps.EMPLOYEE_WRITE, caps.CONTRACT_WRITE,
+                           caps.ALLOCATION_WRITE):
+            with self.subTest(hr_only=capability):
+                self.assertIn(capability, hr)
+                self.assertNotIn(capability, payroll)
+
+        # payroll owns the payrun and nothing that feeds it
+        for capability in (caps.PAYRUN_WRITE, caps.PAYRUN_DELETE,
+                           caps.PAYSLIP_WRITE, caps.SALARY_CONFIG_READ):
+            with self.subTest(payroll_only=capability):
+                self.assertIn(capability, payroll)
+                self.assertNotIn(capability, hr)
+
+    def test_no_capability_is_unreachable(self):
+        """
+        Narrowing a role by subtraction makes it easy to remove a capability
+        from the last role that held it, which silently breaks the feature it
+        guards for everybody, with no error anywhere. Salary-rule writing came
+        within one edit of exactly that and now sits explicitly on the Admin.
+        """
+        from . import capabilities as caps
+        self.assertEqual(caps.unreachable_capabilities(), frozenset())
+
+    def test_only_the_admin_holds_both_sides(self):
+        """Which is what makes an Admin an Admin."""
+        hr = self.make_user("hrm3@oxp.com", Role.HR_MANAGER).capabilities
+        payroll = self.make_user("pmgr3@oxp.com", Role.PAYROLL_MANAGER).capabilities
+        self.assertTrue((hr | payroll) <= self.admin.capabilities)
 
     def test_navigation_hides_what_the_role_cannot_reach(self):
         self.client.force_authenticate(user=self.employee)
