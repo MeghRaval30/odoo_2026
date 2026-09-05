@@ -407,13 +407,24 @@ export default function Dashboard() {
               <div className="card-title">Time Off Overview</div>
               {data.timeoff_overview.length ? (
                 <div className="table-wrap">
+                  {/*
+                    Approved and Pending are scoped to the selected period;
+                    Remaining is the live balance across every open allocation.
+                    Spelling that out stops the row reading as arithmetic —
+                    440 allocated less 8 approved in February is not 428.
+                  */}
                   <table>
                     <thead>
                       <tr>
                         <th>Type</th>
                         <th className="num">Approved Days</th>
                         <th className="num">Pending</th>
-                        <th className="num">Remaining</th>
+                        <th className="num">
+                          Remaining
+                          <div className="tiny faint" style={{ fontWeight: 400 }}>
+                            all periods
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
