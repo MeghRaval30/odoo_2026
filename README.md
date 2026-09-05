@@ -34,20 +34,35 @@ On Linux or macOS use `.venv/bin/python` in place of `./.venv/Scripts/python.exe
 
 ### Verify it works
 
+Three of the four need nothing but the virtualenv:
+
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe verify_rules.py   # 28/28 — business rules
-./.venv/Scripts/python.exe smoke_api.py      # 51/51 — HTTP layer
-./.venv/Scripts/python.exe probe_forms.py    # 24/24 — every UI create and update payload
+./.venv/Scripts/python.exe verify_rules.py        # 28/28 — business rules
+./.venv/Scripts/python.exe smoke_api.py           # 51/51 — HTTP layer
+./.venv/Scripts/python.exe manage.py seed --flush # smoke_api dirties the DB
+./.venv/Scripts/python.exe manage.py test         # 158/158 — Django suite, 7 apps
 ```
+
+The fourth drives real HTTP, so it needs the server running in another terminal:
+
+```bash
+./.venv/Scripts/python.exe manage.py runserver    # terminal 1
+./.venv/Scripts/python.exe probe_forms.py         # terminal 2 — 26/26
+```
+
+Without a server it fails with a `WinError 10061` traceback. That is a missing
+server, not a broken harness.
 
 `probe_forms.py` posts the exact body each frontend form builds, rather than an
 idealised one. That distinction matters: it caught four create bugs the other
-two harnesses could not see, because they construct their own correct payloads.
-It deletes everything it creates.
+harnesses could not see, because they construct their own correct payloads — and
+a fifth once its coverage was completed, on the one create form it had been
+missing. It deletes everything it creates.
 
 `smoke_api.py` writes to the development database and leaves an
 `April 2026 (smoke)` payrun behind. Re-run `seed --flush` before demoing.
+`manage.py test` does not have this problem — it uses a throwaway database.
 
 ---
 
