@@ -38,7 +38,13 @@ On Linux or macOS use `.venv/bin/python` in place of `./.venv/Scripts/python.exe
 cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py   # 28/28 — business rules
 ./.venv/Scripts/python.exe smoke_api.py      # 51/51 — HTTP layer
+./.venv/Scripts/python.exe probe_forms.py    # 24/24 — every UI create and update payload
 ```
+
+`probe_forms.py` posts the exact body each frontend form builds, rather than an
+idealised one. That distinction matters: it caught four create bugs the other
+two harnesses could not see, because they construct their own correct payloads.
+It deletes everything it creates.
 
 `smoke_api.py` writes to the development database and leaves an
 `April 2026 (smoke)` payrun behind. Re-run `seed --flush` before demoing.
