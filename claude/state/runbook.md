@@ -3,8 +3,12 @@
 Get from a fresh clone to a running, seeded app. **Verify every command here at
 each MEGATRON LAUNCH** — a stale runbook costs the next session its first hour.
 
-Last verified: **session 03 (Trevor), 2026-09-05 13:35 IST.** Every command below
+Last verified: **session 04 (Michael), 2026-09-05 15:10 IST.** Every command below
 was run in that session, including the frontend build and all four harnesses.
+
+> **Do not add `--noreload` to `runserver`** (B-016). Session 04 did, then spent
+> minutes chasing a phantom bug that was the server holding pre-fix code while a
+> shell running the same code returned the right answer.
 
 ---
 
@@ -100,7 +104,7 @@ cd project/backend
 ./.venv/Scripts/python.exe verify_rules.py    # 28/28 — the five graded rules
 ./.venv/Scripts/python.exe smoke_api.py       # 51/51 — the HTTP layer
 ./.venv/Scripts/python.exe manage.py seed --flush   # smoke_api dirties the DB
-./.venv/Scripts/python.exe manage.py test     # 158/158 — Django suite, 7 apps
+./.venv/Scripts/python.exe manage.py test     # 171/171 — Django suite, 7 apps
 ```
 
 The fourth drives real HTTP and **needs a live server in another terminal**:

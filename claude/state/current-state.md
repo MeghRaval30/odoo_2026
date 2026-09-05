@@ -9,13 +9,15 @@
 ## ⏱ CLOCK
 
 ```
-Hackathon start:  2026-09-05   10:00 IST   ✅ CONFIRMED BY USER (session 02)
-Hackathon end:    2026-09-06   10:00 IST   ✅ CONFIRMED BY USER
-Now:              2026-09-05   13:40 IST   (wall clock, `date`, not narrative)
-Elapsed:          ~3h 40m  /  24h
-REMAINING:        ~20h 20m
-Phase:            BUILD
+Hackathon start:   2026-09-05   10:00 IST   ✅ confirmed by the user
+Hackathon end:     2026-09-06   10:00 IST   ✅ confirmed by the user
+Session 04 closed: 2026-09-05   15:15 IST   (wall clock, `date`)
+Elapsed:           ~5h 15m  /  24h
+REMAINING:         ~18h 45m
+Phase:             BUILD
 ```
+
+**Run `date` yourself** and recompute before making any scope call.
 
 ### Scope gates — binding
 
@@ -26,94 +28,67 @@ Phase:            BUILD
 | < 4h | **POLISH** | Stop coding. Seed data, demo rehearsal, roadmap |
 | < 2h | **DEMO** | Rehearse only. Touch nothing |
 
-> **Run `date` yourself.** Session 01 recorded a handoff at "13:15 IST" that was
-> ahead of the real wall clock. Session 03 (this one) opened the repo at 13:06
-> and closed at 13:40. There is a great deal of time left — do not rush into
-> freeze behaviour.
-
 ---
 
 ## WHERE WE ARE
 
-**Backend and frontend are both complete and verified. Four harnesses are green.
-Three documented product bugs were closed this session, and one screen that had
-never worked at all was found and fixed.**
-
-The remaining work is deliverables, rehearsal and optional polish — not features.
+**The product is complete and works end to end.** Session 04 audited it against
+the source documents, found and fixed four real defects that all 158 prior tests
+and four harnesses were green over, rehearsed the demo for the first time, and
+drove every screen in a browser.
 
 Sessions: 01 Michael (backend), 02 Franklin (frontend), 03 Trevor (tests,
-deliverables, and this bug-fix pass).
+deliverables, bug fixes), 04 Michael (audit, rehearsal, correctness fixes).
+
+**No features from the spec are missing.** Remaining work is one requested
+feature — a large dataset, deliberately deferred — and optional polish.
 
 ---
 
 ## ✅ WHAT WORKS — verified, with the command or click-path that proves it
 
-### Backend — four harnesses, all green as of 13:35 IST
+### Four harnesses, all green at 15:10 IST
 
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe verify_rules.py   # 28/28 — the five graded rules
-./.venv/Scripts/python.exe smoke_api.py      # 51/51 — the HTTP layer
-./.venv/Scripts/python.exe manage.py test    # 158/158 — Django suite, 7 apps
-# probe_forms.py needs a server running in another terminal:
+./.venv/Scripts/python.exe manage.py test          # 171 tests OK
+./.venv/Scripts/python.exe verify_rules.py         # 28/28
+./.venv/Scripts/python.exe smoke_api.py            # 51/51
+./.venv/Scripts/python.exe manage.py seed --flush  # smoke_api dirties the DB
+# probe_forms needs a live server in another terminal:
 ./.venv/Scripts/python.exe manage.py runserver
-./.venv/Scripts/python.exe probe_forms.py    # 26/26 — every UI create + update
+./.venv/Scripts/python.exe probe_forms.py          # 26/26
 ```
 
-**`probe_forms.py` needs a live server on :8000.** It drives real HTTP with
-`urllib`, unlike `smoke_api.py` which uses Django's test client. Running it
-without a server gives a `WinError 10061` traceback, not a clean message.
+`npm run build` clean. **Always `seed --flush` after `smoke_api.py`** (B-010).
 
-**Always `manage.py seed --flush` after `smoke_api.py`** — it writes an
-`April 2026 (smoke)` payrun into the dev database and the dashboard then opens on
-it (B-010).
+> **Do not start the server with `--noreload`.** Session 04 did, then spent time
+> chasing a "bug" that was the server holding pre-fix code. See B-015.
 
-### Frontend — verified by clicking, not by reading
+### Driven by hand in a browser this session
 
-Both servers, in two terminals:
+**All 18 routes** render real content — no "Not found", no error banner, and an
+instrumented sweep recorded **zero failed network requests**.
 
-```bash
-cd project/backend  && ./.venv/Scripts/python.exe manage.py runserver
-cd project/frontend && npm install && npm run dev      # http://localhost:5173
-```
-
-`npm run build` is clean (613 modules, ~5.8s). Sign in `admin@oxp.com` /
-`demo1234`; the login card has one-click chips for all five roles.
-
-**Payrun flow, driven end to end in a browser this session** (as admin, creating
-a fresh March 2026 payrun):
+**The payrun flow, clicked end to end as admin:**
 
 | Step | Observed |
 |---|---|
-| Wizard step 1 | Scope only — no record created |
-| Wizard step 2 | 20 employees, each with the contract **resolved for that period** — Aarav Mehta on his 01 Jan 2026 contract at ₹85,000 |
-| Create Payrun | 20 payslips, Draft, all zeros |
-| Compute | Gross ₹16,85,299.68 · Net ₹15,79,019.68 |
-| Pre-validation | **0 errors, 2 warnings** — Anita Oliver and Meera Iyer, bank account missing — shown **before** Validate |
-| Validate → Mark Paid | State machine advances; at PAID every action button is disabled |
-| Payslip detail | "Contract resolved for this period" card (CON/2026/0001, ₹85,000) and "Salary computation — evaluated in sequence order" (seq 1, 10, 20, 30…) |
+| Wizard step 1 → 2 | **3 payruns before the Create click, 4 after** — steps 1 and 2 create nothing |
+| Step 2 | 20 employees, contract resolved for the period (Aarav → 01 Jan 2026, ₹85,000) |
+| Before Compute | **Validate button disabled** |
+| Compute | `Pre-validation checks — 0 error(s), 2 warning(s)`, shown **before** Validate |
+| Validate → Mark Paid | State advances; at PAID all three action buttons disabled |
+| Send Payslips | "20 payslip(s) sent, 0 skipped" |
+| Payslip PDF | 200, `application/pdf`, 77 KB, valid `%PDF-` header |
 
-**Time Off self-service, driven as `john@oxp.com` (Employee):** the Payroll menu
-is absent, the request list and attendance list are scoped to him alone, the New
-Request form fills his name in read-only, the balance table loads on type
-selection (Allocated 20 / Taken 2 / Remaining 18), a two-day Paid Time Off
-request saves as Draft with duration **2.00**, and a same-day First-half Sick
-Leave request saves with duration **0.50**.
+**Role scoping:** as `john@oxp.com` the Payroll menu is absent and all five
+permission flags are false. **Attendance widget:** `out` → Check In → `in` with
+a live session → Check Out.
 
-### The five graded rules
-
-All five are proven by `verify_rules.py` and the Django suite, and all five are
-now visible in the UI:
-
-1. **Period-based contract resolution** — payrun wizard step 2, the payslip's
-   "Contract resolved for this period" card, and `Contracts → Resolve by period`.
-2. **Derived weekly hours** — Working Schedules, no weekly-hours input exists.
-3. **Allocation-gated leave** — the balance table on the request form, and the
-   server's own refusal text when no allocation covers the request.
-4. **Sequenced salary rules** — the payslip's computation table, ordered by
-   sequence, gross and net derived from the lines.
-5. **Pre-finalization warnings** — the payrun's pre-validation panel, populated
-   before Validate is available.
+**Time off (Scenario B):** Comp Off refused with the server's exact wording,
+balance table reads 20 / 0 / 20, approving Priya's 08 Mar row moves her
+allocation to **20 / 2 / 18**.
 
 ### Seed evidence — live, not hardcoded
 
@@ -123,68 +98,91 @@ now visible in the UI:
 | Jan 2026 | ₹14,82,320 | |
 | Feb 2026 | ₹15,58,668 | Higher — February overtime reached payroll |
 
-Feb filtered to Engineering alone: ₹5,03,589.
+Feb filtered to Engineering alone: **₹5,03,589**. Worked days are realistic in
+every period (Dec 18–23 of 23, Jan 18–21 of 21, Feb 17–20 of 20).
 
-Counts: 22 employees, 24 contracts, 859 attendance, 11 leave requests, 3 payruns,
-60 payslips, 840 lines, 6 warnings.
+Counts: 22 employees, 24 contracts, 1,746 attendance, 11 leave requests,
+3 payruns, 60 payslips, 960 lines, 6 warnings.
 
 ---
 
 ## ❌ WHAT IS BROKEN
 
-**Nothing known.** All four harnesses green, `npm run build` clean, and the two
-flows above were driven by hand in a browser after the last commit.
+**Nothing known.** All four harnesses green, build clean, and every flow above
+was driven by hand after the last commit.
 
 ---
 
 ## 🚧 WHAT IS HALF-DONE
 
-**Nothing is half-done in the code.** The working tree is clean, every branch is
-merged into `main`, and `main` is pushed.
-
-What is *unfinished* is rehearsal, and one specific risk:
-
-### ⚠ The demo script has never been rehearsed against a running app
-
-`claude/deliverables/demo-script.md` was written by session 03 partly from
-source. **Scenario B steps B2–B3 are built on the New Time Off Request form,
-which could not submit at all until this session fixed it** — the script's line
-*"Submit, and it saves"* would have failed live on stage with
-`half_day: "False" is not a valid choice`.
-
-The form works now, and the fix is verified. But the script itself has not been
-walked through, and two things in it are worth checking against the app:
-
-- The form now has a **Half day** field (Full day / First half / Second half)
-  between the date row and Reason. The script's click path does not mention it.
-  The default is Full day, so the path still works — but a presenter reading the
-  script will meet a field the script does not name.
-- **B5 claims "Taken two. Remaining eighteen."** A newly submitted request is
-  `DRAFT`, and `Allocation.taken` counts only **approved** requests — so the
-  request submitted at B3 does not move the balance by itself. Check that B4
-  actually approves it, or that the narration is talking about pre-existing
-  seeded state. As written this is the step most likely to embarrass someone.
+**Nothing in the code.** Working tree clean, every branch merged into `main`,
+`main` pushed.
 
 ---
 
 ## ⬜ NOT STARTED
 
-- **T-063 — demo rehearsal.** Nobody has walked the script end to end.
-- **T-075 — frontend tests.** None exist. Lowest priority; the browser pass and
-  `probe_forms.py` cover the same ground more cheaply for a 24h build.
+### 1. A 200–300 employee dataset — requested, deferred on purpose
+
+The user asked for a large roster to demonstrate scalability, then said: *"keep
+the dataset building for the end don't do it right now — let's first ensure that
+the software is running perfectly and the workflow is perfect."* **That
+verification is now done, so this is the next piece of work.**
+
+Notes for whoever picks it up:
+
+- The demo script depends on specific seeded people — **John Dsouza, Priya
+  Sharma, Audrey Peterson, Anita Oliver, Meera Iyer, Aarav Mehta**. They must
+  survive the expansion with their exact contracts and balances.
+- The seed inserts rows one at a time. At 250 employees the attendance loop
+  alone is ~20,000 inserts — use `bulk_create` or it will crawl.
+- Prefer a `--employees N` flag over replacing the roster, so the demo-safe
+  22-person set stays the default and the demo script stays true.
+- PRD-7.2 asks for a payrun of 20 in under 5 seconds. **Measure at 250 and
+  record the number** — scalability is the whole point of the exercise.
+
+### 2. PRD success criterion 4 — the one unmet criterion
+
+> "A payrun surfaces at least **two distinct** warnings before validation."
+
+Only `AC_MISSING` fires (×2). The engine supports six codes — `DUPLICATE`,
+`NO_CONTRACT`, `NEGATIVE_NET`, `NO_STRUCTURE`, `RULE_ERROR` — and the seed
+exercises none of them. A 250-person roster with joiners and leavers naturally
+produces more, so **fold this into the dataset work**.
+
+### 3. T-075 — frontend tests
+
+None exist. Lowest priority; `probe_forms.py` and the browser pass cover the
+same ground more cheaply for a 24-hour build.
 
 ---
 
 ## ➡️ THE SINGLE NEXT ACTION
 
-Start both servers, sign in as `admin@oxp.com`, and **walk
-`claude/deliverables/demo-script.md` from A1 to C2 with the script open beside
-you**, correcting it in place wherever the app disagrees. Begin with Scenario B
-steps B2–B5, which are the least trustworthy part of the document for the reasons
-above.
+Build the large dataset (item 1), keeping the demo-critical employees intact,
+and use the joiners and leavers it produces to close PRD criterion 4.
 
-That is a rehearsal *and* a correctness pass on a graded deliverable, and it is
-the highest-value hour left in the project.
+---
+
+## ⚠️ OPEN DECISION FOR THE USER — do not act alone
+
+The user said **"remove your commits"** and the session ended before it was
+resolved. The facts, checked:
+
+- **Every commit in the repository is authored by one of the three teammates.**
+  There is no Claude-authored commit. Session 04's commits are all
+  `TheTeam404 <sohampanchal2229@gmail.com>` — the user's own account.
+- **Exactly one commit carries a Claude co-author trailer:** `12a632f`, the root
+  scaffold commit from session 01, written before D-010 was decided. That single
+  trailer is why `claude` appears in GitHub's contributor list.
+- Removing it means rewriting ~117 commits and force-pushing, which would break
+  the other teammates' clones and risk losing in-flight work. Force-push and
+  `filter-branch` are denied in `.claude/settings.json` by design.
+
+**Ask before touching history.** If the user confirms a rewrite, first confirm
+both other teammates have pushed and are idle. It is also possible they meant
+"revert session 04's code changes" — that would drop four live bug fixes, so
+establish which they mean rather than guessing.
 
 ---
 
@@ -194,24 +192,13 @@ See `claude/context/decisions.md`. Do not reopen.
 
 | | |
 |---|---|
-| **Stack** | React 19 + Vite, Django 6.1 + DRF 3.18. **SQLite, not Postgres** *(D-011)* |
-| **Scope** | Full spec + 3 integration connections *(D-002)* — all three built |
-| **Locale** | India, ₹, PF/ESIC/PT/LWF, single company *(D-003)* |
-| **UI** | Anthropic warm palette, serif/sans pairing. **Binding:** `claude/context/ui-design-language.md` *(D-013)* |
+| **Stack** | React + Django/DRF. **SQLite, not Postgres** *(D-011)* |
+| **Scope** | Full spec + 3 integration connections *(D-002)* — all built |
+| **Locale** | India, ₹, PF / ESIC / PT / LWF, single company *(D-003)* |
 | **Repo** | `https://github.com/MeghRaval30/odoo_2026` |
 | **Git identity** | Each session commits as its own teammate *(D-009)* |
-| **Commits** | No machine attribution *(D-010)*; **no character name in the subject either** *(D-018)* |
+| **Commits** | No machine attribution *(D-010)*, no character tag *(D-018)* |
 | **Context folder** | Updated **only** at MEGATRON LAUNCH *(D-012)* |
 
----
-
-## ⚠️ OPEN QUESTIONS FOR THE USER
-
-1. ~~Exact hackathon start and end time.~~ **ANSWERED:** 10:00 IST 05 Sep →
-   10:00 IST 06 Sep.
-2. Commit `12a632f` carries a Claude co-author trailer from before D-010. Fixing
-   it needs a force-push, which is denied at settings level. Harmless; leave it.
-3. **Still open, asked twice, never answered.** Is a deployed demo required, or
-   does a local walkthrough suffice? It changes what the roadmap and the demo
-   script should assume. Ask again early — it is cheap to ask and expensive to
-   guess wrong at hour 22.
+Contribution split at handoff: `Robo9327study` 75 · `TheTeam404` 25 ·
+`MeghRaval30` 17.

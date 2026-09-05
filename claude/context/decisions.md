@@ -411,3 +411,88 @@ drives end to end as part of the state-machine run.
 
 Concretely: uncovered surface is worse than untested surface, because a green
 harness on an incomplete list reads as proof.
+
+
+---
+
+## D-021 — Employer contributions are separated from employee pay
+
+**Decided by:** Michael, session 04 · 2026-09-05
+
+`SalaryRule.is_employer_cost` now genuinely keeps a rule out of the employee's
+gross and net, accumulating instead into a parallel bucket exposed as
+`Payslip.employer_cost` and `Payslip.ctc`.
+
+**Rationale.** The flag was stored on the model, serialized by the API and
+editable as a checkbox in the Salary Rule form — and `payroll/engine.py` never
+read it. Ticking "Employer cost" on a provident-fund rule still reduced the
+employee's take-home pay, because every rule's amount was accumulated into
+`categories` regardless of who bears it. Configuration that silently does
+nothing is worse than configuration that is absent, and this particular
+omission produced wrong money.
+
+Employer rules stay visible to later rules by code, since an employer-side rule
+may legitimately reference the employee-side figure. The flags are snapshotted
+onto `PayslipLine` so a historical payslip keeps reading correctly after a rule
+is edited.
+
+---
+
+## D-022 — The payslip PDF embeds a rupee-capable font
+
+**Decided by:** Michael, session 04 · 2026-09-05
+
+`payroll/pdf.py` registers a TrueType face carrying U+20B9 when the platform
+has one, and falls back to an ASCII `INR` prefix when it does not. Every table
+sets a base `FONTNAME` across its whole grid.
+
+**Rationale.** ReportLab's built-in Helvetica is a Type 1 face encoded WinAnsi,
+which has no rupee glyph, so every money figure on every payslip PDF rendered a
+substitute character. The PDF is a required deliverable and no harness had ever
+opened one — they only assert that bytes come back.
+
+Embedding the font was not sufficient on its own: each `TableStyle` set
+`FONTNAME` only on its header row or label column, so the body cells — exactly
+where the money sits — still fell back to Helvetica. The base entry fixes that.
+
+The ASCII fallback matters because the build machine happens to have Arial;
+a teammate's machine might not, and a payslip that renders correctly only on one
+laptop is not fixed.
+
+---
+
+## D-023 — Pay is prorated to the contract's own dates
+
+**Decided by:** Michael, session 04 · 2026-09-05
+
+`gather_period_facts` clamps the day window to the contract, and a proration
+factor scales any percentage taken against the contract wage. Percentages of
+another rule are left alone, because their base is already prorated.
+
+**Rationale.** Expected days were measured across the whole payroll period with
+no reference to `contract.start_date` or `end_date`, and a percentage rule took
+its cut of the full monthly wage. An employee joining on 20 February was
+therefore paid a full February. It is the commonest real payroll case and the
+one a payroll manager would refuse to sign, and it sat inside the graded rule
+engine. The roadmap had it as deferred future work (N-3); with time in hand it
+was worth converting a documented weakness into a strength.
+
+---
+
+## D-024 — Overtime in the seed is confined to February onward
+
+**Decided by:** Michael, session 04 · 2026-09-05
+
+Seeded attendance spans December 2025 to March 2026, but only February onward
+carries overtime.
+
+**Rationale.** Attendance previously started in February, so the December and
+January payslips read "Worked Days 0.00 / 23.00" — the payruns were arithmetically
+correct but looked broken. Extending attendance fixes that, but sprinkling
+random overtime across every month would swamp the demo's two headline signals:
+December sits under January purely because two employees resolve to older,
+cheaper contracts, and February rises purely because overtime reached payroll.
+Keeping the earlier months clean preserves both.
+
+Attendance is also no longer generated on public holidays, which had made worked
+days exceed expected days — January read 22 of 21.

@@ -236,3 +236,97 @@ pushed and deliberately unmerged.
 **Handoff tag:** `handoff-trevor-03`
 **Next up:** MICHAEL — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`.
 His first action is to rehearse the demo script against a running app.
+
+---
+
+## Session 04 — MICHAEL (second time round the rotation)
+
+**Opened:** 2026-09-05, ~13:58 IST
+**Closed:** 2026-09-05, ~15:20 IST (~1h 20m)
+
+### Picked up
+Trevor's handoff: everything built, T-063 (demo rehearsal) outstanding. The user
+asked for a fresh audit of the PDF and mockup to find unimplemented features.
+
+### The audit found nothing missing — and that was the useful result
+
+All sixteen required modules (A1–A7, B1–B9) are present, plus extras the spec
+never asked for. Two suspicions turned out to be false alarms: a stray `₹ 1.50L`
+on every page is Recharts' own measurement span at `top: -20000px`, and a
+"missing" salary-config route was a wrong URL guess on my part.
+
+So instead of inventing features, the session went after defects. **Four real
+ones, all of which 158 tests and four green harnesses had been blind to.**
+
+### Defects found and fixed
+
+1. **The payslip PDF could not draw a rupee sign.** ReportLab's Helvetica is a
+   Type 1 face encoded WinAnsi with no U+20B9 glyph, so every money figure on
+   every payslip rendered a substitute character. Embedding a TrueType face was
+   not enough on its own — each `TableStyle` set `FONTNAME` only on its header
+   row, leaving the body cells, where the money is, on the default face. The
+   user caught the second half by downloading a payslip after I had declared it
+   fixed.
+2. **`is_employer_cost` and `appears_on_payslip` were dead config** — stored,
+   serialized, editable checkboxes that the engine never read. Ticking "Employer
+   cost" on a provident-fund rule still reduced the employee's net pay.
+3. **Mid-period joiners were paid a full month.** `gather_period_facts` never
+   consulted the contract's dates. A 20 February joiner drew a full February
+   basic — the commonest real payroll case and the one nobody would sign.
+4. **December and January payslips read "Worked Days 0.00 / 23.00"** because
+   seeded attendance started in February. Also fixed attendance being generated
+   on public holidays, which had made January read 22 worked against 21 expected.
+
+### T-063 closed — the demo is rehearsed
+
+Scenario B was walked click by click and every claim holds. Scenario A's data was
+verified against the database. The rehearsal itself surfaced a fifth bug: the
+Comp Off refusal stayed on screen after switching to Paid Time Off, so the form
+showed "refused" directly above "20 days available", in the middle of the step
+that demonstrates graded rule three.
+
+The standing worry that B5's "Taken two, Remaining eighteen" was wrong is
+**unfounded** — B4 approves the March row first, and that is what moves the
+balance.
+
+### Full browser QA
+
+All 18 routes render real content with zero failed network requests. The payrun
+state machine was driven end to end: 3 payruns before the Create click and 4
+after (steps 1 and 2 create nothing), Validate disabled until Compute, warnings
+shown before Validate, all actions disabled at PAID, 20 payslips emailed, PDF
+served valid. Role scoping and the attendance widget both verified by hand.
+
+### Numbers moved
+
+February is now ₹15,58,667.87 and Engineering alone ₹5,03,589.11. December and
+January are unchanged, so the headline comparison still holds. The figures quoted
+in the demo script, README and current-state were updated to match.
+
+### Left undone, deliberately
+
+The user asked for a **200–300 employee dataset** to demonstrate scalability,
+then said to hold it until the software and workflow were verified. That
+verification is now complete, so the dataset is the next piece of work. It also
+carries PRD criterion 4 with it — only `AC_MISSING` currently fires, and a large
+roster with joiners and leavers naturally produces more warning types.
+
+### Unresolved — needs the user
+
+The user said "remove your commits" and the session ended before it was settled.
+Every commit is authored by a teammate; exactly one (`12a632f`, the root scaffold
+commit) carries a Claude co-author trailer. Removing it means rewriting ~117
+commits and force-pushing. Details and options are in `current-state.md`.
+
+### Decisions added
+D-021 employer cost separation · D-022 PDF font embedding · D-023 proration ·
+D-024 overtime confined to February in the seed.
+
+### Traps recorded
+B-016 through B-020 — the `--noreload` trap, byte-count harnesses proving
+nothing, `pdftotext` misreading subset fonts, the Browser pane refusing PDFs,
+and heredocs corrupting file content.
+
+**Handoff tag:** `handoff-michael-04`
+**Next up:** FRANKLIN — briefing in `claude/handoff/NEXT-SESSION-PROMPT.md`.
+His first action is the 200–300 employee dataset.

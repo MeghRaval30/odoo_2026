@@ -253,3 +253,58 @@ NEXT-SESSION-PROMPT.md)*
 
 **4.** *(the trigger)*
 > megatron launch
+
+
+---
+
+## Session 04 — MICHAEL (second time round the rotation)
+
+**1.**
+> ok now franklin done trevor done aswell, back to you
+>
+> start working, pls re check the pdf and the mockup image, check wht features
+> are still yet to be implemented and then start working on building all the
+> features first
+
+**2.**
+> keep github open in your browser
+
+**3.**
+> and login my acc
+
+**4.**
+> okay i have logged in my acc in github in your browserr now continuee
+
+**5.**
+> are we completely done according to our plan check on everything and then
+> let's start refining it
+
+**6.** *(mid-turn)*
+> still while downoading the payslip pdf the rupee sign is not visible
+
+**7.** *(mid-turn)*
+> push all the changes into the repo
+
+**8.** *(mid-turn)*
+> why everyone's worked days is zero
+
+**9.** *(mid-turn)*
+> we need to put a big database of employees in it to show our software
+> scalable once you are done with everthing build the database of 200-300
+> employees and feed it into software
+
+**10.** *(mid-turn)*
+> keep the dataset building for the end don't do it right now
+
+**11.** *(mid-turn)*
+> let's first ensure that the software is running perfectly and the workflow
+> is perfect
+
+**12.**
+> you have to push through my acc not yourss
+
+**13.** *(mid-turn — unresolved, see current-state.md)*
+> remove your commits
+
+**14.**
+> Megatron launchh!!!

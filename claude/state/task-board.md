@@ -139,3 +139,19 @@ Everything below is optional except the first line.
 **The board is effectively complete.** The failure mode from here is not running
 out of time — it is breaking something that already works. Prefer rehearsal over
 refactoring.
+
+## Phase 5 — Session 04: audit, rehearsal and correctness
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-080 | Re-audit PDF + mockup for missing features | `DONE` | Michael | all 16 modules present; nothing missing |
+| T-081 | Fix stale refusal on the time-off request form | `DONE` | Michael | found by rehearsal; blocked Scenario B3 |
+| T-082 | Label dashboard Remaining column scope | `DONE` | Michael | period-scoped vs all-period figures read as arithmetic |
+| T-083 | Honour `is_employer_cost` / `appears_on_payslip` | `DONE` | Michael | were dead config; employer PF reduced net pay |
+| T-084 | Embed a rupee-capable payslip PDF font | `DONE` | Michael | Helvetica has no U+20B9; every figure was wrong |
+| T-085 | Draw PDF table cells in the embedded font | `DONE` | Michael | FONTNAME was header-only, body fell back to Helvetica |
+| T-086 | Prorate mid-period joiners and leavers | `DONE` | Michael | 20 Feb joiner was paid a full month |
+| T-087 | Seed attendance across Dec–Mar, skip holidays | `DONE` | Michael | Dec/Jan payslips read 0 worked days |
+| T-088 | Full browser QA of all 18 routes and both flows | `DONE` | Michael | zero failed requests; state machine verified |
+| T-089 | **Build a 200–300 employee dataset** | `TODO` | | **user-requested, deferred to now.** Keep demo employees intact; use `bulk_create`; measure payrun timing |
+| T-090 | Close PRD criterion 4 (two distinct warnings) | `TODO` | | only `AC_MISSING` fires; fold into T-089 |
