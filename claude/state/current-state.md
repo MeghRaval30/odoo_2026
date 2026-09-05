@@ -11,10 +11,10 @@
 ```
 Hackathon start:   2026-09-05   10:00 IST   ✅ confirmed by the user
 Hackathon end:     2026-09-06   10:00 IST   ✅ confirmed by the user
-Session 05 closed: 2026-09-05   21:30 IST   (wall clock, `date`)
-Elapsed:           ~11h 30m  /  24h
-REMAINING:         ~12h 30m
-Phase:             BUILD  (>8h)
+Session 06 closed: 2026-09-05   22:50 IST   (wall clock, `date`)
+Elapsed:           ~12h 50m  /  24h
+REMAINING:         ~11h 10m
+Phase:             BUILD  (>8h) — but see the note below
 ```
 
 **Run `date` yourself** and recompute before making any scope call.
@@ -26,262 +26,233 @@ Phase:             BUILD  (>8h)
 | < 4h | **POLISH** | Stop coding. Seed data, demo rehearsal, roadmap |
 | < 2h | **DEMO** | Rehearse only. Touch nothing |
 
+**The gate says BUILD, and you should behave as though it says FREEZE.** There
+is no feature left on the board that the graded deliverables need. The board is
+complete apart from the demo script, and the one remaining risk is breaking
+something that works. Prefer rehearsal over refactoring.
+
+---
+
+## ⚠️ TWO SESSIONS ARE RUNNING IN PARALLEL — read this first
+
+`origin/main` picked up two commits during this session from **another live
+session that also calls itself session 06, as Michael** (`a7c4d3d`, `a1ae6a7` —
+"open session 06 (Michael) — boot, rebase resolution, startup verification").
+They touched only `claude/state/runbook.md` and
+`claude/workflow/session-log.md`; this session touched neither, so the merge was
+clean.
+
+**But the relay is no longer a single file.** Before you write anything:
+
+```bash
+git fetch origin && git log --oneline -5 origin/main
+```
+
+and expect `claude/` files — especially `session-log.md`, `PROGRESS.md` and this
+one — to have been edited by somebody who is not you. Merge, do not overwrite.
+
+**A second, related trap.** `main` cannot be checked out in this worktree: it is
+held by an abandoned worktree at `.claude/worktrees/frontend-routing-setup-e9a159`,
+whose local `main` ref is stale at `ba294be`, far behind the real one. Do not
+trust the local `main` ref. Work against `origin/main`:
+
+```bash
+git checkout -b integrate/<something> origin/main
+git merge --no-ff <your-branch> -m "merge: ..."
+git push origin HEAD:main
+```
+
+That is how this session's work reached `main` at `1437c25`.
+
 ---
 
 ## WHERE WE ARE
 
 Sessions: 01 Michael (backend) · 02 Franklin (frontend) · 03 Trevor (tests,
-deliverables) · 04 Michael (audit, correctness fixes) · **05 Franklin (this
-one — large dataset, then a full RBAC + UI overhaul the user commissioned
-mid-session).**
+deliverables) · 04 Michael (audit, correctness) · 05 Franklin (RBAC + UI
+commission, ~70%) · **06 Trevor (this one — finished the commission).**
 
-The product was already complete and verified end to end at the start of this
-session. Session 05 did two things:
-
-1. **Finished the queued work** — `seed --employees N` (T-089) and its tests.
-2. **Executed a large new commission** (see `claude/PROGRESS.md` for the running
-   diary, and §"THE COMMISSION" below). Roughly **70% delivered**; the remaining
-   30% is a screen-by-screen pass over the older screens, which is listed under
-   HALF-DONE and is the next session's job.
-
-**The commission is not finished.** Read `claude/handoff/NEXT-SESSION-PROMPT.md`
-in full — it is written specifically for finishing it.
+**The commission the user gave in session 05 is now complete.** Every task on the
+board is `DONE` except the demo script (T-107). The product works end to end and
+has been driven by hand, as all five roles, this session.
 
 ---
 
 ## ✅ WHAT WORKS — verified, with the command or click-path that proves it
 
-### Harnesses
+### Harnesses — all green at 22:45 IST
 
 ```bash
 cd project/backend
-./.venv/Scripts/python.exe manage.py migrate          # 0003 + 0004 are new
-./.venv/Scripts/python.exe manage.py test             # 216/216 OK  ✅ verified 21:50
-./.venv/Scripts/python.exe verify_rules.py            # 28/28  ✅ re-run this session
-./.venv/Scripts/python.exe smoke_api.py               # 51/51  ✅ re-run this session
-./.venv/Scripts/python.exe manage.py seed --flush     # smoke_api dirties the DB
+./.venv/Scripts/python.exe manage.py migrate
+./.venv/Scripts/python.exe manage.py test              # 218/218 OK   ← 2 new
+./.venv/Scripts/python.exe verify_rules.py             # 28/28
+./.venv/Scripts/python.exe smoke_api.py                # 51/51  (needs the server)
+./.venv/Scripts/python.exe probe_forms.py              # 26/26  (needs the server)
+./.venv/Scripts/python.exe manage.py seed --flush      # the harnesses dirty the DB
 ```
 
-> **216/216 green**, confirmed at 21:50 IST after the seed-shape fix. That
-> includes accounts 86 (31 of them new security tests), attendance 33 and core 9
-> (new). Re-run it anyway as your first action — it is cheap and it is the only
-> thing that proves the checkout you have is the one that was packed.
+`npm run build` clean, 748 kB JS.
 
-`npm run build` clean (742 kB bundle, 24 kB CSS).
+> **The venv is not in this worktree.** It lives in the main checkout at
+> `C:/Users/raval/Desktop/odoo_2026/project/backend/.venv/Scripts/python.exe`.
+> Run that interpreter against this worktree's `manage.py`; the SQLite file is
+> created per worktree from `BASE_DIR`, so each worktree has its own database.
+> `npm install` is also needed once per worktree.
+
+### The seed, after this session's change
+
+```
+22 employees | 24 contracts | 1746 attendance | 11 leave requests
+4 payruns | 61 payslips | 976 lines | 6 warnings
+December ₹14,73,360 · January ₹14,82,320 · February ₹15,58,667.87   (unchanged)
+```
+
+The fourth payrun is new and deliberate: `March 2026 (off-cycle correction)`,
+one payslip for **Vikram Rao**, left at **Computed**. See PRD criterion 4 below.
 
 ### Driven by hand in a browser this session
 
 | Signed in as | Observed |
 |---|---|
-| `john@oxp.com` (Employee) | Top bar is **Dashboard · Attendance · Time Off ▾ · My Payslips** and nothing else. Employee dashboard renders his contract `CON/2026/0002` ₹1,10,000, leave 18 of 20, three payslips, expected weekly **40h 00m** |
-| `sara@oxp.com` (HR Manager) | Top bar is **Dashboard · Employees ▾ · Contracts ▾ · Attendance · Time Off ▾ · My Payslips** — **no Payroll, no Reports, no Administration**. Workforce dashboard: headcount 22, 4 waiting on her, coverage 100%, average day **8h 43m**, overtime **124h 38m carried by 22 employees**. No money anywhere on the screen |
-| `admin@oxp.com` (Admin) | `/api/auth/me/` returns all eight menu groups: dashboard, employees, contracts, attendance, timeoff, payroll, reports, admin |
+| `john@oxp.com` Employee | Menu is exactly Dashboard · Attendance · Time Off · My Payslips. `/employees`, `/payroll`, `/users`, `/security`, `/salary-rules` all answer **"Not available for this account."** Attendance shows his own 80 rows and no New Record. Allocations shows his one row, no New Allocation. My Payslips lists three, opens his own detail, and the PDF is 76 kB of real `%PDF-1.4` |
+| `sara@oxp.com` HR Manager | All 13 of her routes render; every payroll and admin route refuses. Sees Approve/Refuse on ten of eleven leave requests |
+| `rahul@oxp.com` Payroll User | Reaches payroll. Salary Rules opens **read-only** — no New Rule, and the rule form offers Close with no Save. `/users`, `/security`, `/audit` refuse |
+| `aarav@oxp.com` Payroll Manager | Same screen with New Rule and Save present |
+| `admin@oxp.com` Admin | All 18 routes render |
 
-### The large dataset (T-089 — DONE)
+### The four screens session 05 never clicked — now all walked
 
-```bash
-./.venv/Scripts/python.exe manage.py seed --flush --employees 250
+Profile (all three tabs), Security, Audit log, My Payslips, Admin dashboard.
+Proven end to end, each with the state restored afterwards:
+
+- Direct profile field edited and saved; approval-gated bank change raised by
+  John, **approved by Sara, and the value landed on the employee record**; a
+  second request refused, and it did not.
+- **Nobody decides their own** — Sara raising a request against her own record is
+  refused with the server's sentence.
+- **Password change** rotates the token, stores the new one and keeps the session
+  alive; a subsequent `/api/employees/` call on the rotated token succeeds.
+- **Security** — a network policy added through the UI; switching enforcement on
+  from an address it does not cover is refused **and now says why**; adding a
+  policy that covers the address then succeeds.
+- **Audit log** captured every one of those actions, and its filter and search
+  both work.
+
+### Six design languages — now actually applied
+
+**They had never worked.** All six resolved to Ledger (see WHAT WAS BROKEN
+below). Fixed, and every one opened on a dashboard, a kanban, a table and a
+modal: Ledger, Console, Atrium, Blueprint, Marigold, Graphite. No horizontal
+page overflow in any of them, measured. Charts follow the theme and re-colour
+live when it is switched.
+
+### PRD success criterion 4 — met on the demo seed
+
+```
+March payrun over the eligible 20 →  19 payslips
+  AC_MISSING x2   (Anita Oliver, Meera Iyer)
+  DUPLICATE  x1   (Vikram Rao — already has a March payslip, skipped)
+  severities: all WARNING       can_validate: True
 ```
 
-**Measured, 2026-09-05:**
-
-| | |
-|---|---|
-| 250 employees seeded | **40 s** wall clock |
-| Rows written | 278 contracts, 250 allocations, **19,045 attendance**, 680 payslips |
-| Payrun of 20 (default seed) | **0.6–0.7 s** — PRD-7.2 asks for <5 s ✅ |
-| Payrun of 225–230 (Dec/Jan/Feb) | **6.9 / 7.4 / 7.6 s** |
-| Payrun of 233 (March, created live) | create 1.4 s, **compute 5.7 s** |
-| Dashboard at 250 | `/api/dashboard/` 2.9 s · `/api/employees/` 0.6 s · `/api/payruns/` 2.8 s |
-
-Scaling is linear: ~32 ms per payslip at both 20 and 233 employees.
-
-**PRD success criterion 4 is now met.** A March 2026 payrun over the 250-person
-roster raises **`NO_CONTRACT` ×8 and `AC_MISSING` ×13** — two distinct codes.
-The default 22-person demo seed still raises only `AC_MISSING` ×2; see
-"THE OPEN QUESTION" below.
-
-**The default seed is byte-identical to before.** 22 employees, 24 contracts,
-1,746 attendance, 3 payruns, 60 payslips, 960 lines, 6 warnings; December
-₹14,73,360 · January ₹14,82,320 · February ₹15,58,667.87. `core/tests.py` pins
-all of it, so a change that moves the demo's numbers fails there first.
+Two distinct codes, and `[Validate]` still available so demo steps A8/A9 survive.
 
 ---
 
-## ❌ WHAT IS BROKEN
+## ❌ WHAT WAS BROKEN, AND IS NOW FIXED
 
-**Nothing known to be broken.** But note two things:
+Recorded because each was invisible from the code and only fell out of clicking.
 
-1. **Two stale `runserver` processes were found on port 8000** at 20:50 IST, one
-   serving pre-fix code and answering first. This wasted time — see B-021.
-   Check `netstat -ano | grep ":8000.*LISTENING"` before debugging anything that
-   looks like an edit not taking effect.
-
----
-
-## 🚧 WHAT IS HALF-DONE
-
-Working tree clean, `feat/rbac-ui-overhaul` merged into `main`, `main` pushed.
-The *code* is not half-done; the **commission** is. What remains:
-
-### 1. The screen-by-screen pass (the big one)
-
-New screens are built to the new design language. **The pre-existing screens
-were not revisited** and still assume the old world:
-
-| File | What is stale |
-|---|---|
-| `project/frontend/src/screens/Login.jsx` | Says "Sign in to continue". The mockup says **"Welcome back" / "Sign in to continue to your workspace" / "Work Email" / "Password" / "Sign In" / "Forgot password?"**. Also still shows five demo-account shortcut buttons |
-| `screens/Attendance.jsx` | Renders `worked_hours` as a decimal. The API now serves `worked_hm` / `overtime_hm` — switch the columns over |
-| `screens/Dashboard.jsx` (payroll) | The Attendance Overview tile still shows an overtime **count**. The endpoint now returns `total_overtime_hm`, `overtime_employees` and `average_worked_hm` — use them |
-| `screens/Users.jsx` | Pre-dates the capability matrix. Should show the multi-role checkbox set, the account-status switch, the **Reset password** action (`POST /api/users/{id}/reset-password/`) and the capability grid from `GET /api/users/capability-matrix/` |
-| `screens/Employees.jsx`, `Contracts.jsx`, `TimeOff.jsx`, `Allocations.jsx`, `Payruns.jsx`, `Payslips.jsx`, `SalaryConfig.jsx`, `Schedules.jsx`, `Reference.jsx`, `Holidays.jsx`, `TimeOffTypes.jsx`, `Reports.jsx` | Work, and inherit the new tokens automatically, but were not re-checked against the mockup or against `auth.has(...)` for per-role action gating. **Action buttons are still gated on the four legacy booleans, not on capabilities** |
-| `components/AttendanceWidget.jsx` | Should read `elapsed_hm` / `total_today_hm` (the mockup's `6h56` form) and must surface `punch_blocked_reason` when the network policy refuses a punch |
-
-### 2. Not verified in a browser
-
-Only Ledger and (briefly) Console were seen. **The other four themes —
-Atrium, Blueprint, Marigold, Graphite — have never been rendered.** They are
-plausible but unproven; check every one before claiming six work.
-
-The Profile, Security, Audit, My Payslips and Admin-dashboard screens were
-written but **only the Admin dashboard's data was confirmed**; none of the four
-new screens has been clicked.
-
-### 3. Not written
-
-No tests for the four new frontend screens, and no test for
-`hr_dashboard_view` / `my_dashboard_view` / `admin_dashboard_view` beyond the
-capability gate. `verify_rules.py` and `smoke_api.py` do not touch any new
-endpoint.
+1. **All six themes resolved to Ledger.** `index.css` must `@import themes.css`
+   at the top and then declares Ledger's defaults on a bare `:root`. `:root` and
+   `[data-theme="x"]` have identical specificity, so the *fallback* won every
+   time. The switcher highlighted the right swatch and stored the choice, and not
+   one token changed. Fixed by `:root[data-theme="x"]`.
+2. **An employee saw Approve and Refuse on their own pending leave request.**
+   The server refused, so nothing could be approved — but the screen advertised
+   the opposite of the rule.
+3. **A refused security toggle flipped back in silence.** `patch()` set the error
+   then called `load()`, which cleared it on success. The best guard on the
+   screen — the one that stops an admin locking everybody out — rendered as a
+   broken checkbox.
+4. **My Payslips printed `18.00 /`** — `expected_days` was on the detail
+   serializer only and the screen reads the list.
+5. **The chart palette was a hand copy of Ledger's tokens** — a terracotta line
+   on Blueprint's electric blue, and invisible axes on both dark themes.
+6. **Marigold's button labels measured 2.86:1**, below AA and below the 3:1
+   large-text floor. Now 5.28:1.
+7. **Typing `#/payroll` as an HR Manager rendered the Payruns screen** — empty
+   table, "0 records", a permission error underneath. It looked broken rather
+   than refused.
 
 ---
 
-## ⬜ NOT STARTED
+## ❌ WHAT IS BROKEN NOW
 
-1. **`/profile` change-request approvals have never been exercised end to end**
-   in the UI. The backend path is tested (`accounts/test_security.py`), the
-   screens are not.
-2. **The demo script has not been updated** for any of this. It still describes
-   the old menu, and it never mentions roles, themes or the profile menu.
-   Whoever finishes the UI must re-rehearse it — see `§14` of the briefing.
-3. **T-075 frontend tests.** Still lowest priority.
+**Nothing known to be broken.** Two things are true and worth knowing:
+
+1. **One account cannot hold two live sessions.** Every sign-in deletes that
+   account's token and issues a fresh one, deliberately, so `token.created` is
+   the start of *this* session. Signing in as `admin@oxp.com` in a second tab
+   silently kills the first, which lands on the login screen. It caught this
+   session twice while driving the app. **Use one tab per account.**
+2. **Ledger's primary button is 3.05:1** — white on Claude orange, below WCAG AA
+   for 13px labels. This is inherited, is fixed by `ui-design-language.md` §2,
+   and is the product's signature look, so it was **reported rather than changed
+   at hour 13**. It is the user's call. Marigold had the same failure at 2.86:1
+   and was fixed, because nobody had ever seen Marigold.
 
 ---
 
-## ➡️ YOUR FIRST ACTION
+## 🔶 WHAT IS HALF-DONE
+
+### T-107 — the demo script is stale, and this session made it staler
+
+`claude/deliverables/demo-script.md`, 257 lines. It was rehearsed and stamped in
+session 04 and describes the pre-RBAC menu. **Four steps now quote wrong
+numbers**, all because of the criterion-4 change:
+
+| Step | Line says | Reality |
+|---|---|---|
+| **A3** | "Three payruns, all paid." | **Four** — three paid plus `March 2026 (off-cycle correction)` at Computed |
+| **A5** | "Twenty payslip shells" | **Nineteen.** The button still reads `Create payrun (20)`: twenty are selected, Vikram Rao is skipped |
+| **A7** | "0 error(s), **2** warning(s)" | "0 error(s), **3** warning(s)" — and now **two kinds**, which is the improvement |
+| **C1** | "It opens on March 2026" | Still true. After A9 the demo's March run is paid, and the dashboard opens on the newest **paid** period |
+
+A8, A9, A10, all of Scenario B, and C2/C3 are untouched. December ₹14,73,360,
+January ₹14,82,320 and February ₹15,58,667.87 are unchanged.
+
+**Three things to add**, in value order:
+
+1. A new beat at A7: *"and it found a second kind of problem — somebody was
+   already paid for March off-cycle, so it skipped him and told me why."* That is
+   the problem statement's own named example, live.
+2. A third scenario: sign in as `john@oxp.com` and show the Payroll menu is
+   **absent**, not greyed out. Stronger than any permissions table.
+3. The theme switcher in the avatar menu — six complete design languages, one
+   click apart. It now actually works.
+
+### The wizard rehearsal was interrupted mid-step
+
+MEGATRON LAUNCH arrived with the New Payrun wizard open at step 1. The criterion-4
+numbers above are proven by test and by a direct engine run, **not** by walking
+the wizard in the browser. Walking A3 → A10 once is the first thing to do.
+
+---
+
+## 🎯 THE SINGLE NEXT ACTION
 
 ```bash
+git fetch origin && git log --oneline -5 origin/main     # another session is live
 cd project/backend
-./.venv/Scripts/python.exe manage.py migrate
-./.venv/Scripts/python.exe manage.py test 2>&1 | tail -20
+netstat -ano | grep -E ":(8000|5173).*LISTENING"          # B-021 and B-027
+./.venv/Scripts/python.exe manage.py seed --flush
+./.venv/Scripts/python.exe manage.py runserver            # terminal 1
+cd ../frontend && npm install && npm run dev              # terminal 2
 ```
 
-If that is green, start the screen-by-screen pass at
-`project/frontend/src/screens/Login.jsx` (smallest, most visible, and quoted
-verbatim in the mockup), then `AttendanceWidget.jsx`, then `Attendance.jsx`,
-then `Dashboard.jsx`'s overtime tile. Those four are the ones the user
-explicitly complained about.
-
----
-
-## THE COMMISSION — what the user actually asked for
-
-Verbatim in `claude/handoff/prompt-history.md` under Session 05. In summary:
-
-1. **Redo the UI completely**, strictly following the excalidraw mockup.
-2. **4–6 themes** — "not just colours … fonts style and boxes style and all the
-   stuff aswell full design language". ✅ **six built**, four unverified.
-3. **Rework account types** from the sources: who exists, what each may do, what
-   each *sees*, and what its dashboard looks like. ✅ **done**.
-4. "**all buttons wont be there for every account type login**" — an employee
-   gets only their own dashboard, with attendance and the rest as separate
-   tabs. ✅ **done and verified in a browser**.
-5. **A profile menu** with user settings and personal-detail changes, "some
-   might require approval". ✅ **built**, not clicked.
-6. "**can you add more than one account type?**" — **yes**, and the matrix takes
-   the union. Confirmed by the mockup's own access note.
-7. **Overtime as a count is useless, and decimal hours are wrong** — needs hours
-   and minutes. ✅ backend done; **the payroll Dashboard tile still shows the
-   count**.
-8. **Security**: login only from selected networks, plus "super critical cyber
-   security stuff … make sure no one can game the system". ✅ **done** — see the
-   briefing §5.
-9. **A user can change their own password.** ✅ **done**.
-10. **Keep committing, and keep `claude/PROGRESS.md` updated.** ✅ done.
-
----
-
-## ⚠️ TWO PLACES THE USER'S EXAMPLES CONTRADICT THE SOURCES
-
-Both resolved **in favour of the PDF**, because the same message said to follow
-the sources strictly. Both are written down rather than settled silently, and
-**the next session should raise them with the user** if there is a chance to.
-
-1. The user said an HR Manager **cannot create an attendance record**. PDF §3
-   gives HR Manager *full CRUD on Attendance*. Resolved for the PDF, but split
-   by intent: an employee's own check-in is a **punch** (own record, today only,
-   network-gated); an HR Manager's is a **correction** (any record, any date,
-   flagged `is_manually_edited` and written to the audit log).
-2. The user said a **Payroll Manager sees only employee details and holidays**.
-   PDF §3 gives the Payroll Manager everything an HR Payroll User has *plus*
-   full CRUD on payruns, payslips, structures and rules. Resolved for the PDF.
-
----
-
-## THE OPEN QUESTION — PRD criterion 4 in the *default* seed
-
-Criterion 4 wants "at least two distinct warnings before validation". It is met
-on the 250-person roster. On the **22-person demo seed only `AC_MISSING` fires**.
-
-Session 05 investigated and **deliberately did not fix it**, because every fix
-damages the rehearsed demo:
-
-- `NO_CONTRACT`, `NEGATIVE_NET` and `NO_STRUCTURE` are **ERROR** severity and
-  block Validate. Seeding one breaks demo steps A8/A9.
-- `DUPLICATE` is warning-severity and is the problem statement's own named
-  example — but it needs a pre-existing payslip for March 2026, and
-  `dashboard/api.py:49` defaults the dashboard period to `Payrun.objects
-  .order_by("-period_start").first()`. Seeding a March payrun would make the
-  dashboard open on March with one payslip, wrecking demo step C1.
-
-**Options for the next session**, in preference order:
-1. Demo on `--employees 250`, where both codes fire naturally. Costs: every
-   figure quoted in `demo-script.md` changes and must be re-measured.
-2. Seed the March off-cycle payrun anyway and change the dashboard's default
-   period to the newest **PAID** payrun rather than the newest one.
-3. Leave it and say so — one criterion of six, and the engine demonstrably
-   supports all six codes.
-
-**Ask the user.** Do not pick silently.
-
----
-
-## LOCKED-IN CONTEXT
-
-See `claude/context/decisions.md`. Do not reopen.
-
-| | |
-|---|---|
-| **Stack** | React 19 + Vite · Django 6.1 + DRF 3.18 · **SQLite** *(D-011)* |
-| **Scope** | Full spec + 3 integrations *(D-002)* — all built |
-| **Locale** | India, ₹, PF / ESIC / PT / LWF, single company *(D-003)* |
-| **Repo** | `https://github.com/MeghRaval30/odoo_2026` |
-| **Git identity** | Each session commits as its own teammate *(D-009)* |
-| **Commits** | No machine attribution *(D-010)*, no character tag *(D-018)* |
-| **Roles** | Five, from PDF §3; an account may hold several and gets the union *(D-025)* |
-| **Themes** | Six, per browser not per account *(D-027)* |
-| **Context folder** | Updated **only** at MEGATRON LAUNCH *(D-012)* |
-
----
-
-## STILL UNRESOLVED FROM SESSION 04 — "remove your commits"
-
-Untouched, because it needs the user. Every commit in the repository is authored
-by one of the three teammates; exactly one (`12a632f`, the root scaffold commit)
-carries a Claude co-author trailer, and that trailer is why `claude` appears in
-GitHub's contributor list. Removing it means rewriting ~120 commits and
-force-pushing, which would break the other teammates' clones. Force-push and
-`filter-branch` are denied in `.claude/settings.json` by design.
-
-**Ask before touching history.**
+Then sign in at `http://localhost:5173` as `aarav@oxp.com` / `demo1234` and
+**walk demo steps A3 → A10 once**, writing the real numbers into
+`claude/deliverables/demo-script.md` as you go. That is T-107 and it is the only
+task left on the board.
