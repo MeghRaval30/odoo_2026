@@ -25,6 +25,10 @@ build/
 .env.*
 !.env.example
 
+# Claude Code — settings.json is committed (team-wide, needed by the relay);
+# settings.local.json is personal to each machine
+.claude/settings.local.json
+
 # Editors / OS
 .vscode/
 .idea/
