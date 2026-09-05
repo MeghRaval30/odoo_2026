@@ -6,7 +6,7 @@
 // refusal rather than a message invented on the client.
 
 import { useEffect, useState } from "react";
-import { api, formatDate } from "../api";
+import { api, auth, formatDate } from "../api";
 import {
   ErrorBox,
   Field,
@@ -24,25 +24,44 @@ const BLANK = {
   time_off_type: "",
   date_from: new Date().toISOString().slice(0, 10),
   date_to: new Date().toISOString().slice(0, 10),
-  half_day: false,
+  // A choice, not a flag: the model stores "" / FIRST / SECOND, and the
+  // duration is halved only when a half is named and the range is one day.
+  half_day: "",
   reason: "",
 };
 
+// An employee raising their own request has nothing to choose here: the server
+// substitutes their own id on POST whatever the payload says, and scopes
+// /api/employees/ to the single row that is theirs. Showing them a one-option
+// picker would be asking a question with one answer, so the field is filled in
+// and shown read-only instead. HR keeps the picker -- they file on behalf of
+// other people, which is the whole reason the field exists.
+const selfService = () =>
+  !auth.can("can_manage_hr") && Boolean(auth.user?.employee_id);
+
 function RequestForm({ onClose, onSaved }) {
-  const [form, setForm] = useState(BLANK);
+  const ownRequest = selfService();
+  const [form, setForm] = useState(() =>
+    ownRequest
+      ? { ...BLANK, employee: String(auth.user.employee_id) }
+      : BLANK);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refs, setRefs] = useState({});
   const [balances, setBalances] = useState([]);
 
   useEffect(() => {
+    // Only HR needs the employee list; for an own request it would be one row.
     Promise.all([
-      api.get("/api/employees/", { page_size: 200 }),
+      ownRequest
+        ? Promise.resolve(null)
+        : api.get("/api/employees/", { page_size: 200 }),
       api.get("/api/timeoff-types/"),
     ])
-      .then(([e, t]) => setRefs({ employees: rows(e), types: rows(t) }))
+      .then(([e, t]) =>
+        setRefs({ employees: e ? rows(e) : [], types: rows(t) }))
       .catch((err) => setError(err.message));
-  }, []);
+  }, [ownRequest]);
 
   useEffect(() => {
     if (!form.employee) return setBalances([]);
@@ -89,14 +108,18 @@ function RequestForm({ onClose, onSaved }) {
       <ErrorBox error={error} />
 
       <Field label="Employee">
-        <select value={form.employee} onChange={set("employee")}>
-          <option value="">—</option>
-          {refs.employees?.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.full_name}
-            </option>
-          ))}
-        </select>
+        {ownRequest ? (
+          <input value={auth.user?.employee_name || ""} readOnly disabled />
+        ) : (
+          <select value={form.employee} onChange={set("employee")}>
+            <option value="">—</option>
+            {refs.employees?.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.full_name}
+              </option>
+            ))}
+          </select>
+        )}
       </Field>
 
       <Field label="Time off type">
@@ -146,6 +169,19 @@ function RequestForm({ onClose, onSaved }) {
           <input type="date" value={form.date_to} onChange={set("date_to")} />
         </Field>
       </div>
+
+      <Field label="Half day">
+        <select value={form.half_day} onChange={set("half_day")}>
+          <option value="">Full day</option>
+          <option value="FIRST">First half</option>
+          <option value="SECOND">Second half</option>
+        </select>
+        {form.half_day && form.date_from !== form.date_to && (
+          <div className="muted">
+            Counted as a half day only when From and To are the same date.
+          </div>
+        )}
+      </Field>
 
       <Field label="Reason">
         <textarea rows={2} value={form.reason} onChange={set("reason")} />

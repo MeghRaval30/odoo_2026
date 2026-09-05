@@ -41,12 +41,29 @@ def first(path, key="results"):
     return rowset[0] if rowset else None
 
 
+def every(path, key="results"):
+    """
+    All rows, for the cases that need to pick a row by a property.
+
+    Not first() with a query string appended -- first() adds its own
+    ?page_size=1, so a path that already carries a query ends up with two
+    question marks and the filter is silently dropped.
+    """
+    _, payload = call("GET", path + "?page_size=200", token)
+    return payload[key] if isinstance(payload, dict) else payload
+
+
 company = first("/api/companies/")["id"]
 employee = first("/api/employees/")["id"]
 department = first("/api/departments/")["id"]
 structure = first("/api/salary-structures/")["id"]
 schedule = first("/api/working-schedules/")["id"]
 timeoff_type = first("/api/timeoff-types/")["id"]
+# The request probe wants a type with no allocation gate, so that a failure
+# means the payload shape is wrong rather than that graded rule #3 fired.
+# The gate itself is covered by verify_rules.py and the Django suite.
+timeoff_type_open = next(t["id"] for t in every("/api/timeoff-types/")
+                         if not t["requires_allocation"])
 
 CASES = [
     ("employee", "/api/employees/", {
@@ -85,6 +102,14 @@ CASES = [
         "name": "Probe Allocation", "allocated": "5",
         "valid_from": "2030-01-01", "valid_to": "2030-12-31",
         "state": "TO_APPROVE", "description": "",
+    }),
+    # The one create form the probe did not cover, which is exactly where a
+    # bug sat: TimeOff.jsx sent half_day as a boolean to a FIRST/SECOND choice
+    # field, so every submission came back 400 and no harness noticed.
+    ("timeoff-request", "/api/timeoff-requests/", {
+        "employee": employee, "time_off_type": timeoff_type_open,
+        "date_from": "2030-05-06", "date_to": "2030-05-07",
+        "half_day": "", "reason": "Probe request",
     }),
     ("salary-rule", "/api/salary-rules/", {
         "structure": structure, "name": "Probe Rule", "code": "PROBE",
@@ -138,6 +163,7 @@ EDITS = {
     "/api/attendance/": {"status": "OVERTIME", "notes": "corrected"},
     "/api/timeoff-types/": {"requires_allocation": True},
     "/api/allocations/": {"allocated": "7"},
+    "/api/timeoff-requests/": {"half_day": "FIRST", "date_to": "2030-05-06"},
     "/api/salary-rules/": {"sequence": 998},
     "/api/holidays/": {"name": "Probe Holiday Renamed"},
     "/api/departments/": {"name": "Probe Dept Renamed"},
