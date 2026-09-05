@@ -56,16 +56,16 @@ in full — it is written specifically for finishing it.
 ```bash
 cd project/backend
 ./.venv/Scripts/python.exe manage.py migrate          # 0003 + 0004 are new
-./.venv/Scripts/python.exe manage.py test             # 216 tests — see note
+./.venv/Scripts/python.exe manage.py test             # 216/216 OK  ✅ verified 21:50
 ./.venv/Scripts/python.exe verify_rules.py            # 28/28  ✅ re-run this session
 ./.venv/Scripts/python.exe smoke_api.py               # 51/51  ✅ re-run this session
 ./.venv/Scripts/python.exe manage.py seed --flush     # smoke_api dirties the DB
 ```
 
-> **The full `manage.py test` run was still executing when this session was cut
-> off.** Every app was green individually within the last hour: accounts 86
-> (incl. 31 new security tests), attendance 33, core 9 (new). **Re-run it first
-> — see §"YOUR FIRST ACTION".**
+> **216/216 green**, confirmed at 21:50 IST after the seed-shape fix. That
+> includes accounts 86 (31 of them new security tests), attendance 33 and core 9
+> (new). Re-run it anyway as your first action — it is cheap and it is the only
+> thing that proves the checkout you have is the one that was packed.
 
 `npm run build` clean (742 kB bundle, 24 kB CSS).
 
@@ -112,11 +112,10 @@ all of it, so a change that moves the demo's numbers fails there first.
 
 **Nothing known to be broken.** But note two things:
 
-1. **The full test suite has not been observed green since the security work
-   landed.** Every app passed individually; the combined run was still going.
-   Treat "216 green" as unverified until you re-run it.
-2. **Two stale `runserver` processes were found on port 8000** at 20:50 IST, one
+1. **Two stale `runserver` processes were found on port 8000** at 20:50 IST, one
    serving pre-fix code and answering first. This wasted time — see B-021.
+   Check `netstat -ano | grep ":8000.*LISTENING"` before debugging anything that
+   looks like an edit not taking effect.
 
 ---
 
