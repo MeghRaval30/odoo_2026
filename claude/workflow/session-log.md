@@ -54,6 +54,28 @@ See `claude/context/decisions.md` — entries D-001 through D-007.
 - The hackathon start time in `current-state.md` is **assumed**, not confirmed.
   Get it corrected early — every scope gate depends on it.
 
+
+### Git setup (added after the initial scaffold)
+
+The user added two requirements partway through: all three teammates must appear
+as commit authors, and the history must show real collaborative development
+rather than a flat line of commits on main. This reversed the earlier plan.
+
+- `claude/workflow/git-strategy.md` written: identity register, branch model,
+  `--no-ff` merge policy, version tags, contribution-balance check
+- D-008 reverses D-007 (branches now required)
+- D-009 per-session git identity, verified before first commit
+- D-010 no machine attribution in commit messages
+- Michael identity confirmed: `TheTeam404 <sohampanchal2229@gmail.com>`
+- Franklin and Trevor rows in the identity register are still `TBC`
+
+Repository is live at https://github.com/MeghRaval30/odoo_2026
+Tagged `v0.1-planning`. Branch `docs/git-strategy` merged `--no-ff` into main.
+
+**Known wart:** commit `12a632f` (initial scaffold) predates D-010 and carries a
+Claude co-author trailer. Left as-is rather than amended, since rewriting pushed
+history is forbidden. Every commit after it is clean.
+
 **Closed:** _(pending)_
 **Handoff SHA:** _(pending)_
 **Next up:** FRANKLIN
