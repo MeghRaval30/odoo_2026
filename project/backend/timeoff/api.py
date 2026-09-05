@@ -1,0 +1,183 @@
+"""Time off API — types, allocations, requests and the approval flow."""
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
+from rest_framework import serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from accounts.permissions import CanManageHR
+
+from .models import Allocation, TimeOffRequest, TimeOffType
+
+
+class TimeOffTypeSerializer(serializers.ModelSerializer):
+    unit_display = serializers.CharField(source="get_unit_display", read_only=True)
+    approval_display = serializers.CharField(source="get_approval_display",
+                                             read_only=True)
+
+    class Meta:
+        model = TimeOffType
+        fields = ["id", "name", "code", "unit", "unit_display",
+                  "requires_allocation", "approval", "approval_display",
+                  "is_paid", "work_entry_code", "color", "active",
+                  "description"]
+
+
+class AllocationSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.full_name",
+                                          read_only=True)
+    type_name = serializers.CharField(source="time_off_type.name",
+                                      read_only=True)
+    unit = serializers.CharField(source="time_off_type.unit", read_only=True)
+    # Derived balance maths (PRD-4.3.3)
+    taken = serializers.DecimalField(max_digits=6, decimal_places=2,
+                                     read_only=True)
+    remaining = serializers.DecimalField(max_digits=6, decimal_places=2,
+                                         read_only=True)
+    state_display = serializers.CharField(source="get_state_display",
+                                          read_only=True)
+
+    class Meta:
+        model = Allocation
+        fields = ["id", "employee", "employee_name", "time_off_type",
+                  "type_name", "unit", "name", "allocated", "taken",
+                  "remaining", "valid_from", "valid_to", "state",
+                  "state_display", "description"]
+
+
+class TimeOffRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.full_name",
+                                          read_only=True)
+    type_name = serializers.CharField(source="time_off_type.name",
+                                      read_only=True)
+    allocation_name = serializers.CharField(source="allocation_used.name",
+                                            read_only=True, default=None)
+    state_display = serializers.CharField(source="get_state_display",
+                                          read_only=True)
+    approver_email = serializers.CharField(source="approver.email",
+                                           read_only=True, default=None)
+
+    class Meta:
+        model = TimeOffRequest
+        fields = ["id", "employee", "employee_name", "time_off_type",
+                  "type_name", "allocation_used", "allocation_name",
+                  "date_from", "date_to", "duration", "half_day", "state",
+                  "state_display", "reason", "approver", "approver_email",
+                  "approved_at"]
+        read_only_fields = ["allocation_used", "approver", "approved_at"]
+
+    def validate(self, attrs):
+        """
+        Run the allocation gate and surface it as a readable API error.
+
+        This is graded rule #3 — a request against an allocation-required type
+        must be refused when no approved allocation covers it.
+        """
+        data = {**{f: getattr(self.instance, f, None)
+                   for f in ("employee", "time_off_type", "date_from",
+                             "date_to", "half_day", "state")},
+                **attrs}
+        probe = TimeOffRequest(**{k: v for k, v in data.items() if v is not None})
+        probe.pk = self.instance.pk if self.instance else None
+        probe.duration = probe.compute_duration()
+        try:
+            probe.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"detail": exc.messages})
+        attrs["duration"] = probe.duration
+        attrs["allocation_used"] = probe.allocation_used
+        return attrs
+
+
+class TimeOffTypeViewSet(viewsets.ModelViewSet):
+    queryset = TimeOffType.objects.all()
+    serializer_class = TimeOffTypeSerializer
+    permission_classes = [CanManageHR]
+    filterset_fields = ["active", "requires_allocation", "unit"]
+    search_fields = ["name", "code"]
+
+
+class AllocationViewSet(viewsets.ModelViewSet):
+    serializer_class = AllocationSerializer
+    permission_classes = [CanManageHR]
+    filterset_fields = ["employee", "time_off_type", "state"]
+    search_fields = ["name", "employee__first_name", "employee__last_name"]
+
+    def get_queryset(self):
+        qs = Allocation.objects.select_related("employee", "time_off_type")
+        user = self.request.user
+        if not user.can_manage_hr and user.employee_id:
+            qs = qs.filter(employee_id=user.employee_id)
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        """Only an approved allocation creates balance."""
+        allocation = self.get_object()
+        allocation.state = Allocation.APPROVED
+        allocation.save(update_fields=["state", "updated_at"])
+        return Response(self.get_serializer(allocation).data)
+
+    @action(detail=True, methods=["post"])
+    def refuse(self, request, pk=None):
+        allocation = self.get_object()
+        allocation.state = Allocation.REFUSED
+        allocation.save(update_fields=["state", "updated_at"])
+        return Response(self.get_serializer(allocation).data)
+
+
+class TimeOffRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = TimeOffRequestSerializer
+    permission_classes = [CanManageHR]
+    filterset_fields = ["employee", "time_off_type", "state"]
+    search_fields = ["employee__first_name", "employee__last_name", "reason"]
+    ordering_fields = ["date_from", "duration"]
+
+    def get_queryset(self):
+        qs = TimeOffRequest.objects.select_related(
+            "employee", "time_off_type", "allocation_used", "approver")
+        user = self.request.user
+        if not user.can_manage_hr and user.employee_id:
+            qs = qs.filter(employee_id=user.employee_id)
+        if self.request.query_params.get("my_team") and user.employee_id:
+            qs = qs.filter(employee__manager_id=user.employee_id)
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        if not request.user.can_approve_leave:
+            return Response({"detail": "Not permitted to approve leave."},
+                            status=status.HTTP_403_FORBIDDEN)
+        req = self.get_object()
+        try:
+            req.approve(user=request.user)
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(req).data)
+
+    @action(detail=True, methods=["post"])
+    def refuse(self, request, pk=None):
+        if not request.user.can_approve_leave:
+            return Response({"detail": "Not permitted to refuse leave."},
+                            status=status.HTTP_403_FORBIDDEN)
+        req = self.get_object()
+        req.refuse(user=request.user)
+        return Response(self.get_serializer(req).data)
+
+    @action(detail=False, methods=["get"])
+    def balances(self, request):
+        """Balance summary per type for one employee."""
+        employee_id = request.query_params.get("employee") or request.user.employee_id
+        allocations = Allocation.objects.filter(
+            employee_id=employee_id, state=Allocation.APPROVED
+        ).select_related("time_off_type")
+        return Response([{
+            "time_off_type": a.time_off_type_id,
+            "type_name": a.time_off_type.name,
+            "unit": a.time_off_type.unit,
+            "allocated": a.allocated,
+            "taken": a.taken,
+            "remaining": a.remaining,
+        } for a in allocations])
