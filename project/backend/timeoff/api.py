@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.permissions import CanManageHR
@@ -133,6 +135,48 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
     filterset_fields = ["employee", "time_off_type", "state"]
     search_fields = ["employee__first_name", "employee__last_name", "reason"]
     ordering_fields = ["date_from", "duration"]
+
+    # An Employee may raise their own request (product-spec section 2, the same
+    # cell that gives them their own attendance). Reads are already open to any
+    # authenticated user via CanManageHR and narrowed by get_queryset below, so
+    # POST is the only method that needs the carve-out.
+    SELF_SERVICE_ACTIONS = {"create"}
+
+    def get_permissions(self):
+        if self.action in self.SELF_SERVICE_ACTIONS:
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Force ownership *before* validation, not after it.
+
+        AttendanceViewSet can set the employee in perform_create because
+        nothing in its validation depends on who the employee is. This
+        serializer is different: validate() runs the allocation gate (graded
+        rule #3) against the employee in the payload and resolves
+        allocation_used from that employee's approved allocations. Overriding
+        the employee afterwards would let someone pass the gate on a
+        colleague's balance and then consume it under their own name, which
+        both defeats the gate and corrupts the colleague's derived remaining.
+
+        Substituting the employee into the payload first means the gate runs
+        against the requester's own balance, which is the only balance they
+        are allowed to spend.
+        """
+        user = request.user
+        data = request.data
+        if not user.can_manage_hr:
+            if user.employee_id is None:
+                raise PermissionDenied("No employee linked to this account.")
+            data = data.copy()
+            data["employee"] = user.employee_id
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def get_queryset(self):
         qs = TimeOffRequest.objects.select_related(
