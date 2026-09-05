@@ -6,7 +6,13 @@
 // (the admin login) get no widget rather than a permanent error.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, auth } from "../api";
+
+// Module scope on purpose: the widget remounts on every navigation, and an
+// account with no linked employee (the admin login) would otherwise re-probe
+// and 400 on every screen change. Keyed by token so signing in as someone else
+// re-probes rather than inheriting the previous account's answer.
+let noEmployeeForToken = null;
 
 function elapsedLabel(hours) {
   const total = Math.max(0, Number(hours || 0));
@@ -18,7 +24,8 @@ function elapsedLabel(hours) {
 export default function AttendanceWidget() {
   const [status, setStatus] = useState(null);
   const [open, setOpen] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
+  const token = auth.token;
+  const [unavailable, setUnavailable] = useState(noEmployeeForToken === token);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const ref = useRef(null);
@@ -27,13 +34,14 @@ export default function AttendanceWidget() {
     try {
       setStatus(await api.get("/api/attendance/status/"));
     } catch {
+      noEmployeeForToken = token;
       setUnavailable(true);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (noEmployeeForToken !== token) load();
+  }, [load, token]);
 
   // Keep the elapsed counter honest while a session is open.
   useEffect(() => {
