@@ -162,6 +162,14 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Only the seven CORS-safelisted response headers are readable from JavaScript
+# on a cross-origin response, and the frontend is a different origin from the
+# API in development. Content-Disposition is not on that list, so the register
+# export's carefully built `filename="register-February-2026.csv"` was invisible
+# to the code that reads it and every export landed as the fallback
+# "register.csv" -- three months of exports overwriting each other by name.
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
+
 # --------------------------------------------------------------------------
 # Email — console backend is sufficient for the demo (PRD-7.5)
 # --------------------------------------------------------------------------

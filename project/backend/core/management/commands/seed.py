@@ -26,7 +26,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Role, User
-from accounts.security import NetworkPolicy, SecuritySetting
+from accounts.security import (AuditLog, LoginAttempt, NetworkPolicy,
+                               SecuritySetting)
 from attendance.models import Attendance
 from core.models import Company, Department, Holiday, JobPosition, WorkLocation
 from employees.models import Contract, Employee, ScheduleLine, WorkingSchedule
@@ -75,6 +76,21 @@ class Command(BaseCommand):
             NetworkPolicy.objects.all().delete()
             SecuritySetting.objects.all().delete()
             SecuritySetting.load()          # recreated at model defaults
+
+            # The two history tables outlived every reseed for the same reason
+            # the settings row did: nothing above references them. AuditLog
+            # holds its actor with SET_NULL, so a flush left orphaned rows
+            # naming accounts that no longer exist -- including the throwaway
+            # ones the harnesses create -- and the administration dashboard
+            # opens on exactly that table. LoginAttempt is not merely cosmetic:
+            # it is what `_recent_failures` counts, so a run of failed sign-ins
+            # can leave a demo account locked out with no way to clear it.
+            #
+            # Both are append-only by design and neither is reconstructible, so
+            # they are dropped only here, where "a known demo state" is the
+            # whole point of the command.
+            AuditLog.objects.all().delete()
+            LoginAttempt.objects.all().delete()
 
         random.seed(360)  # reproducible demos
 
