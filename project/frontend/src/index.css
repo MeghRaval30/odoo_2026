@@ -630,6 +630,37 @@ label {
   color: var(--on-primary);
 }
 
+/* ---------------------------------------------- checkboxes and matrix */
+
+.check-list { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  cursor: pointer;
+}
+.check input { margin: 0; }
+
+/* The capability grid is long and narrow: a sticky first column keeps the
+   capability name beside its ticks while the role columns scroll. */
+.matrix td:first-child, .matrix th:first-child { min-width: 220px; }
+.matrix .group-row td {
+  background: var(--surface-2);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 6px 12px;
+}
+.matrix .tick { color: var(--green); font-weight: 600; }
+
 /* ------------------------------------------------ attendance headline */
 
 .attendance-headline {

@@ -292,3 +292,31 @@ One server-side copy fix went with it: a punch refused by the network policy
 said *"Sign-in from 127.0.0.1 is not permitted"*, which reads as though the
 session is about to be cut. `network_allows` now names the action it actually
 refused. `accounts` + `attendance` 119/119 still green.
+
+### 22:15 — T-104 Users & Roles
+The screen pre-dated the matrix. It now carries the mockup's five columns —
+**User · Employee · Work Email · Role · Status** — a search box and a role
+filter, and three things it was missing:
+
+* **The account-status switch.** `is_active` was already in the form's state and
+  posted on every save, but nothing rendered it, so an administrator could not
+  actually deactivate anyone from this screen. That is now a checkbox.
+* **Reset password.** `POST /api/users/{id}/reset-password/` sets a temporary
+  password and ends every session that account holds. It is a separate action
+  from Save rather than a field on the form, because it is not an edit — it
+  logs the person out everywhere and writes to the audit log.
+* **The capability grid**, from `GET /api/users/capability-matrix/`, grouped by
+  resource. It is served from the same module the permission classes enforce
+  with, so the grid an administrator reads cannot drift from what the server
+  does — which is the whole reason it is worth showing.
+
+`UserSerializer` gained `employee_code` and `employee_work_email`, because the
+mockup gives the sign-in address and the employee's work address two separate
+columns and the interesting rows are the ones where they differ.
+
+Driven in the browser, all four paths: role filter 5 → 1, search "rahul" → 1,
+reset password (accepted at 8 characters, refused at 3 with the server's own
+sentence), and the escalation guard — unticking Admin on your own account
+surfaces **"You cannot change your own roles. Ask another administrator to do
+it."** and changes nothing. Rahul's password was reset back to `demo1234`, so
+every demo account still signs in. `npm run build` clean.

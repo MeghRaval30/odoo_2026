@@ -27,13 +27,22 @@ class UserSerializer(serializers.ModelSerializer):
         source="roles", required=False)
     employee_name = serializers.CharField(source="employee.full_name",
                                           read_only=True, default=None)
+    # The sign-in address and the employee record's work address are two
+    # different facts and the mockup's grid gives them two different columns.
+    # They are usually the same string and the interesting rows are the ones
+    # where they are not.
+    employee_code = serializers.CharField(source="employee.employee_code",
+                                          read_only=True, default=None)
+    employee_work_email = serializers.CharField(source="employee.work_email",
+                                                read_only=True, default=None)
     password = serializers.CharField(write_only=True, required=False,
                                      allow_blank=True)
 
     class Meta:
         model = User
-        fields = ["id", "email", "employee", "employee_name", "roles",
-                  "role_ids", "is_active", "is_staff", "password"]
+        fields = ["id", "email", "employee", "employee_name", "employee_code",
+                  "employee_work_email", "roles", "role_ids", "is_active",
+                  "is_staff", "password"]
 
     def create(self, validated):
         password = validated.pop("password", None) or "demo1234"
