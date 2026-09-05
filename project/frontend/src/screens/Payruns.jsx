@@ -45,6 +45,7 @@ function Wizard({ onClose, onCreated }) {
   });
   const [eligible, setEligible] = useState([]);
   const [selected, setSelected] = useState(new Set());
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -92,6 +93,15 @@ function Wizard({ onClose, onCreated }) {
       setBusy(false);
     }
   };
+
+  const needle = employeeSearch.trim().toLowerCase();
+  const shown = needle
+    ? eligible.filter(
+        (r) =>
+          r.name.toLowerCase().includes(needle) ||
+          (r.department || "").toLowerCase().includes(needle),
+      )
+    : eligible;
 
   const toggle = (id) =>
     setSelected((prev) => {
@@ -180,13 +190,25 @@ function Wizard({ onClose, onCreated }) {
       ) : (
         <>
           <div className="row mb">
-            <span className="muted tiny">
-              {eligible.length} employee(s) in scope · {selected.size} selected
+            <input
+              type="search"
+              style={{ maxWidth: 240 }}
+              placeholder="Search employee…"
+              value={employeeSearch}
+              onChange={(e) => setEmployeeSearch(e.target.value)}
+            />
+            <span className="muted tiny mono">
+              1–{shown.length} / {eligible.length}
             </span>
+            <span className="badge blue">{selected.size} selected</span>
             <div className="spacer" />
             <button
               className="sm"
-              onClick={() => setSelected(new Set(eligible.map((r) => r.id)))}
+              onClick={() =>
+                setSelected(
+                  new Set([...selected, ...shown.map((r) => r.id)]),
+                )
+              }
             >
               Select all
             </button>
@@ -207,7 +229,7 @@ function Wizard({ onClose, onCreated }) {
                 </tr>
               </thead>
               <tbody>
-                {eligible.map((row) => (
+                {shown.map((row) => (
                   <tr key={row.id} className="clickable" onClick={() => toggle(row.id)}>
                     <td>
                       <input
