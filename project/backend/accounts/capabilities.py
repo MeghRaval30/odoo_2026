@@ -277,6 +277,14 @@ NAVIGATION = [
         "key": "employees", "label": "Employees", "cap": EMPLOYEE_READ_ALL,
         "items": [
             {"to": "/employees", "label": "Employees", "cap": EMPLOYEE_READ_ALL},
+            # The approval queue for personal-detail changes. The screen and
+            # the route already existed, reachable only as a tab inside "My
+            # profile" -- a personal screen, and for the admin login one that
+            # opens by saying there is no profile to show. So the people who
+            # may decide these requests had no way to find them, and requests
+            # sat pending because nobody knew where to look. This is the door.
+            {"to": "/profile/requests", "label": "Change Requests",
+             "cap": PROFILE_APPROVE},
             {"to": "/schedules", "label": "Working Schedules", "cap": SCHEDULE_READ},
             # The four catalogues below are configuration, not staff data, so
             # they hang off REFERENCE_READ rather than EMPLOYEE_READ_ALL. A

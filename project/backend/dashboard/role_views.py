@@ -94,8 +94,16 @@ def hr_dashboard_view(request):
         employee__in=employees, state=TimeOffRequest.TO_APPROVE)
     pending_allocations = Allocation.objects.filter(
         employee__in=employees, state=Allocation.TO_APPROVE)
+    # "Awaiting you" must mean awaiting *you*. A reviewer may never decide a
+    # change to their own record -- ProfileChangeRequest.approve() refuses it
+    # outright -- so an HR Manager's own pending request is awaiting somebody
+    # else, and listing it here put a row in their queue whose Approve button
+    # could only ever return 400.
     pending_profile = ProfileChangeRequest.objects.filter(
         state=ProfileChangeRequest.PENDING)
+    viewer_employee_id = getattr(request.user, "employee_id", None)
+    if viewer_employee_id is not None:
+        pending_profile = pending_profile.exclude(employee_id=viewer_employee_id)
 
     # The HR equivalent of a payroll warning: nothing is broken yet, but it
     # will be. A contract that lapses mid-period means somebody is not paid.

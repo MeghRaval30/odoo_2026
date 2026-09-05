@@ -37,6 +37,7 @@ from payroll.models import Payrun, SalaryRule, SalaryStructure
 from timeoff.models import Allocation, TimeOffRequest, TimeOffType
 
 from .models import Role, User
+from .selfservice import ProfileChangeRequest
 
 ROLE_NAMES = dict(Role.CHOICES)
 
@@ -573,6 +574,114 @@ class ApproveLeaveTests(RoleFixtureMixin, APITestCase):
         response = self.client.post(
             reverse("timeoffrequest-refuse", args=[self.request.pk]))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_a_submitted_request_lands_in_the_approval_queue(self):
+        """
+        The model default is DRAFT and no endpoint ever advanced a request out
+        of it -- there is no submit action -- while the screen offers Approve
+        and Refuse only on TO_APPROVE. So every request raised through the UI
+        arrived as a draft that nobody could decide and the requester could
+        not advance. Submitting is the act of submitting.
+        """
+        self.client.force_authenticate(user=self.employee)
+        response = self.client.post(
+            reverse("timeoffrequest-list"),
+            {"time_off_type": self.sick_leave.pk,
+             "date_from": "2026-03-02", "date_to": "2026-03-03"},
+            format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["state"], TimeOffRequest.TO_APPROVE)
+
+        created = TimeOffRequest.objects.get(pk=response.data["id"])
+        self.assertEqual(created.state, TimeOffRequest.TO_APPROVE)
+        self.assertIsNone(created.approver)
+
+    def test_an_employee_cannot_self_approve_through_the_create_payload(self):
+        """
+        `state` was a writable serializer field, and creating a request is the
+        one write every employee always has. PATCH and the approve action were
+        already refused to them, so the create payload was the way through:
+        POST {"state": "APPROVED"} granted the leave outright, consuming their
+        own allocation and, for an unpaid type, moving their own payslip.
+        """
+        self.client.force_authenticate(user=self.employee)
+        response = self.client.post(
+            reverse("timeoffrequest-list"),
+            {"time_off_type": self.sick_leave.pk,
+             "date_from": "2026-03-09", "date_to": "2026-03-10",
+             "state": TimeOffRequest.APPROVED},
+            format="json")
+
+        # The request is accepted -- it is a legitimate request -- but the
+        # state it asked for is ignored rather than honoured.
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["state"], TimeOffRequest.TO_APPROVE)
+
+        created = TimeOffRequest.objects.get(pk=response.data["id"])
+        self.assertEqual(created.state, TimeOffRequest.TO_APPROVE)
+        self.assertIsNone(created.approver)
+        self.assertIsNone(created.approved_at)
+
+
+# ==========================================================================
+# "Awaiting you" must mean awaiting you
+# ==========================================================================
+
+class OwnChangeRequestIsNotYoursToDecideTests(RoleFixtureMixin, APITestCase):
+    """
+    A reviewer may never decide a change to their own record — approve()
+    refuses it at the write. The HR dashboard's queue was not applying the
+    same rule, so an HR Manager's own pending request appeared in the panel
+    headed "awaiting you" with an Approve button that could only return 400.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.company = Company.objects.create(name="OXP Test Co")
+        cls.hr_record = Employee.objects.create(
+            first_name="Sara", last_name="Khan",
+            work_email="sara@example.com",
+            company=cls.company, date_of_joining=date(2025, 1, 1))
+        cls.other_record = Employee.objects.create(
+            first_name="John", last_name="Dsouza",
+            work_email="john@example.com",
+            company=cls.company, date_of_joining=date(2025, 1, 1))
+        cls.hr = cls.make_user("hr@example.com", Role.HR_MANAGER,
+                               employee=cls.hr_record)
+
+    def setUp(self):
+        self.mine = ProfileChangeRequest.objects.create(
+            employee=self.hr_record, field="bank_account_number",
+            old_value="1111", new_value="2222")
+        self.theirs = ProfileChangeRequest.objects.create(
+            employee=self.other_record, field="bank_account_number",
+            old_value="3333", new_value="4444")
+        self.client.force_authenticate(user=self.hr)
+
+    def test_the_queue_offers_only_requests_this_reviewer_may_decide(self):
+        response = self.client.get(reverse("dashboard-hr"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        queued = {row["id"] for row in
+                  response.data["awaiting_you"]["profile_changes"]}
+        self.assertEqual(queued, {self.theirs.pk})
+        self.assertEqual(response.data["kpis"]["pending_profile_changes"], 1)
+
+    def test_the_full_list_still_shows_the_reviewer_their_own_request(self):
+        """Excluded from the queue is not hidden — HR still reads the whole
+        queue, and sees their own request sitting in it."""
+        response = self.client.get(reverse("profilechangerequest-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {row["id"] for row in response.data["results"]}
+        self.assertEqual(ids, {self.mine.pk, self.theirs.pk})
+
+    def test_deciding_your_own_request_is_still_refused_at_the_write(self):
+        response = self.client.post(
+            reverse("profilechangerequest-approve", args=[self.mine.pk]))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.mine.refresh_from_db()
+        self.assertEqual(self.mine.state, ProfileChangeRequest.PENDING)
 
 
 # ==========================================================================
