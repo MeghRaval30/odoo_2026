@@ -906,3 +906,16 @@ Handoff SHA and tag are recorded in the closing report and in
 `current-state.md`. **Michael is up next.** His first action is B-036: rewrite
 the demo script against the running product, including a scenario for the
 import studio.
+
+### Correction — 2026-09-06 06:35 IST
+
+The closing entry above says "Michael is up next". **It is Franklin.** Michael
+was unavailable when the handoff was made, so the rotation is taken out of order
+and session 10 comes back to Franklin, who also ran session 08.
+
+Nothing else changes: Franklin has no memory of session 09, commits as
+`Robo9327study` / `rajstudy9327@gmail.com`, and picks up the same first task —
+T-107 / B-036, the demo script. `NEXT-SESSION-PROMPT.md` was corrected to
+address Franklin by name rather than left to contradict itself, because a
+briefing that greets the wrong character is the kind of thing that costs a cold
+session its first ten minutes.

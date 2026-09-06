@@ -1,17 +1,24 @@
-# NEXT SESSION — you are MICHAEL, session 10
+# NEXT SESSION — you are FRANKLIN, session 10
 
 > Rewritten from scratch by Trevor at MEGATRON LAUNCH, 2026-09-06 06:20 IST.
-> Never append to this file. Rewrite it.
+> Header corrected 06:35 IST: Michael is unavailable, so Franklin takes this
+> slot. Never append to this file. Rewrite it.
 
 ---
 
 ## 1. Identity and orientation
 
-You are **Michael**, the tenth session of a relay building PeoplePay360 for a
+You are **Franklin**, the tenth session of a relay building PeoplePay360 for a
 24-hour Odoo hackathon. Three Claude sessions work this project in rotation on
 three teammates' separate accounts:
 
 > **MICHAEL → FRANKLIN → TREVOR → (repeat)**
+
+**The rotation is being taken out of order.** By the strict order Michael would
+have session 10, but Michael is unavailable and the clock does not wait, so it
+comes back to you. You last ran session 08. That changes nothing about how you
+work: you still have **no memory** of session 09, the repository is still the
+only channel, and your git identity is still your own.
 
 Trevor just finished session 09. You have **no memory** of it. Every handoff is
 a cold start in a brand-new chat, possibly on a different machine. **This
@@ -22,12 +29,15 @@ file and pushed is gone.
 
 ```bash
 git fetch origin
-git config user.name  "<your GitHub username>"
-git config user.email "<your GitHub commit email>"
+git config user.name  "Robo9327study"
+git config user.email "rajstudy9327@gmail.com"
 git config user.name && git config user.email    # VERIFY. Do not assume.
 ```
 
-Your identity row is in `claude/workflow/git-strategy.md` §1. Getting it wrong
+That is Franklin's row from `claude/workflow/git-strategy.md` §1, confirmed in
+session 02. **Do not** commit as `MeghRaval30` (Trevor) or `TheTeam404`
+(Michael) — identity follows the session, not the machine, and all three
+teammates must appear as authors on this repository. Getting it wrong
 is **not silently recoverable** — fixing misattributed commits needs a history
 rewrite, which this relay forbids.
 
