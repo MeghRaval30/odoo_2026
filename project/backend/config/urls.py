@@ -22,6 +22,9 @@ from employees.api import (CompanyViewSet, ContractViewSet, DepartmentViewSet,
                            WorkLocationViewSet, WorkingScheduleViewSet)
 from payroll.api import (PayrunViewSet, PayslipViewSet, SalaryRuleViewSet,
                          SalaryStructureViewSet)
+from workforce.api import (BondTemplateViewSet, BondViewSet,
+                           BulkOperationViewSet, PlaybookEventViewSet,
+                           PlaybookViewSet, SegmentViewSet)
 from timeoff.api import (AllocationViewSet, TimeOffRequestViewSet,
                          TimeOffTypeViewSet)
 
@@ -55,6 +58,17 @@ router.register("payslips", PayslipViewSet, basename="payslip")
 # Data migration -- the import studio
 router.register("intel/sources", ImportSourceViewSet, basename="importsource")
 router.register("intel/runs", ImportRunViewSet, basename="importrun")
+
+# Workforce -- bulk people operations
+router.register("workforce/segments", SegmentViewSet, basename="segment")
+router.register("workforce/bond-templates", BondTemplateViewSet,
+                basename="bondtemplate")
+router.register("workforce/bonds", BondViewSet, basename="bond")
+router.register("workforce/bulk-operations", BulkOperationViewSet,
+                basename="bulkoperation")
+router.register("workforce/playbooks", PlaybookViewSet, basename="playbook")
+router.register("workforce/playbook-events", PlaybookEventViewSet,
+                basename="playbookevent")
 
 # Administration
 router.register("users", UserViewSet)

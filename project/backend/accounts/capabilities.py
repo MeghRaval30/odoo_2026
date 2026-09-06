@@ -115,11 +115,6 @@ _HR_MANAGER = frozenset({
     TIMEOFF_READ_ALL, TIMEOFF_APPROVE, TIMEOFF_TYPE_WRITE,
     ALLOCATION_READ_ALL, ALLOCATION_WRITE,
     PROFILE_APPROVE, DASHBOARD_HR,
-    # Migrating a roster in and running mass actions on it are the same
-    # authority as creating one employee and one contract, applied at scale.
-    # This role already holds both singly, so withholding the bulk form would
-    # be theatre rather than control.
-    DATA_IMPORT, WORKFORCE_READ, WORKFORCE_WRITE,
 })
 
 #: The HR Payroll User is an **observer of payroll, not an operator of it**.
@@ -167,12 +162,6 @@ _PAYROLL_USER = frozenset({
     PAYRUN_READ,
     PAYSLIP_READ_ALL,
     DASHBOARD_PAYROLL,
-    # A bond carries a recovery amount and a mass increment changes next
-    # month's cost, so both are payroll-relevant figures this role must be able
-    # to check a run against. Reading them is not deciding them -- the write
-    # half stays with HR, and DATA_IMPORT is absent entirely because importing
-    # a roster creates contracts.
-    WORKFORCE_READ,
 })
 
 #: "All HR Payroll User permissions with full CRUD access to Payruns, Payslips,
@@ -238,6 +227,24 @@ _ADMIN = _HR_MANAGER | _PAYROLL_MANAGER | {
     # become uneditable by anyone, which the ALL_CAPABILITIES check below
     # would catch but is worth naming here.
     SALARY_CONFIG_WRITE,
+
+    # The bulk and inference tools, held here and nowhere else.
+    #
+    # These are the widest-blast-radius actions in the product. One import
+    # creates hundreds of employees and contracts; one mass increment rewrites
+    # the wage on every contract in a segment; one offboarding deactivates
+    # people and marks their bonds breached. Each is a single click whose
+    # consequences are spread across the whole roster, and unlike every other
+    # write in this system there is no per-record review step where a second
+    # person would notice a mistake.
+    #
+    # The HR Manager can do each of these things one record at a time, and
+    # that is deliberately where the boundary sits: doing something once is a
+    # correction, doing it to four hundred people is a policy decision. The
+    # capability is therefore not "can you edit an employee" but "may you
+    # commit the organisation in one action", and that belongs with the
+    # account that already carries system-wide authority.
+    DATA_IMPORT, WORKFORCE_READ, WORKFORCE_WRITE,
 }
 
 ROLE_CAPABILITIES = {
