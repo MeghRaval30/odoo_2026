@@ -9,9 +9,9 @@
 import { useState } from "react";
 import { api, auth } from "../api";
 import {
-  ErrorBox, Field, Loading, Modal, PageHead, useResource, rows,
+  ErrorBox, Loading, Modal, PageHead, useResource, rows,
 } from "../components/ui";
-import { Pulse, Stagger, ThinkingStream } from "../components/ai";
+import { Stagger, ThinkingStream, Working } from "../components/ai";
 
 const EXAMPLES = [
   "remind me to review increments for full time staff twelve months after they join",
@@ -186,10 +186,10 @@ function Rules() {
           </div>
 
           {thinking && (
-            <div className="row" style={{ gap: 8, marginTop: 12, alignItems: "center" }}>
-              <Pulse />
-              <span className="tiny faint">Working out the trigger and who it applies to</span>
-            </div>
+            <Working
+              label="Working out the trigger and who it applies to"
+              sub="matching it against the triggers this system has"
+            />
           )}
 
           {proposal && (
