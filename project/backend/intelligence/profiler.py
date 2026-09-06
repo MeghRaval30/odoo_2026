@@ -137,7 +137,20 @@ def _detect(header, values, total=None):
         _PHONE.match(re.sub(r"[\s()-]", "", v.strip()))))
 
     date_hits = _date_formats_seen(values)
-    scores["date"] = (sum(date_hits.values()) / n) if n else 0.0
+    # An Excel serial is a bare integer, and a monthly Indian salary is a bare
+    # integer in exactly the same range -- 45000 is both a plausible wage and
+    # 2023-03-15. Counting serials as confidently as a parsed date read every
+    # such salary column as a date, and since KIND_COMPATIBILITY lets a date be
+    # a contract end, the column then mapped to one. So a serial only carries
+    # its full weight when the header agrees it is a date; otherwise it is a
+    # weak signal that a real format string outranks.
+    header_date = bool(re.search(
+        r"(date|doj|dob|dt|day|joining|joined|birth|start|end|expiry|"
+        r"valid|from|till|until)", h))
+    serials = date_hits.get("excel-serial", 0)
+    parsed = sum(v for k, v in date_hits.items() if k != "excel-serial")
+    weight = 1.0 if header_date else 0.35
+    scores["date"] = ((parsed + weight * serials) / n) if n else 0.0
 
     money_marked = _frac(values, lambda v: bool(_MONEY_MARK.search(v)) or
                          bool(_THOUSANDS.match(v.strip())))
@@ -161,6 +174,13 @@ def _detect(header, values, total=None):
     if scores["money"] > 0.75:
         scores["integer"] = min(scores["integer"], scores["money"] - 0.05)
         scores["decimal"] = min(scores["decimal"], scores["money"] - 0.05)
+
+    # Same tie, other direction: an Excel serial date column really is a column
+    # of integers, so on raw counts the two score identically and the more
+    # specific reading loses on a coin flip. A header that says "joining date"
+    # settles it.
+    if header_date and scores["date"] > 0.75:
+        scores["integer"] = min(scores["integer"], scores["date"] - 0.05)
     scores["boolean"] = _frac(values, lambda v: v.strip().lower() in
                               {"y", "n", "yes", "no", "true", "false", "0", "1"})
 
