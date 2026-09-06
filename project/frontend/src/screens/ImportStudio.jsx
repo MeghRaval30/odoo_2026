@@ -389,19 +389,30 @@ export default function ImportStudio() {
                 <GapsCard
                   plan={plan}
                   fields={fields}
-                  hue={hue}
                   busy={busy}
                   deriveOn={applyFixes.includes("derive_email")}
                   codePolicy={codePolicy || plan.code_policy}
                   onEnrich={() => setEnriching(true)}
                   onOpenCodes={() => setShowCodes(true)}
-                  onDeriveEmail={() =>
-                    setApplyFixes((prev) =>
-                      prev.includes("derive_email")
-                        ? prev.filter((f) => f !== "derive_email")
-                        : [...prev, "derive_email"]
-                    )
-                  }
+                  onDeriveEmail={async () => {
+                    const next = applyFixes.includes("derive_email")
+                      ? applyFixes.filter((f) => f !== "derive_email")
+                      : [...applyFixes, "derive_email"];
+                    setApplyFixes(next);
+                    // Sent to the server rather than kept here, so that the
+                    // one place which decides what is still missing knows
+                    // about it. Accepting this fix is a source for work email
+                    // exactly as a column would be.
+                    try {
+                      setPlan(
+                        await api.patch(`/api/intel/runs/${runId}/plan/`, {
+                          apply_fixes: next,
+                        })
+                      );
+                    } catch (e) {
+                      setError(e.message);
+                    }
+                  }}
                 />
 
                 {enriching && (
@@ -455,10 +466,8 @@ export default function ImportStudio() {
 
                 <PlanDetail
                   plan={plan}
-                  fields={fields}
                   labelFor={labelFor}
                   hue={hue}
-                  onRemap={remap}
                   onRemapValue={remapValue}
                 />
               </>
@@ -756,7 +765,7 @@ function PlanRail({ plan, fields, hue, elapsed, busy, onPreview }) {
 
 // ---------------------------------------------------------------------------
 
-function PlanDetail({ plan, fields, labelFor, hue, onRemap, onRemapValue }) {
+function PlanDetail({ plan, labelFor, hue, onRemapValue }) {
   const [openChip, setOpenChip] = useState({});
   const mapped = (plan.columns || []).filter((c) => c.field);
 
@@ -966,8 +975,15 @@ function PreviewStage({ preview, labelFor, busy, applyFixes, onToggleFix, onBack
                 </tr>
               </thead>
               <tbody>
-                {(preview.records || []).map((r) => (
-                  <tr key={r.row} style={r.blocked ? { opacity: 0.45 } : undefined}>
+                {(preview.records || []).map((r, i) => (
+                  <tr
+                    key={r.row}
+                    className={i < 12 ? "stagger-row" : undefined}
+                    style={{
+                      ...(r.blocked ? { opacity: 0.45 } : null),
+                      ...(i < 12 ? { animationDelay: `${i * 28}ms` } : null),
+                    }}
+                  >
                     <td className="mono">{r.row + 1}</td>
                     {columns.map((k) => {
                       const cell = r.cells[k];
@@ -1180,6 +1196,29 @@ function DoneStage({ result, source, onAgain }) {
         <div className="tiny faint" style={{ marginTop: 12 }}>
           {result.skipped} row{result.skipped === 1 ? " was" : "s were"} skipped
           and nothing was written for {result.skipped === 1 ? "it" : "them"}.
+        </div>
+      )}
+
+      {/* A row that was accepted and then failed at the database is a
+          different thing from one that was skipped on purpose, and it must
+          not be left to be inferred from a count that looks lower than
+          expected. */}
+      {result.failed > 0 && (
+        <div className="alert error" style={{ marginTop: 12 }}>
+          {result.failed} row{result.failed === 1 ? "" : "s"} could not be
+          written.
+          {(result.failures || []).slice(0, 3).map((f) => (
+            <div key={f.row} className="tiny" style={{ marginTop: 4 }}>
+              Row {f.row + 1}: {f.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {made.employees === 0 && result.failed === 0 && (
+        <div className="alert" style={{ marginTop: 12 }}>
+          Nothing was written. Every row was short of something the software
+          needs — the preview lists what, row by row.
         </div>
       )}
 

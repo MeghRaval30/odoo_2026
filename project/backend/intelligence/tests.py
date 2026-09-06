@@ -431,6 +431,64 @@ class ImportApiTests(TestCase):
         self.assertEqual(contract.wage, Decimal("45000.00"))
         self.assertEqual(contract.state, Contract.RUNNING)
 
+    def test_a_run_cannot_be_imported_twice(self):
+        """
+        Found by double-clicking Import.
+
+        Read-then-write let the second request through while the first was
+        still inside its transaction. It then failed every row on the unique
+        email and reported "0 employees imported" over the top of a run that
+        had just created eleven.
+        """
+        import base64
+
+        client = self._client(self.admin)
+        source = client.post("/api/intel/sources/", {
+            "filename": "roster.csv",
+            "content_b64": base64.b64encode(MESSY).decode(),
+        }, format="json")
+        run = client.post("/api/intel/runs/", {"source": source.data["id"]},
+                          format="json")
+        run_id = run.data["id"]
+        list(client.get("/api/intel/runs/%d/analyze/" % run_id).streaming_content)
+
+        first = client.post("/api/intel/runs/%d/commit/" % run_id, {},
+                            format="json")
+        self.assertEqual(first.status_code, 200)
+        after_first = Employee.objects.count()
+
+        second = client.post("/api/intel/runs/%d/commit/" % run_id, {},
+                             format="json")
+        self.assertEqual(second.status_code, 400)
+        self.assertEqual(Employee.objects.count(), after_first)
+
+    def test_accepting_the_email_fix_clears_the_missing_field(self):
+        """One place decides what is still missing, and the fix is one input."""
+        import base64
+
+        no_email = (b"Name,Dept,Joined,Salary\n"
+                    b"Rajesh Kumar,Engg,2021-03-08,45000\n"
+                    b"Priya Nair,Engg,2022-07-19,52000\n")
+        client = self._client(self.admin)
+        source = client.post("/api/intel/sources/", {
+            "filename": "no-email.csv",
+            "content_b64": base64.b64encode(no_email).decode(),
+        }, format="json")
+        run_id = client.post("/api/intel/runs/", {"source": source.data["id"]},
+                             format="json").data["id"]
+        list(client.get("/api/intel/runs/%d/analyze/" % run_id).streaming_content)
+
+        plan = client.get("/api/intel/runs/%d/plan/" % run_id).data
+        self.assertIn("work_email", plan["missing_required"])
+
+        patched = client.patch("/api/intel/runs/%d/plan/" % run_id,
+                               {"apply_fixes": ["derive_email"]}, format="json")
+        self.assertEqual(patched.data["missing_required"], [])
+
+        undone = client.patch("/api/intel/runs/%d/plan/" % run_id,
+                              {"apply_fixes": []}, format="json")
+        self.assertIn("work_email", undone.data["missing_required"])
+
     def test_a_preview_writes_nothing(self):
         import base64
 

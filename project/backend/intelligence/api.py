@@ -125,18 +125,35 @@ def _read_upload(request):
             status=status.HTTP_400_BAD_REQUEST)
 
 
+#: Auto-fixes that supply a field outright, rather than correcting one.
+#: Accepting one of these is a source for that field in exactly the way a
+#: column or a second file is.
+_FIX_SUPPLIES = {"derive_email": "work_email"}
+
+
 def missing_required_after(plan):
     """
-    Which required fields are still unsourced once every file is counted.
+    Which required fields are still unsourced once everything is counted.
 
-    The primary file's columns and each supplement's fields are the same kind
-    of answer -- a source for a field -- so they are pooled before the check
-    rather than the screen being left to reconcile two lists.
+    Three things can supply a field: a column in the primary file, a second
+    file joined onto it, and an auto-fix the operator has accepted. They are
+    the same kind of answer, so they are pooled here and the question is
+    answered once.
+
+    That pooling is the whole point. The screen briefly had its own version of
+    this -- it showed "Work email: building addresses from each person's name"
+    with a green tick, next to a rail insisting work email was still needed and
+    a Preview button that stayed disabled. Two places answering one question is
+    how that happens.
     """
     columns = list(plan.get("columns") or [])
     for entry in (plan.get("enrichments") or []):
         for field in (entry.get("fields") or []):
             columns.append({"field": field})
+    for fix in (plan.get("apply_fixes") or []):
+        supplied = _FIX_SUPPLIES.get(fix)
+        if supplied:
+            columns.append({"field": supplied})
     return missing_required(columns)
 
 
@@ -361,6 +378,11 @@ class ImportRunViewSet(viewsets.ModelViewSet):
             plan["unmapped_columns"] = [c["index"] for c in plan.get("columns", [])
                                         if not c.get("field")]
 
+        if "apply_fixes" in body:
+            plan["apply_fixes"] = [f for f in (body["apply_fixes"] or [])
+                                   if f in _FIX_SUPPLIES or f == "skip_row"]
+            plan["missing_required"] = missing_required_after(plan)
+
         if "value_map" in body:
             wanted = body["value_map"]
             for vm in plan.get("value_maps", []):
@@ -514,7 +536,9 @@ class ImportRunViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         result = importer.run(
             run.source, run.plan, commit=False,
-            apply_fixes=request.data.get("apply_fixes") or [],
+            apply_fixes=(request.data.get("apply_fixes")
+                         if "apply_fixes" in request.data
+                         else run.plan.get("apply_fixes")) or [],
             email_domain=request.data.get("email_domain"))
         run.state = ImportRun.PREVIEWED
         run.save(update_fields=["state", "updated_at"])
@@ -526,17 +550,32 @@ class ImportRunViewSet(viewsets.ModelViewSet):
         if not run.plan:
             return Response({"detail": "Analyse the file first."},
                             status=status.HTTP_400_BAD_REQUEST)
-        if run.state == ImportRun.DONE:
-            return Response({"detail": "This run has already been imported."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
+        # Claim the run in one statement rather than checking and then
+        # setting. A double-click sends two commits a few milliseconds apart,
+        # and read-then-write let both through: the second passed the check
+        # while the first was still inside its transaction, then failed every
+        # row on the unique email and reported "0 employees imported" over the
+        # top of a run that had just created eleven. The database decides who
+        # got there first.
+        claimed = (ImportRun.objects
+                   .filter(pk=run.pk)
+                   .exclude(state__in=(ImportRun.IMPORTING, ImportRun.DONE))
+                   .update(state=ImportRun.IMPORTING))
+        if not claimed:
+            run.refresh_from_db()
+            return Response(
+                {"detail": ("This run is already being imported."
+                            if run.state == ImportRun.IMPORTING
+                            else "This run has already been imported.")},
+                status=status.HTTP_400_BAD_REQUEST)
         run.state = ImportRun.IMPORTING
-        run.save(update_fields=["state", "updated_at"])
         try:
             result = importer.run(
                 run.source, run.plan, commit=True,
                 actor=request.user if request.user.is_authenticated else None,
-                apply_fixes=request.data.get("apply_fixes") or [],
+                apply_fixes=(request.data.get("apply_fixes")
+                             if "apply_fixes" in request.data
+                             else run.plan.get("apply_fixes")) or [],
                 email_domain=request.data.get("email_domain"))
         except Exception as exc:                # noqa: BLE001
             run.state = ImportRun.FAILED

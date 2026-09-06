@@ -15,7 +15,7 @@
 import { useRef, useState } from "react";
 import { api } from "../api";
 import { Field } from "./ui";
-import { ConfidenceBar, CountUp, FieldChip, Pulse, Stagger, ThinkingStream } from "./ai";
+import { ConfidenceBar, CountUp, FieldChip, Stagger, ThinkingStream, Working } from "./ai";
 
 // ---------------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ import { ConfidenceBar, CountUp, FieldChip, Pulse, Stagger, ThinkingStream } fro
  * it, and fixing it now costs one file.
  */
 export function GapsCard({
-  plan, fields, hue, onEnrich, onDeriveEmail, deriveOn, codePolicy,
+  plan, fields, onEnrich, onDeriveEmail, deriveOn, codePolicy,
   onOpenCodes, busy,
 }) {
   const sourced = new Set();
@@ -43,29 +43,23 @@ export function GapsCard({
   const label = (key) => fields.find((f) => f.key === key)?.label || key;
 
   // Worth offering, in the order somebody would care about them.
-  const WANTED = ["work_email", "bank_account_number", "bank_ifsc",
-                  "pan_number", "employee_code"];
+  const WANTED = ["work_email", "bank_account_number", "bank_ifsc", "pan_number"];
   const gaps = WANTED.filter((key) => !sourced.has(key));
 
-  const codesResolved = sourced.has("employee_code") ||
-    (codePolicy && codePolicy.mode !== "keep");
-
-  if (gaps.length === 0 && codesResolved) {
-    return (
-      <div className="card">
-        <div className="card-title">Nothing is missing</div>
-        <div className="tiny faint" style={{ marginTop: 6 }}>
-          Every field this software needs has a source.
-        </div>
-      </div>
-    );
-  }
+  // Numbering is always offered, even when the file has ids of its own. Those
+  // ids are the previous employer's numbering, and after the migration these
+  // people work here -- so whether to keep them is a decision somebody should
+  // make on purpose rather than one taken by default because a column matched.
+  const fromFile = sourced.has("employee_code");
+  const mode = codePolicy?.mode || (fromFile ? "keep" : "auto");
 
   return (
     <div className="card">
       <div className="card-title">Complete the data</div>
       <div className="card-sub">
-        What this file does not carry. Each one can be filled here.
+        {gaps.length
+          ? "What this file does not carry. Each one can be filled here."
+          : "Every field has a source. Check how people will be numbered."}
       </div>
 
       <div className="gaps" style={{ marginTop: 10 }}>
@@ -117,6 +111,29 @@ export function GapsCard({
             </Stagger>
           );
         })}
+
+        <Stagger index={gaps.length}>
+          <div className="gap">
+            <span className="gap-mark">#</span>
+            <span className="gap-what">
+              <b>{label("employee_code")}</b>
+              <span className="tiny faint">
+                {mode === "keep"
+                  ? "Keeping the ids that are in the file."
+                  : mode === "generate"
+                  ? "Generated to the pattern you chose."
+                  : fromFile
+                  ? "The file has ids. Keep them, or issue new ones."
+                  : "Not in this file. Numbered automatically unless you choose."}
+              </span>
+            </span>
+            <span className="gap-do">
+              <button className="ghost sm" onClick={onOpenCodes} disabled={busy}>
+                {mode === "generate" ? "Change" : "Choose numbering"}
+              </button>
+            </span>
+          </div>
+        </Stagger>
       </div>
 
       {(plan.enrichments || []).length === 0 && gaps.some((g) =>
@@ -262,12 +279,10 @@ export function EnrichPanel({ onClose, onAdded, runId, fields, hue }) {
       {error && <div className="alert error" style={{ marginTop: 10 }}>{error}</div>}
 
       {busy ? (
-        <div className="row" style={{ gap: 9, marginTop: 16, alignItems: "center" }}>
-          <Pulse />
-          <span className="tiny faint">
-            Reading it, and looking for a column the two files share
-          </span>
-        </div>
+        <Working
+          label="Reading it, and looking for a column the two files share"
+          sub="every column pair is scored on how far its values overlap"
+        />
       ) : (
         <label
           className={`dropzone${dragging ? " over" : ""}`}
