@@ -186,7 +186,6 @@ export default function Shell({ route, children }) {
           </span>
         )}
 
-        <nav className="navbar">
         {nav.map((group) => {
           const isActive = groupIsActive(group);
 
@@ -221,7 +220,7 @@ export default function Shell({ route, children }) {
             </div>
           );
         })}
-        </nav>
+        <div className="spacer" />
 
         <AttendanceWidget />
 

@@ -784,7 +784,7 @@ label {
    reads the wordmark alone. The logo is capped by height rather than width:
    marks arrive at every aspect ratio, and the one thing that must stay
    constant is the height of the bar. */
-.brand { display: inline-flex; align-items: center; gap: 9px; }
+.brand { display: inline-flex; align-items: center; gap: 7px; }
 .brand-logo {
   height: 26px;
   width: auto;
@@ -893,8 +893,18 @@ label {
 }
 /* The unbranded fallback is still the wordmark, on the bar, not on a plate. */
 .brand:not(.brand-plate) .brand-name span { color: var(--primary); }
-/* Menu items keep their own width. Without this they are flex children of a
-   shrinking row and wrap onto a second line, which pushes the bar off its
-   fixed height and hides the menus past the fold. */
-.navbar { flex-wrap: nowrap; }
-.navbar > .navitem { flex: 0 0 auto; white-space: nowrap; }
+
+/* Whose software this is, beside whose company it is. On the bar, not on the
+   plate: the plate carries the customer's mark and nothing else belongs on it. */
+.app-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: var(--display-tracking);
+  color: var(--topbar-fg);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-right: 8px;
+  opacity: 0.92;
+}
+.app-mark span { color: var(--primary); }
