@@ -2,22 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Shell from "./components/Shell";
+import AISetup from "./screens/AISetup";
 import Allocations from "./screens/Allocations";
 import Attendance from "./screens/Attendance";
 import Contracts from "./screens/Contracts";
 import DashboardRouter from "./screens/DashboardRouter";
 import Employees from "./screens/Employees";
+import Bonds from "./screens/Bonds";
 import Holidays from "./screens/Holidays";
 import ImportStudio from "./screens/ImportStudio";
 import Login from "./screens/Login";
 import MyPayslips from "./screens/MyPayslips";
+import MassActions from "./screens/MassActions";
 import Payruns from "./screens/Payruns";
 import Payslips from "./screens/Payslips";
+import Playbooks from "./screens/Playbooks";
 import Profile from "./screens/Profile";
 import { Departments, JobPositions, WorkLocations } from "./screens/Reference";
 import Reports from "./screens/Reports";
 import { SalaryRules, SalaryStructures } from "./screens/SalaryConfig";
 import Schedules from "./screens/Schedules";
+import Segments from "./screens/Segments";
 import Security, { AuditLog } from "./screens/Security";
 import TimeOff from "./screens/TimeOff";
 import TimeOffTypes from "./screens/TimeOffTypes";
@@ -45,6 +50,11 @@ const SCREENS = {
   "work-locations": WorkLocations,
   holidays: Holidays,
   import: ImportStudio,
+  segments: Segments,
+  "mass-actions": MassActions,
+  bonds: Bonds,
+  playbooks: Playbooks,
+  "ai-setup": AISetup,
   reports: Reports,
   users: Users,
   security: Security,
