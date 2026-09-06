@@ -278,3 +278,49 @@ green after it, and none of these five defects was visible to any of them.
 
 **Do not open new feature work.** The failure mode from here is breaking
 something that works.
+
+---
+
+## Session 09 — Trevor · 2026-09-06
+
+The board entered this session FREEZE with one open task (T-107). The user
+instead commissioned a new feature area, so T-107 was **not** touched and is
+now the top priority for session 10 — it has more to cover than before.
+
+### Delivered
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-135 | Local model client with graceful degradation | `DONE` | Trevor | `intelligence/llm.py`. Ollama on 127.0.0.1, stdlib urllib only, `keep_alive: 30m`, JSON extraction that survives a fenced or prose-wrapped reply, one retry. `available()` gates the *label*, never the feature (D-059) |
+| T-136 | Deterministic column profiler | `DONE` | Trevor | `intelligence/profiler.py`. Type, range, distinctness, date formats, blank ratio, and one ASCII evidence sentence per column used by both the UI and the prompt (D-058) |
+| T-137 | Header-row detection | `DONE` | Trevor | `intelligence/readers.py`. Scores the first 15 rows; finds the header on line 4 of the hand-kept file and reports the three rows it skipped. Also drops a trailing TOTAL row and blank columns |
+| T-138 | Synonym dictionary and lexical matcher | `DONE` | Trevor | `intelligence/schema.py`. 22 target fields with Indian-HR-aware synonyms. Maps 21 of 22 real headers with no model at all |
+| T-139 | Three-voter reconciler | `DONE` | Trevor | `intelligence/mapper.py`. Keeps losing votes; hard evidence overrules the model; enforces one-column-per-field (D-057) |
+| T-140 | Transform DSL | `DONE` | Trevor | `intelligence/transforms.py`. Named, composable, previewable steps. Proposes `scale(1/12)` when a money column's median says it is annual |
+| T-141 | Row validation | `DONE` | Trevor | `intelligence/validators.py`. Error blocks a row, warning does not. A file with three bad rows imports the other 397 |
+| T-142 | Streaming analyse endpoint | `DONE` | Trevor | `intelligence/api.py`. SSE consumed with `fetch` + reader because EventSource cannot send an auth header. Paced deliberately on the no-model path so the reasoning is still visible |
+| T-143 | The Import Studio screen | `DONE` | Trevor | `screens/ImportStudio.jsx` + `components/SheetGrid.jsx`, `ai.jsx`, `intel.css`. Colour-coded columns, vote stacks, transform chips, before/after preview |
+| T-144 | Second-file enrichment | `DONE` | Trevor | `intelligence/enrich.py` + `components/ImportGaps.jsx`. Join key found by measuring value overlap; 14 of 16 on the demo pair; fills blanks only, never overwrites |
+| T-145 | Employee code assignment | `DONE` | Trevor | `intelligence/codes.py`. Always offered (D-063), previewed against real rows, sequences continue from what exists |
+| T-146 | Workforce app: segments, bulk ops, bonds, playbooks | `DONE` | Trevor | `workforce/`. Increment opens a new contract rather than editing a wage — the graded rule from the other side |
+| T-147 | Natural-language rule compiler | `DONE` | Trevor | `workforce/compiler.py`. Model output validated against the real vocabulary; anything invented is dropped *and reported*; keyword fallback with no model |
+| T-148 | Workforce screens | `DONE` | Trevor | `Segments`, `MassActions`, `Bonds`, `Playbooks`, `AISetup`. NL-first on two of them, preview-before-commit on the third |
+| T-149 | Restrict the smart features to the Admin | `DONE` | Trevor | D-060. Verified as enforcement: 9 endpoints x 4 roles all 403, menu group absent for all four |
+| T-150 | Setup scripts and diagnostics | `DONE` | Trevor | `scripts/setup-ai.ps1`, `setup-ai.sh`, `manage.py ai_doctor`, `models_manifest.json`. All verify with a real round trip rather than assuming the pull worked |
+| T-151 | AI setup documentation | `DONE` | Trevor | `docs/AI-SETUP.md` + a README section. Measured numbers, per-feature fallbacks, the privacy argument, four real failure modes |
+| T-152 | Seven demo rosters | `DONE` | Trevor | `test-data/import/` + README. Each breaks differently; 06 carries 240 employees (D-064) |
+| T-153 | 78 tests for the new code | `DONE` | Trevor | `intelligence/tests.py`, `workforce/tests.py`. Weighted at what fails silently: header detection, the overrule path, the mass increment not rewriting history |
+| T-154 | Make `verify_rules.py` scale-independent | `DONE` | Trevor | It asserted `min(no_bank, 2)`, true only for the 22-person seed. Now compares against the employees actually in the payrun. 28/28 at 22 and at 200 |
+| T-155 | Reorganise into four feature branches and merge to main | `DONE` | Trevor | Final integration tree asserted byte-identical to the original branch tip before pushing (B-039) |
+
+### Open, in priority order for session 10
+
+| ID | Task | Status | Owner | Notes |
+|---|---|---|---|---|
+| T-107 | Rewrite the demo script against the running product | `TODO` | | **The top task.** B-031 + B-036. Was stale before; now an entire menu group is unmentioned. Needs scenarios A and B corrected and a new scenario C for the import studio — `test-data/README.md` already contains the narration for C |
+| T-156 | Walk the 240-row import in a browser | `TODO` | | B-037. The pipeline is proven at that size through the API; the studio UI has not been watched doing it. Low risk, 10 minutes |
+| T-157 | Decide the demo seed size with the user | `TODO` | | D-066 keeps 22 as the default because the script's three-month narrative depends on those figures. `--employees 200` is verified. The user asked for 200; the answer chosen was to tell the scale story through the import instead. **Confirm this is what they want** |
+| T-134 | Self-approval guard on leave approval | `TODO` | | B-034, unchanged. Real, small, not reachable in the demo |
+| T-126 | Two reads answer 400 for an account with no employee | `TODO` | | B-032, unchanged. Cosmetic; both UIs handle it |
+| T-127 | Frontend test runner | `TODO` | | B-033, unchanged — and this session is more evidence for it. Six of the nine defects found were frontend or frontend-adjacent and every one was found by hand |
+| T-111 | Ledger primary button contrast is 3.05:1 | `TODO` | | Carried unasked across four sessions now. One token closes it, but Ledger is the shipped signature look and `ui-design-language.md` §2 fixes it, so it needs the user's decision rather than a fix |

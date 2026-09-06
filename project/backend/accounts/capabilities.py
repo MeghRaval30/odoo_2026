@@ -74,9 +74,24 @@ SALARY_CONFIG_READ = "salaryconfig.read"     # structures and rules
 SALARY_CONFIG_WRITE = "salaryconfig.write"
 DASHBOARD_PAYROLL = "dashboard.payroll"
 
+# -- workforce operations ---------------------------------------------------
+# Bulk work on many employees at once: migrating another system's roster in,
+# resolving a segment, running a mass increment or exit, issuing bonds, and the
+# playbooks that schedule those. Every one of them writes employee records or
+# contracts, so they sit on the HR side of the line D-042 draws -- a wage lives
+# on a contract, and setting a wage is deciding pay, not processing it.
+DATA_IMPORT = "data.import"              # the import studio
+WORKFORCE_READ = "workforce.read"        # see bonds, segments, playbooks
+WORKFORCE_WRITE = "workforce.write"      # issue, run, execute
+
 # -- administration ---------------------------------------------------------
 USER_MANAGE = "user.manage"
 SECURITY_MANAGE = "security.manage"
+#: Who may change the marks that say whose system this is. Admin only, and
+#: deliberately its own capability rather than folded into security.manage:
+#: a role that can restyle the product as another company is doing
+#: something different from a role that can change a password policy.
+BRANDING_MANAGE = "branding.manage"
 AUDIT_READ = "audit.read"
 
 
@@ -210,13 +225,31 @@ _PAYROLL_MANAGER = _PAYROLL_USER | {
 #: those two are siblings rather than a ladder -- otherwise the Admin would
 #: quietly lose leave approval and attendance correction along with them.
 _ADMIN = _HR_MANAGER | _PAYROLL_MANAGER | {
-    USER_MANAGE, SECURITY_MANAGE, AUDIT_READ,
+    USER_MANAGE, SECURITY_MANAGE, AUDIT_READ, BRANDING_MANAGE,
     # Salary structures and rules are readable by payroll and writable by
     # nobody below this line. Listed explicitly because it is the one
     # capability no other role carries -- take it out and the salary rules
     # become uneditable by anyone, which the ALL_CAPABILITIES check below
     # would catch but is worth naming here.
     SALARY_CONFIG_WRITE,
+
+    # The bulk and inference tools, held here and nowhere else.
+    #
+    # These are the widest-blast-radius actions in the product. One import
+    # creates hundreds of employees and contracts; one mass increment rewrites
+    # the wage on every contract in a segment; one offboarding deactivates
+    # people and marks their bonds breached. Each is a single click whose
+    # consequences are spread across the whole roster, and unlike every other
+    # write in this system there is no per-record review step where a second
+    # person would notice a mistake.
+    #
+    # The HR Manager can do each of these things one record at a time, and
+    # that is deliberately where the boundary sits: doing something once is a
+    # correction, doing it to four hundred people is a policy decision. The
+    # capability is therefore not "can you edit an employee" but "may you
+    # commit the organisation in one action", and that belongs with the
+    # account that already carries system-wide authority.
+    DATA_IMPORT, WORKFORCE_READ, WORKFORCE_WRITE,
 }
 
 ROLE_CAPABILITIES = {
@@ -297,6 +330,24 @@ NAVIGATION = [
         ],
     },
     {
+        # Bulk people operations, kept as their own group rather than folded
+        # into Employees. The distinction is not cosmetic: everything under
+        # Employees acts on one record that is already in the system, and
+        # everything here acts on many records at once -- including records
+        # that are not in the system yet. A judge reading the menu should be
+        # able to tell those two apart without opening either.
+        "key": "workforce", "label": "Workforce", "cap": WORKFORCE_READ,
+        "items": [
+            {"to": "/import", "label": "Data Import", "cap": DATA_IMPORT},
+            {"to": "/segments", "label": "Segments", "cap": WORKFORCE_READ},
+            {"to": "/mass-actions", "label": "Mass Actions",
+             "cap": WORKFORCE_WRITE},
+            {"to": "/bonds", "label": "Bonds", "cap": WORKFORCE_READ},
+            {"to": "/playbooks", "label": "Playbooks", "cap": WORKFORCE_READ},
+            {"to": "/ai-setup", "label": "Local AI", "cap": DATA_IMPORT},
+        ],
+    },
+    {
         "key": "contracts", "label": "Contracts", "cap": CONTRACT_READ_ALL,
         "items": [
             {"to": "/contracts", "label": "Contracts", "cap": CONTRACT_READ_ALL},
@@ -324,6 +375,8 @@ NAVIGATION = [
         "items": [
             {"to": "/payroll", "label": "Payruns", "cap": PAYRUN_READ},
             {"to": "/payslips", "label": "Payslips", "cap": PAYSLIP_READ_ALL},
+            {"to": "/payslip-import", "label": "Import Past Payslips",
+             "cap": DATA_IMPORT},
         ],
     },
     {
@@ -348,6 +401,7 @@ NAVIGATION = [
             {"to": "/users", "label": "Users & Roles", "cap": USER_MANAGE},
             {"to": "/security", "label": "Security", "cap": SECURITY_MANAGE},
             {"to": "/audit", "label": "Audit Log", "cap": AUDIT_READ},
+            {"to": "/branding", "label": "Branding", "cap": BRANDING_MANAGE},
         ],
     },
 ]

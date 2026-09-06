@@ -772,3 +772,150 @@ servers, sign in as `aarav@oxp.com`, and read demo scenario A aloud against the
 screen, fixing the prose. The script's figures are now all verified correct; what
 is stale is its description of menus and roles, which predates the permission
 rebuild.
+
+---
+
+## Session 09 — Trevor · 2026-09-06 03:49 → 06:20 IST (~2h 30m)
+
+Opened on the session 08 handoff, set the `MeghRaval30` identity, and then the
+brief changed completely. The board said FREEZE with one task left (T-107, the
+demo script). The user's actual instruction was to build a substantial new
+feature area: AI-assisted data migration using local models, plus a bulk
+workforce management ecosystem. That is what the session did.
+
+**T-107 was not touched.** It is still the most valuable open task and is now
+worse than when the session started, because there is a whole feature area the
+script does not mention. See B-036.
+
+### What was accomplished
+
+**An AI data-migration studio, built around a measurement rather than a guess.**
+
+The obvious design — hand the headers to a local model and do what it says —
+was built first and measured. `qwen2.5:7b` at temperature 0 returned `null` for
+`Sal (pm)`, `DOJ` and `Mob No` in one pass and mapped all three correctly in
+the next, with nothing in the response to tell the two apart. The rebuild made
+the model **one voter of three** (D-057) and fed it the profiler's measured
+evidence instead of raw values (D-058), which took it from 3/6 to 6/6 columns
+on the same prompt. The reconciler keeps the losing votes, so the screen can
+show the profiler overruling the model.
+
+Everything works with the model switched off — the two deterministic voters map
+10 of 13 columns on the bundled files, in about 40 ms, and every response says
+which path ran.
+
+**A second-file join.** A roster is never in one place: HR has names and pay,
+finance has bank details in its own spreadsheet. The studio detects the join
+key by measuring value overlap rather than being told (`enrich.py`), reports
+matched / not-found / unused, and fills only blanks. On the demo pair it
+matches 14 of 16 on `Staff ID` and names the two people finance never sent.
+
+**Employee numbering**, always asked rather than assumed (D-063), previewed
+against real rows because the year comes from each person's own joining date,
+with sequences continuing from what is already issued.
+
+**A workforce operations app**: segments as saved questions, bulk
+increment/exit/transfer/bond-issue with a mandatory preview built from the same
+code that executes, bonds with pro-rata recovery, and playbooks that raise
+reminders and never change anything. The mass increment closes the current
+contract and opens a new one rather than editing a wage in place, which is the
+graded period-resolution rule working from the other side.
+
+**Setup that actually verifies.** `scripts/setup-ai.ps1` / `.sh` detect Ollama,
+pick the 7B or 3B from `nvidia-smi`, pull, warm, then fire a real mapping
+prompt and report PASS/FAIL with latency. `manage.py ai_doctor` does the same
+as a diagnostic and always exits 0.
+
+**Seven demo rosters** in `test-data/import/`, each failing differently, with a
+README narrating what each one proves.
+
+**Nine defects found by using the product, none of them visible to a harness:**
+
+* A salary column of bare integers read as **dates** — 45000 is a plausible
+  monthly wage and also the Excel serial for a day in 2023. Indian salaries sit
+  squarely in that range; it was masked only because the sample files carry
+  currency marks.
+* The implausible-wage ceiling was 5,000,000, so an unscaled annual salary of
+  10,80,000 imported silently as a monthly wage.
+* A bank sheet's `Account Type` (Savings/Current) mapped to **Employment type**,
+  then to **Work location**.
+* The model answered *some* department mappings and silently skipped others,
+  which would have merged two departments and duplicated two more.
+* It collapsed `Senior Developer` onto `Developer`.
+* Derived emails came out at `example.com` when the file had no email column.
+* **Double-clicking Import** wrote the roster once and then reported "0
+  employees imported" over the top of it.
+* The done screen could not distinguish "nothing needed writing" from
+  "everything failed to write".
+* Accepting the email fix ticked green while the rail insisted the field was
+  still needed and Preview stayed disabled — two places answering one question
+  (D-065).
+
+`verify_rules.py` also had a check pinned to the 22-person seed. At
+`--employees 200` it failed and **the product was right**; the check now
+compares against the employees actually in the payrun, which is correct at any
+size and a stronger assertion.
+
+### What was attempted and abandoned
+
+**A nine-agent parallel build.** Launched with a full written contract so the
+agents could work against fixed interfaces. The user killed it about four
+minutes in — "burning too much tokens too soon" — before any agent had written
+a file. Nothing was lost and nothing was on disk. Everything after that was
+built directly, sequentially, and it was the right call: most of the nine
+defects above came from driving the product by hand, which a fan-out would not
+have done.
+
+**Renaming the code prefix to `FFL` during the browser walkthrough** failed
+silently — a React controlled input ignores a native `value` set. Not worth
+fixing; the default `EMP` is the better answer anyway since it matches the
+company's existing scheme.
+
+### Verification at close
+
+| Check | Result |
+|---|---|
+| `manage.py test` | **314 OK** (was 236; 78 new) |
+| `verify_rules.py` | 28/28, at 22 employees **and** at 200 |
+| `audit_permissions.py` | every cell matches the intended matrix |
+| `smoke_api.py` | 53/53 |
+| `probe_forms.py` | 26/26 |
+| `npm run build` | clean, ~835 kB |
+| `manage.py ai_doctor` | all checks pass, 711 ms warm |
+| Admin-only enforcement | 9 endpoints x 4 other roles, all 403; menu absent for all four |
+
+### Git
+
+Eight working commits on `feat/intelligence-layer`, then reorganised at the
+user's request into **four feature branches**, each squashed to one commit and
+merged `--no-ff` into an integration branch based on `origin/main`:
+
+* `feat/ai-import-studio`
+* `feat/workforce-operations`
+* `feat/ai-setup-and-test-data`
+* `feat/import-enrichment`
+
+The final integration tree was asserted **byte-identical** to the original
+branch tip before pushing, so nothing was lost in the reorganisation. Pushed to
+`main` with `git push origin HEAD:main`, because `main` is checked out in an
+abandoned worktree 41 commits behind (B-038).
+
+### Handoff
+
+Handoff SHA and tag are recorded in the closing report and in
+`current-state.md`. **Michael is up next.** His first action is B-036: rewrite
+the demo script against the running product, including a scenario for the
+import studio.
+
+### Correction — 2026-09-06 06:35 IST
+
+The closing entry above says "Michael is up next". **It is Franklin.** Michael
+was unavailable when the handoff was made, so the rotation is taken out of order
+and session 10 comes back to Franklin, who also ran session 08.
+
+Nothing else changes: Franklin has no memory of session 09, commits as
+`Robo9327study` / `rajstudy9327@gmail.com`, and picks up the same first task —
+T-107 / B-036, the demo script. `NEXT-SESSION-PROMPT.md` was corrected to
+address Franklin by name rather than left to contradict itself, because a
+briefing that greets the wrong character is the kind of thing that costs a cold
+session its first ten minutes.

@@ -645,3 +645,174 @@ configuration, Leave approval and attendance correction
 > Okayy everything works fine now commit it to github repo
 
 > MEGATRON LAUNCH
+
+---
+
+## Session 09 — Trevor · 2026-09-06 03:49 → 06:20 IST
+
+**Prompt 1 — the boot prompt, followed immediately by the mission**
+
+> You are TREVOR, session 09 of a three-Claude relay building PeoplePay360 — an
+> integrated HR & payroll platform for a 24-hour Odoo hackathon.
+>
+> Repo: https://github.com/MeghRaval30/odoo_2026
+>
+> You have no memory of the eight sessions before you. The repository is the only
+> channel between sessions. Everything you need was written down for you.
+>
+> FIRST, IN THIS ORDER:
+>
+> 1.  git pull --rebase
+>
+> 2.  Set and VERIFY your git identity — you commit as Megh, not as the previous
+>     session:
+>         git config user.name  "MeghRaval30"
+>         git config user.email "meghraval306@gmail.com"
+>         git config user.name && git config user.email
+>     Getting this wrong is not silently recoverable. All three teammates must
+>     appear as authors on this repo.
+>
+> 3.  Read claude/handoff/NEXT-SESSION-PROMPT.md IN FULL. It was rewritten from
+>     scratch for you at 03:10 IST and is the real briefing — 14 sections covering
+>     the product, the five graded rules, the architecture, what is done, what is
+>     half-done, the decisions you must not relitigate, and eleven traps that cost
+>     earlier sessions real time.
+>
+> 4.  Then read claude/state/current-state.md and claude/state/task-board.md.
+>
+> 5.  Skim claude/context/decisions.md. D-050 through D-056 are from session 08
+>     and cover the approval workflows and the reseed behaviour. Do not "fix" any
+>     of them back — the reasoning is recorded.
+>
+> The last handoff is commit ddec27d, tagged handoff-franklin-08.
+>
+> THE CLOCK: the hackathon ends 2026-09-06 at 10:00 IST. Run `date` and work out
+> what is left. You are in FREEZE at best and probably POLISH — bugfix, polish and
+> rehearsal only. There is no feature left that the graded deliverables need. The
+> board has been feature-complete since session 06.
+>
+> YOUR FIRST ACTION IS NOT A FEATURE. It is this:
+>
+>     cd project/backend
+>     ./.venv/Scripts/python.exe manage.py test        # expect 236 OK
+>     ./.venv/Scripts/python.exe manage.py seed --flush
+>     ./.venv/Scripts/python.exe manage.py runserver   # terminal 1
+>     cd ../frontend && npm run dev                    # terminal 2
+>
+> Then do T-107, which is the only task left on the board and the last graded
+> deliverable that is currently wrong.
+>
+> [... full boot prompt, hard rules, and two traps as in session 08's briefing ...]
+>
+> Announce which character you are and what you are picking up, then start.
+>
+> now this is ur mission :
+>
+> we will be developing a really smart feature
+> whats the biggest problem with getting a company to use this software?
+> onboarding the biggest friction point. every company has their own way of
+> storing such employee data before they get this software how to migrate their
+> database to our own software?
+> now their own database could be in any form a excel sheet made by company
+> owner's 7 year old kid badly formatted or some another software that exports a
+> bad format file.
+> so how to get any type of database input converted to our software database?
+> answer is automation using local ai models to analyze, classify and handle any
+> type of inputted database to convert them to our software in minutes. local
+> models running on our gpu something like qwen maybe. now you will have to
+> develop a really smart handling of this database taking help of dumb ai models
+> that run on laptops like us having only 8gb vram gpu.
+> now we want a complete database management ecosystem in our product man even
+> helping with things like company merger, mass firing or mass recruitment.
+> add features like bond signing and management aswell. being able to set scripts
+> such as "remind me to give increments to employees matching these criteria
+> after this duration".
+> also like the repo must be so well managed that the next agent pulling this repo
+> will get these ai models set up on their pc aswell quickly with proper
+> installation setup aswell.
+> I want you to think about all the smart features and automation/ mass management
+> features we can add to the software. even using local ai models for some
+> features. dont add a generic ai chatbox add some really powerfull and makes
+> sense features that are actually smart and makes life easier and reduce friction
+> for users. features that sell the software.
+>
+> we are now going advanced.
+>
+> also since we are in a hackathon you must understand that these features must
+> provide shock value to the judges and for that we need to show the great things
+> the smart features and specifically the ai does visually. by visually I dont
+> mean that you stick a flowchart on the page but I mean things like higlighting
+> the excel sheet for example that was given as input and colour code matching the
+> highlight with what we need, how things like format will be handled from them
+> for example removing commas or adding idk and then this procedure is like shown
+> by ai and then the user clicks approve, start importing and then using that
+> algorithm or something that ai designed the software runs import and boom the
+> database is imported. so for ai features or the really powerfull and magical
+> features we need some actual animations that make the option feel like powerfull
+> just like the ultracode animation in claude code and claude code terminal.
+>
+> also ofc make example databases for us to show these features in demo.
+
+**Prompt 2** (mid-turn)
+
+> also forgot to add only one commit do pls at the end of the session
+
+**Prompt 3** (mid-turn, superseding prompt 2)
+
+> sorry do like 5 to 6 commits dureing the development but do on a seperate
+> branch not on main once its confirm we will merge on main
+
+**Prompt 4** (mid-turn — the nine-agent workflow was killed)
+
+> I had to stop the 9 agents they were burning too mcuh tokens too soon go easy
+> on me man
+
+**Prompt 5** (mid-turn)
+
+> All these smart features should only be accessible to admin and no one else
+> shold be able use or see itanyhow
+
+**Prompt 6**
+
+> I do not want the three demo options as buttons in the software
+> I want like 4 to 5 actual files in different formats mostly excel format
+> somewhere in the folder preferrable called test data or something which we can
+> open and show to the judges.
+>
+> now we need to show these files some having all the required data, some very
+> badly formatted some even not having all the data required for our software.
+>
+> then in import we need to
+
+*(prompt 6 was sent unfinished; prompt 8 completes it)*
+
+**Prompt 7**
+
+> Try again
+
+**Prompt 8 — the completion of prompt 6, and the specification for the
+second-file flow**
+
+> then in import we just select one file with one missing data, the software
+> shows exactly from where what is being fetched and how is it outputted.
+> then for the mssing data software shows missing data, bank details add another
+> file to fecth from ? there we give it another data with bank details with
+> employee name and code . which it pulls that data from also then software asks
+> for auto assignment of employee code in specific manner and all that stuff. so
+> this one we will use in demo, it will go step by step other than that improve ui
+> and animations in our all smart features. run it for me
+
+**Prompt 9** (mid-turn)
+
+> extra high on
+
+**Prompt 10** (mid-turn)
+
+> make really good data files for these also for our other examples sorted into
+> folders perfectly also the data for general non smart featured add atleast 200
+> employees.
+
+**Prompt 11 — the close**
+
+> start commiting in 3 to 4 commits and each feature should have a different
+> branch and then merge it all to main branch and then megatron launch

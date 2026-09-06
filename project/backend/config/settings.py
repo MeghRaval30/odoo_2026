@@ -50,6 +50,8 @@ LOCAL_APPS = [
     "timeoff",
     "payroll",
     "dashboard",
+    "intelligence",
+    "workforce",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -212,3 +214,28 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+
+# --------------------------------------------------------------------------
+# Local language model
+# --------------------------------------------------------------------------
+#
+# The import studio and the natural-language rule compilers talk to a model
+# running on this machine through Ollama, never to a hosted API. That is a
+# deliberate constraint rather than a cost saving: the data being read is a
+# company's salary register, and the argument for letting software touch it at
+# all is much easier to make when nothing leaves the host.
+#
+# It is also optional. Every feature that uses the model has a deterministic
+# path behind it, so an evaluator with no GPU still gets a working import --
+# the responses say which path ran rather than pretending.
+PP360_LLM_ENABLED = os.getenv("PP360_LLM_ENABLED", "1").lower() in ("true", "1", "yes")
+PP360_LLM_BASE = os.getenv("PP360_LLM_BASE", "http://127.0.0.1:11434")
+PP360_LLM_MODEL = os.getenv("PP360_LLM_MODEL", "qwen2.5:7b")
+
+# A cold load of a 7B model onto an 8GB card costs about eleven seconds; a warm
+# generation costs about four. Every request therefore asks Ollama to hold the
+# weights resident, and the first request of a session is deliberately paid for
+# on a screen that is expecting to wait.
+PP360_LLM_KEEP_ALIVE = os.getenv("PP360_LLM_KEEP_ALIVE", "30m")
+PP360_LLM_TIMEOUT = int(os.getenv("PP360_LLM_TIMEOUT", "120"))

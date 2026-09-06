@@ -26,6 +26,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Role, User
+from core.models import Branding
 from accounts.security import (AuditLog, LoginAttempt, NetworkPolicy,
                                SecuritySetting)
 from attendance.models import Attendance
@@ -92,9 +93,27 @@ class Command(BaseCommand):
             AuditLog.objects.all().delete()
             LoginAttempt.objects.all().delete()
 
+            # The workforce tables reference employees, which are about to
+            # go, and an import run holds the file it read. Both are demo
+            # state rather than history, so a flush resets them with
+            # everything else.
+            from intelligence.models import ImportRun, ImportSource
+            from workforce.models import (Bond, BondTemplate, BulkOperation,
+                                          Playbook, PlaybookEvent, Segment)
+            for model in (PlaybookEvent, Playbook, BulkOperation, Bond,
+                          BondTemplate, Segment, ImportRun, ImportSource):
+                model.objects.all().delete()
+
+            # Branding is a single row nothing above references, so like the
+            # security settings it outlived every reseed -- including a logo
+            # somebody uploaded mid-demo. "A known demo state" has to include
+            # whose name is in the top bar.
+            Branding.objects.all().delete()
+
         random.seed(360)  # reproducible demos
 
         company = self._company()
+        self._branding()
         roles = self._roles()
         departments = self._departments(company)
         positions = self._positions(company, departments)
@@ -113,6 +132,7 @@ class Command(BaseCommand):
         self._attendance(employees)
         self._payroll_history(company, structures["regular"], employees)
         self._off_cycle_correction(company, structures["regular"], employees)
+        self._workforce(company, employees)
 
         self._summary()
 
@@ -833,6 +853,115 @@ class Command(BaseCommand):
             f"{subject.full_name}, state={payrun.state} "
             f"(leaves a DUPLICATE for the March run to find)")
 
+    # -------------------------------------------------------------- workforce
+
+    def _workforce(self, company, employees):
+        """
+        Bonds, segments and playbooks, so the workforce screens open on
+        something real rather than on empty tables.
+
+        Deliberately modest: two bond templates, five issued bonds with one
+        already close to expiry so the expiring filter has a hit, three saved
+        segments, and two playbooks left switched on with their events
+        unraised -- running them is part of the demo, and a screen that already
+        shows the answer has nothing to show.
+        """
+        from workforce.models import Bond, BondTemplate, Playbook, Segment
+
+        training, _ = BondTemplate.objects.get_or_create(
+            name="Training bond - 24 months",
+            defaults={
+                "description": "Standard bond against funded certification.",
+                "duration_months": 24,
+                "recovery_amount": Decimal("150000.00"),
+                "notice_days": 60,
+                "body": ("This agreement is made between {{company}} and "
+                         "{{employee_name}}.\n\n"
+                         "In consideration of training funded by the company, "
+                         "{{employee_name}} agrees to remain in service for "
+                         "{{duration_months}} months from {{start_date}} to "
+                         "{{end_date}}.\n\n"
+                         "Should employment end before {{end_date}}, a sum of "
+                         "{{recovery_amount}} becomes recoverable, reduced pro "
+                         "rata for months already served.\n\n"
+                         "Either party may terminate on {{notice_days}} days "
+                         "written notice."),
+            })
+        BondTemplate.objects.get_or_create(
+            name="Relocation bond - 12 months",
+            defaults={
+                "description": "Against relocation and joining expenses.",
+                "duration_months": 12,
+                "recovery_amount": Decimal("60000.00"),
+                "notice_days": 30,
+                "body": ("{{employee_name}} received relocation assistance on "
+                         "joining and agrees to serve {{duration_months}} months "
+                         "to {{end_date}}, failing which {{recovery_amount}} is "
+                         "recoverable pro rata."),
+            })
+
+        # One of these ends inside sixty days, which is what makes the
+        # expiring-soon filter and the bond playbook worth opening.
+        today = date.today()
+        offsets = [(-20, 24), (-14, 24), (-23, 24), (-6, 12), (-11, 12)]
+        for emp, (months_ago, term) in zip(employees[2:7], offsets):
+            start = today - timedelta(days=abs(months_ago) * 30)
+            end = start + timedelta(days=term * 30)
+            Bond.objects.get_or_create(
+                employee=emp, start_date=start,
+                defaults={
+                    "template": training, "state": Bond.ACTIVE,
+                    "end_date": end, "duration_months": term,
+                    "recovery_amount": Decimal("150000.00"),
+                    "notice_days": 60,
+                    "signed_at": timezone.now(),
+                    "signed_name": emp.full_name,
+                })
+
+        for name, description, criteria in [
+            ("Engineering, full time",
+             "Everyone building the product on a permanent contract.",
+             {"departments": ["Engineering"], "employee_types": ["FULL_TIME"]}),
+            ("Interns past six months",
+             "Interns due a conversation about conversion.",
+             {"employee_types": ["INTERN"], "tenure_months_min": 6}),
+            ("No bank account on file",
+             "These people block a payrun until somebody fixes them.",
+             {"missing_bank_account": True}),
+        ]:
+            Segment.objects.get_or_create(
+                name=name,
+                defaults={"description": description, "criteria": criteria,
+                          "source": Segment.MANUAL})
+
+        Playbook.objects.get_or_create(
+            name="Increment review at twelve months",
+            defaults={
+                "trigger": Playbook.TENURE_REACHED,
+                "trigger_params": {"months": 12, "window_days": 120},
+                "criteria": {"employee_types": ["FULL_TIME"]},
+                "action": Playbook.PROPOSE_INCREMENT,
+                "action_params": {"percent": 8},
+                "nl_prompt": ("remind me to review increments for full time staff "
+                              "twelve months after they join"),
+                "active": True,
+            })
+        Playbook.objects.get_or_create(
+            name="Bond ending within 60 days",
+            defaults={
+                "trigger": Playbook.BOND_EXPIRING,
+                "trigger_params": {"days": 60},
+                "criteria": {},
+                "action": Playbook.NOTIFY,
+                "nl_prompt": "tell me when someone's bond is about to end",
+                "active": True,
+            })
+
+        self.stdout.write(
+            "  workforce: %d bond templates, %d bonds, %d segments, %d playbooks"
+            % (BondTemplate.objects.count(), Bond.objects.count(),
+               Segment.objects.count(), Playbook.objects.count()))
+
     # ----------------------------------------------------------------- report
 
     def _summary(self):
@@ -849,3 +978,42 @@ class Command(BaseCommand):
             f"{PayslipLine.objects.count()} lines | "
             f"{PayslipWarning.objects.count()} warnings")
         self.stdout.write("\n  Login: admin@oxp.com / demo1234")
+
+    def _branding(self):
+        """
+        The demo ships branded.
+
+        An unbranded install is a fair default for the product but a poor
+        demo: the corporate theme is built around a customer's mark sitting in
+        the bar and washed across the page, and neither is visible with no
+        images loaded. The two SVGs beside this app are read from disk rather
+        than pasted in as base64 so they stay editable as drawings.
+
+        Anything an administrator uploads through Administration -> Branding
+        replaces these outright; this only decides what a freshly seeded
+        database looks like.
+        """
+        import base64
+        import os
+
+        here = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))), "brand_assets")
+        branding = Branding.load()
+        branding.app_name = "PeoplePay360"
+        branding.company_name = "Shree Ganesh Engineering Co"
+
+        for which, filename in (("logo", "sgec-logo.svg"),
+                                ("watermark", "sgec-watermark.svg")):
+            path = os.path.join(here, filename)
+            if not os.path.exists(path):
+                continue
+            with open(path, "rb") as handle:
+                raw = handle.read()
+            setattr(branding, "%s_b64" % which,
+                    base64.b64encode(raw).decode("ascii"))
+            setattr(branding, "%s_mime" % which, "image/svg+xml")
+            setattr(branding, "%s_filename" % which, filename)
+
+        branding.watermark_opacity = 5
+        branding.save()
+        self.stdout.write("  branding: %s" % branding.company_name)

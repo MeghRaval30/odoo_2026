@@ -1,0 +1,594 @@
+/* ==========================================================================
+   The import studio.
+
+   Two things live here and nothing else: a colour per target field, and the
+   motion that makes the analysis legible while it happens.
+
+   THE COLOURS. A column's hue is its meaning. The same hue marks the header
+   cell, the column body, the field chip and the entry in the schema legend, so
+   "which of my columns became the wage" is answered by looking rather than by
+   reading. That is why they are declared once, here, and referenced by index.
+
+   They sit outside the six themes on purpose. Every other colour in this
+   product is a theme token and changes when the theme does; these are data
+   encoding, like the chart palette in Dashboard.jsx, and a category that
+   changes colour between themes is a category the eye has to relearn. They
+   are chosen to stay inside the warm family so they still belong.
+
+   THE MOTION. Short, eased, staggered, and never decorative. Every animation
+   here is showing a step of real work: a beam that sweeps as the file is read,
+   a column that pulses while it is being profiled, a reason that types out as
+   the model produces it. Under prefers-reduced-motion all of it resolves
+   instantly to the finished state -- the information is in the final frame,
+   never in the transition.
+   ========================================================================== */
+
+:root {
+  --fld-1: #d97757;  --fld-1-wash: #fbeae2;
+  --fld-2: #5b7d58;  --fld-2-wash: #e8efe4;
+  --fld-3: #856b9c;  --fld-3-wash: #eee8f3;
+  --fld-4: #a97a24;  --fld-4-wash: #f7ecd8;
+  --fld-5: #c0757b;  --fld-5-wash: #f7e4e5;
+  --fld-6: #46727e;  --fld-6-wash: #e2eef0;
+  --fld-7: #8a6a52;  --fld-7-wash: #f0e7e0;
+  --fld-8: #6f7442;  --fld-8-wash: #eef0e0;
+  --fld-9: #9c5f7a;  --fld-9-wash: #f4e5eb;
+  --fld-10: #5a6690; --fld-10-wash: #e5e8f2;
+}
+
+/* Console and Graphite are the two dark themes. A near-white wash vanishes
+   on a dark ground, so those get the same hues at low alpha instead -- the
+   encoding survives the theme switch, which is the whole point of it. */
+:root[data-theme="console"], :root[data-theme="graphite"] {
+  --fld-1-wash: rgba(217, 119, 87, 0.18);
+  --fld-2-wash: rgba(123, 157, 120, 0.18);
+  --fld-3-wash: rgba(150, 128, 178, 0.18);
+  --fld-4-wash: rgba(190, 146, 60, 0.18);
+  --fld-5-wash: rgba(200, 125, 132, 0.18);
+  --fld-6-wash: rgba(96, 150, 165, 0.18);
+  --fld-7-wash: rgba(160, 128, 102, 0.18);
+  --fld-8-wash: rgba(140, 148, 86, 0.18);
+  --fld-9-wash: rgba(180, 110, 140, 0.18);
+  --fld-10-wash: rgba(120, 134, 180, 0.18);
+}
+
+/* ==========================================================================
+   The sheet
+   ========================================================================== */
+
+.sheet-wrap {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.sheet {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.sheet th,
+.sheet td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 9px;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 260ms ease, color 260ms ease;
+}
+
+.sheet .rownum {
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 34px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.sheet thead th {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  position: relative;
+  vertical-align: top;
+  min-width: 116px;
+}
+
+.sheet thead th.clickable { cursor: pointer; }
+.sheet thead th.clickable:hover { filter: brightness(0.97); }
+
+.sheet-head-label {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+/* A row above the detected header. Kept visible and struck through, because
+   "I ignored these" is only trustworthy if you can see what was ignored. */
+.sheet tr.junk td {
+  color: var(--text-faint);
+  background: var(--surface-2);
+  font-style: italic;
+}
+.sheet tr.junk.identified td { text-decoration: line-through; opacity: 0.55; }
+
+.sheet tr.headerline td {
+  background: var(--primary-wash);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sheet tbody tr:hover td { background: var(--surface-2); }
+
+.sheet td.num,
+.sheet td.mono {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* An unmapped column: visibly excluded rather than merely unmarked. */
+.sheet .unmapped {
+  background-image: repeating-linear-gradient(
+    -45deg, transparent, transparent 5px,
+    var(--border) 5px, var(--border) 6px);
+  color: var(--text-faint);
+}
+
+.sheet .pulsing { animation: cell-pulse 900ms ease-in-out infinite; }
+
+@keyframes cell-pulse {
+  0%, 100% { background-color: var(--surface-2); }
+  50% { background-color: var(--primary-wash); }
+}
+
+/* ==========================================================================
+   Scan beam
+   ========================================================================== */
+
+.scanbeam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 64px;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(
+    180deg, transparent 0%,
+    color-mix(in srgb, var(--primary) 16%, transparent) 55%,
+    color-mix(in srgb, var(--primary) 42%, transparent) 88%,
+    transparent 100%);
+  animation: scan 1900ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes scan {
+  0% { top: -64px; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ==========================================================================
+   Chips, votes, meters
+   ========================================================================== */
+
+.fieldchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.fieldchip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.tchip {
+  display: inline-block;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 10.5px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+.tchip:hover, .tchip.on { border-color: var(--primary); color: var(--primary); }
+
+.tchip-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tchip-sep { color: var(--text-faint); font-size: 10px; }
+
+.confbar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+  min-width: 54px;
+}
+.confbar > i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 420ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.confbar.low > i { background: var(--red); }
+.confbar.mid > i { background: var(--amber); }
+.confbar.high > i { background: var(--green); }
+
+.votes { display: flex; flex-direction: column; gap: 4px; }
+
+.vote {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 7px;
+  align-items: baseline;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.vote .who {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  padding: 0 3px;
+  text-align: center;
+}
+
+.vote.agreed .who { color: var(--green); border-color: var(--green); }
+.vote.overruled { opacity: 0.62; }
+.vote.overruled .what { text-decoration: line-through; }
+.vote.overruled .who { color: var(--red); border-color: var(--red); }
+.vote.outvoted { opacity: 0.68; }
+.vote .what { color: var(--text-dim); }
+.vote .what b { color: var(--text); font-weight: 600; }
+
+/* ==========================================================================
+   Thinking stream
+   ========================================================================== */
+
+.thinking {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.thinking .caret {
+  display: inline-block;
+  width: 6px;
+  height: 11px;
+  background: var(--primary);
+  vertical-align: -1px;
+  margin-left: 1px;
+  animation: blink 900ms step-end infinite;
+}
+@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+.pulse-ring {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  position: relative;
+  flex: none;
+}
+.pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+  animation: ring 1500ms ease-out infinite;
+}
+@keyframes ring {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ==========================================================================
+   Entrances
+   ========================================================================== */
+
+.stagger { animation: rise 340ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   Studio layout
+   ========================================================================== */
+
+.studio-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .studio-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.studio-rail { display: flex; flex-direction: column; gap: 10px; }
+
+.progress {
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress > i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 7px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--border);
+}
+.legend-row:last-child { border-bottom: 0; }
+.legend-row .swatch { width: 9px; height: 9px; border-radius: 2px; }
+.legend-row .src { color: var(--text-faint); font-size: 10.5px; }
+.legend-row.missing .src { color: var(--red); }
+
+.samplecard {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.samplecard:hover { border-color: var(--primary); transform: translateY(-1px); }
+.samplecard h4 { margin: 0 0 3px; font-size: 13px; }
+.samplecard p { margin: 0 0 6px; color: var(--text-dim); font-size: 11.5px; line-height: 1.45; }
+.samplecard .teaches { color: var(--text-faint); font-size: 10.5px; }
+
+.dropzone {
+  border: 1px dashed var(--border-2);
+  border-radius: 8px;
+  padding: 26px 18px;
+  text-align: center;
+  color: var(--text-dim);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+.dropzone.over { border-color: var(--primary); background: var(--primary-wash); }
+
+.llmpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.llmpill .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.llmpill.on .dot { background: var(--green); }
+.llmpill.off .dot { background: var(--amber); }
+
+.diff-before { color: var(--text-faint); text-decoration: line-through; }
+.diff-after { color: var(--text); }
+.diff-arrow { color: var(--text-faint); margin: 0 5px; }
+
+.vmap { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.vmap td { padding: 3px 4px; border-bottom: 1px solid var(--border); }
+.vmap td:first-child { color: var(--text-dim); }
+.vmap input {
+  width: 100%;
+  font-size: 11.5px;
+  padding: 2px 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  color: var(--text);
+}
+.vmap input:hover { border-color: var(--border-2); }
+.vmap input:focus { border-color: var(--primary); background: var(--surface); outline: none; }
+
+.bignum {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 30px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanbeam,
+  .sheet .pulsing,
+  .thinking .caret,
+  .pulse-ring::after { animation: none !important; }
+  .scanbeam { display: none; }
+  .stagger { animation: none !important; }
+  .sheet th, .sheet td, .confbar > i, .progress > i { transition: none !important; }
+}
+
+/* ==========================================================================
+   Completing the data: gaps, the second-file join, and numbering
+   ========================================================================== */
+
+.gaps { display: flex; flex-direction: column; gap: 2px; }
+
+.gap {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 9px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.gap:last-child { border-bottom: 0; }
+
+.gap-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+.gap.blocking .gap-mark { background: var(--red-wash); color: var(--red); }
+.gap.done .gap-mark { background: var(--green-wash); color: var(--green); }
+
+.gap-what { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gap-what b { font-weight: 600; }
+.gap.done .gap-what b { color: var(--green); }
+
+/* The join, drawn rather than described. Two column names and the line
+   between them is the whole idea, and it fits in one glance. */
+.joinviz {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.joinside { min-width: 0; }
+.joinside.right { text-align: right; }
+
+.joinkey {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.joinlink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 120px;
+}
+.joinline {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--border-2), var(--primary), var(--border-2));
+  background-size: 200% 100%;
+  animation: joinflow 2200ms linear infinite;
+}
+@keyframes joinflow {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.codechip {
+  display: inline-block;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--primary-wash);
+  color: var(--primary-dark);
+  border: 1px solid var(--border-2);
+  animation: rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* A cell whose value came from a second file rather than the one on screen. */
+.from-second {
+  background: var(--fld-6-wash);
+  border-bottom: 1px dotted var(--fld-6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joinline, .codechip { animation: none !important; }
+}
+
+/* ==========================================================================
+   Working, and rows arriving
+   ========================================================================== */
+
+.working {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+}
+.working-text { display: flex; flex-direction: column; gap: 2px; }
+
+.stagger-row {
+  animation: rowin 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes rowin {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-row { animation: none !important; }
+}
+
+/* ------------------------------------------- historical payslip import */
+
+.gap-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.gap-list li {
+  padding: 7px 0;
+  border-top: var(--border-width) solid var(--border);
+}
+.gap-list li:first-child { border-top: 0; }
+
+.inline-form { display: flex; gap: 8px; margin-top: 10px; }
+.inline-form input { flex: 1; max-width: 260px; }
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: var(--gap);
+}
+.actions-row > .muted:first-child { margin-right: auto; }
+
+/* A row that will not be written, and a column that will not be read. Both
+   are dimmed rather than hidden: the operator needs to see that the importer
+   noticed them, and why, or the counts above the table look like data loss. */
+.row-blocked td { opacity: 0.55; }
+.row-blocked td:first-child { box-shadow: inset 2px 0 0 var(--red); }
+.row-muted td { opacity: 0.6; }

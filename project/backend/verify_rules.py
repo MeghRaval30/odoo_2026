@@ -207,10 +207,20 @@ check("Missing bank account is detected",
       PayslipWarning.AC_MISSING in codes,
       ", ".join(w.message for w in run.warnings.filter(code=PayslipWarning.AC_MISSING)))
 
-no_bank = Employee.objects.filter(bank_account_number__isnull=True).count()
+# Compared against the employees actually in this payrun, not against the
+# whole roster. The two are the same number only on the 22-person demo seed,
+# where every employee has a contract covering February; at `seed --employees
+# 200` ten people lack bank details and nine of them are in the February run,
+# because the tenth joined after it closed. A payrun can only warn about the
+# payslips it contains, so that is what the rule says and what is checked.
+in_run = set(run.payslips.values_list("employee_id", flat=True))
+no_bank_total = Employee.objects.filter(bank_account_number__isnull=True).count()
+no_bank_in_run = (Employee.objects
+                  .filter(pk__in=in_run, bank_account_number__isnull=True)
+                  .count())
 check("Every employee without bank details is flagged",
-      run.warnings.filter(code=PayslipWarning.AC_MISSING).count() == min(no_bank, 2),
-      f"{no_bank} employees lack bank details")
+      run.warnings.filter(code=PayslipWarning.AC_MISSING).count() == no_bank_in_run,
+      f"{no_bank_in_run} of {no_bank_total} without bank details are in this run")
 
 
 print("\n" + "=" * 72)

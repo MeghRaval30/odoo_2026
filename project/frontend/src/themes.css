@@ -467,3 +467,113 @@
 
   color-scheme: dark;
 }
+
+/* ------------------------------------------------------------------ corporate
+   Tally, and every ERP that came out of an accounts department.
+
+   The reference is deliberately unfashionable: dark navy chrome, a light grey
+   field, square corners, hairline rules, and no shadow anywhere. Nothing here
+   is trying to look modern, because the users of a payroll system are reading
+   figures for four hours at a stretch and everything soft, rounded or floating
+   is a small tax on that.
+
+   The two colours doing the work are the navy and the grey. Navy is structure
+   -- the bar, the headers, the totals -- and grey is field. Colour is reserved
+   for state: a red that means refused, an amber that means check this, a green
+   that means paid. Nothing is coloured for decoration, so anything coloured on
+   this screen is telling you something.
+
+   The one warm-ish accent is the brass, taken from the customer's own mark so
+   the chrome and the logo do not sit next to each other arguing. It is dark
+   enough to carry white text at 13px, which the shipped Ledger orange is not
+   (T-111) -- worth noting because this theme was drawn after that was known.
+   ------------------------------------------------------------------------- */
+:root[data-theme="corporate"] {
+  --navy: #1e2340;
+  --navy-2: #2b3255;
+
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --surface-2: #f4f5f7;
+  --surface-3: #e4e7ec;
+
+  --border: #c3c8d2;
+  --border-2: #9aa2b1;
+
+  --text: #14171f;
+  --text-dim: #4c5462;
+  --text-faint: #78808f;
+
+  --primary: #b07a2b;
+  --primary-dark: #8c5f1f;
+  --primary-wash: #f6efe2;
+  --on-primary: #ffffff;
+
+  --rose: #9d3b57;      --rose-wash: #f6e6ea;
+  --green: #1f6b45;     --green-wash: #e2efe8;
+  --amber: #8a6212;     --amber-wash: #f7eeda;
+  --red: #a32020;       --red-wash: #f7e4e4;
+  --purple: #4b3f7a;    --purple-wash: #eae7f3;
+
+  --font-display: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: Consolas, "Courier New", ui-monospace, monospace;
+  --display-weight: 600;
+  --display-tracking: 0;
+  --display-transform: none;
+  --label-transform: uppercase;
+  --label-tracking: 0.07em;
+  --label-weight: 600;
+  --body-size: 13px;
+  --line: 1.45;
+
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-pill: 0px;
+  --border-width: 1px;
+  --card-border-width: 1px;
+  --shadow-card: none;
+  --shadow-raised: none;
+  --shadow-pop: 0 2px 8px rgba(20, 23, 31, 0.18);
+  --shadow-modal: 0 4px 20px rgba(20, 23, 31, 0.3);
+  --scrim: rgba(20, 23, 31, 0.45);
+
+  /* Tighter than every other theme. A register is meant to fit on a screen. */
+  --pad-card: 12px 14px;
+  --pad-cell: 6px 10px;
+  --pad-control: 6px 9px;
+  --gap: 10px;
+  --page-pad: 18px 20px 52px;
+  --topbar-h: 46px;
+
+  --topbar-bg: var(--navy);
+  --topbar-fg: #e8eaf0;
+  --topbar-border: var(--navy-2);
+  --nav-active-bg: var(--navy-2);
+  --nav-active-fg: #ffffff;
+
+  color-scheme: light;
+}
+
+/* Table headers as a filled navy band rather than a rule. This is the single
+   most Tally-like thing in the theme and it is load-bearing: on a page of
+   twelve tables it is what tells you where each one starts without a shadow,
+   a radius or a gap doing it. */
+:root[data-theme="corporate"] .table thead th {
+  background: var(--navy);
+  color: #e8eaf0;
+  border-bottom: 1px solid var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+}
+:root[data-theme="corporate"] .table tbody tr:nth-child(even) td {
+  background: var(--surface-2);
+}
+:root[data-theme="corporate"] .card {
+  border-color: var(--border-2);
+}
+:root[data-theme="corporate"] .page-head h1 {
+  border-bottom: 2px solid var(--navy);
+  padding-bottom: 6px;
+}

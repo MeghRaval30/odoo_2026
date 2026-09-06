@@ -267,6 +267,9 @@ class AuditLog(models.Model):
     TIMEOFF_DECIDED = "TIMEOFF_DECIDED"
     PAYRUN_STATE = "PAYRUN_STATE"
     SECURITY_CHANGED = "SECURITY_CHANGED"
+    DATA_IMPORTED = "DATA_IMPORTED"
+    BRANDING_CHANGED = "BRANDING_CHANGED"
+    WORKFORCE_BULK = "WORKFORCE_BULK"
 
     ACTIONS = [
         (SIGN_IN, "Signed in"), (SIGN_IN_FAILED, "Sign-in refused"),
@@ -281,6 +284,9 @@ class AuditLog(models.Model):
         (TIMEOFF_DECIDED, "Time off decided"),
         (PAYRUN_STATE, "Payrun state change"),
         (SECURITY_CHANGED, "Security settings changed"),
+        (DATA_IMPORTED, "Roster imported"),
+        (BRANDING_CHANGED, "Branding changed"),
+        (WORKFORCE_BULK, "Bulk workforce operation"),
     ]
 
     actor = models.ForeignKey("accounts.User", on_delete=models.SET_NULL,

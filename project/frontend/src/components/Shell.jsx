@@ -16,6 +16,78 @@ import { href, navigate } from "../lib/router";
 import { THEMES, applyTheme, currentTheme } from "../lib/theme";
 import AttendanceWidget from "./AttendanceWidget";
 
+/**
+ * The customer's own marks, read once per session.
+ *
+ * Kept here rather than in a context because exactly one component draws the
+ * logo and exactly one rule draws the wash. A provider would be ceremony
+ * around a single consumer.
+ *
+ * The background mark is applied by setting two custom properties on the root
+ * rather than by rendering an element. A fixed element behind the page would
+ * have to be kept clear of every stacking context the app already has -- the
+ * sticky bar, the modals, the dropdowns -- and the first one that got it wrong
+ * would put a company logo across a payslip. A background on the page
+ * container cannot do that.
+ */
+/**
+ * The company name as the two lines a logotype is set in.
+ *
+ * Split on the trailing legal-form words rather than at the halfway point,
+ * because that is where these names actually break: "Shree Ganesh" is the
+ * name and "Engineering Co" is what kind of company it is, and every printed
+ * version of a mark like this stacks them that way. A name with nothing to
+ * strip stays on one line rather than being broken somewhere arbitrary.
+ */
+const TRAILING = ["co", "co.", "company", "ltd", "ltd.", "limited", "llp",
+                  "pvt", "pvt.", "private", "inc", "inc.", "corp", "corp.",
+                  "industries", "engineering", "enterprises", "works",
+                  "technologies", "solutions", "services", "systems", "and",
+                  "&"];
+
+function lockup(branding) {
+  const name = (branding.company_name || branding.app_name || "").trim();
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length < 3) return [name, ""];
+
+  let cut = words.length;
+  while (cut > 1 && TRAILING.includes(words[cut - 1].toLowerCase())) cut -= 1;
+  // Nothing recognisable to strip, or it would eat the whole name: one line.
+  if (cut === words.length || cut < 1) return [name, ""];
+  return [words.slice(0, cut).join(" "), words.slice(cut).join(" ")];
+}
+
+function useBranding() {
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    api
+      .get("/api/branding/")
+      .then((data) => live && setBranding(data))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (branding && branding.watermark) {
+      root.style.setProperty("--watermark", 'url("' + branding.watermark + '")');
+      const pct =
+        branding.watermark_opacity == null ? 4 : branding.watermark_opacity;
+      root.style.setProperty("--watermark-opacity", String(pct / 100));
+    } else {
+      root.style.removeProperty("--watermark");
+      root.style.removeProperty("--watermark-opacity");
+    }
+  }, [branding]);
+
+  return branding;
+}
+
+
 function initials(user) {
   const source = user?.employee_name || user?.email || "?";
   return source
@@ -34,6 +106,7 @@ export default function Shell({ route, children }) {
   const [userOpen, setUserOpen] = useState(false);
   const [theme, setTheme] = useState(currentTheme);
   const barRef = useRef(null);
+  const branding = useBranding();
   const user = auth.user;
   const active = route.parts[0] || "";
   const nav = user?.navigation?.length ? user.navigation : MINIMAL_NAV;
@@ -85,10 +158,35 @@ export default function Shell({ route, children }) {
   return (
     <div className="app">
       <div className="topbar" ref={barRef}>
-        <a className="brand" href={href("/dashboard")}>
-          People<span>Pay</span>360
+        <a className="brand brand-plate" href={href("/dashboard")}>
+          {branding && branding.logo ? (
+            <>
+              <img
+                className="brand-logo"
+                src={branding.logo}
+                alt={branding.company_name || branding.app_name}
+              />
+              <span className="brand-words">
+                <span className="brand-l1">{lockup(branding)[0]}</span>
+                {lockup(branding)[1] && (
+                  <span className="brand-l2">{lockup(branding)[1]}</span>
+                )}
+              </span>
+            </>
+          ) : (
+            <span className="brand-name">
+              People<span>Pay</span>360
+            </span>
+          )}
         </a>
 
+        {branding && branding.logo && (
+          <span className="app-mark">
+            People<span>Pay</span>360
+          </span>
+        )}
+
+        <nav className="navbar">
         {nav.map((group) => {
           const isActive = groupIsActive(group);
 
@@ -123,8 +221,7 @@ export default function Shell({ route, children }) {
             </div>
           );
         })}
-
-        <div className="spacer" />
+        </nav>
 
         <AttendanceWidget />
 

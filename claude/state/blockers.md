@@ -681,3 +681,139 @@ The relay runs on three teammates' machines, so any absolute path in the runbook
 is true for at most one of them. Treat those two sections as *"this happened
 once, on one machine"* rather than as instructions. Session 08 annotated them
 rather than deleting them, because the worktree problem is real where it exists.
+
+---
+
+### B-036 — The demo script is now badly out of date
+
+**Raised by:** Trevor, session 09 · 2026-09-06 · **OPEN, and the biggest one**
+
+`claude/deliverables/demo-script.md` was already stale before this session
+(B-031, T-107: its figures were verified but its prose predates the permission
+rebuild). It is now much worse, because an entire feature area exists that the
+script does not mention at all:
+
+* **Workforce** is a new top-bar menu group with six entries, visible to the
+  Admin only.
+* Data Import, Segments, Mass Actions, Bonds, Playbooks and Local AI are all
+  unmentioned.
+* The five changes listed in session 08's briefing §8 were never folded in
+  either — Reports opening on February, the per-month register filename,
+  Employees to Change Requests, leave arriving as *To Approve*, and the
+  Administration dashboard opening on an empty audit log.
+
+**Already tried:** nothing. Session 09 was spent entirely on the feature the
+user asked for and never reached the script. This is not a case of an attempted
+fix that failed — it is simply undone, and it is the single most valuable
+remaining task.
+
+**What it needs:** open the script, sign in as `aarav@oxp.com` / `demo1234`,
+read scenario A aloud A1 to A10 against the screen, correct the words, then do
+the same for B. Then add a scenario C for the import studio, for which
+`test-data/README.md` already contains the narration.
+
+---
+
+### B-037 — The 240-employee import has not been walked in a browser
+
+**Raised by:** Trevor, session 09 · 2026-09-06 · **OPEN, low risk**
+
+`test-data/import/06-vantage-240-headcount.xlsx` was generated and its shape
+checked, and the *import pipeline* is proven at that size only through the API,
+not through the studio UI.
+
+**What is known to work:** the analysis, preview and commit paths are the same
+code the 22-row files exercise, and `SheetGrid` renders at most 14 rows
+regardless of file size. The preview table caps at 25 records and the issues
+list at 40. So the screen has no unbounded render.
+
+**What is unverified:** wall-clock time for a 240-row commit through HTTP, and
+whether the model's single mapping call slows measurably with 14 columns (it
+should not — the prompt carries headers and evidence, not rows).
+
+**Already tried:** the 22-row and 18-row files are both walked end to end in the
+browser and commit in under 50 ms. Nothing suggests a problem; it simply has
+not been watched.
+
+---
+
+### B-038 — Local `main` ref is stale and held by another worktree (confirms B-029)
+
+**Raised by:** Trevor, session 09 · 2026-09-06 · **CONFIRMED, worked around**
+
+B-029 said this happened once on one machine. It is true on this machine too,
+and now precisely characterised:
+
+```
+C:/Users/raval/Desktop/odoo_2026/.claude/worktrees/frontend-routing-setup-e9a159  ba294be [main]
+```
+
+That worktree holds `main` checked out at `ba294be`, which is **41 commits
+behind `origin/main`**. So `git checkout main` fails here, and the local `main`
+ref is not a useful base.
+
+**The working approach**, and it worked cleanly this session:
+
+```bash
+git checkout -b integrate/<something> origin/main   # base on the remote, not local main
+# ... build and merge feature branches into it ...
+git push origin HEAD:main
+```
+
+**Do not** try to fix the other worktree. It belongs to an abandoned session and
+removing it risks whatever is in it. Base on `origin/main` and push
+`HEAD:main`; that is the whole workaround.
+
+---
+
+### B-039 — `git merge --squash` picks the wrong base when replaying onto a squashed branch
+
+**Raised by:** Trevor, session 09 · 2026-09-06 · **SOLVED, recorded so nobody repeats it**
+
+Reorganising eight commits into four feature branches, the second
+`git merge --squash <tip>` conflicted in `config/urls.py` and `App.jsx`.
+
+**Why:** the integration branch's first commit was a *new* squashed commit with
+no ancestry link to the original commits. So the merge base for the second
+squash fell all the way back to the original branch point, and git tried to
+replay changes that were already applied.
+
+**What works instead** — set the tree directly, which is exact and cannot
+conflict:
+
+```bash
+git read-tree -u --reset <target-commit>
+git commit -F <message-file>
+# then assert the result is faithful:
+[ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse <target-commit>^{tree})" ]
+```
+
+The tree-equality assertion is the important half. It was run after every one
+of the four squashes, and the final integration tree was confirmed byte-
+identical to the original `feat/intelligence-layer` tip before anything was
+pushed.
+
+---
+
+### B-040 — Long commit messages must go through a file, never a shell heredoc
+
+**Raised by:** Trevor, session 09 · 2026-09-06 · **SOLVED, and it bit twice**
+
+This is B-020 again, in two new disguises, and it cost real time both times.
+
+1. **`git commit -m "..."`** with a message containing double quotes broke shell
+   quoting and git tried to read fragments of prose as pathspecs.
+2. **A quoted heredoc** (`<<'EOF'`) writing markdown with backticks and
+   apostrophes still failed with *"unexpected EOF while looking for matching
+   quote"*.
+
+Earlier in the same session a heredoc silently turned `\n` inside a Python
+string into a **real newline**, splitting three string literals and leaving
+`seed.py` unparseable — and the first repair attempt reported "rejoined 3
+literals" while changing nothing, because the file was CRLF and the search
+pattern was LF.
+
+**The rule that works:** write the content with the Write tool to the
+scratchpad, then `cat file >> target` or `git commit -F file`. For in-place
+edits, write the patch script to the scratchpad and run it with the interpreter
+rather than piping it through the shell.
