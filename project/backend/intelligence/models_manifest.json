@@ -1,0 +1,59 @@
+{
+  "runtime": {
+    "name": "Ollama",
+    "minimum_version": "0.5.0",
+    "endpoint": "http://127.0.0.1:11434",
+    "download": "https://ollama.com/download",
+    "verified_with": "0.32.5"
+  },
+  "models": [
+    {
+      "name": "qwen2.5:7b",
+      "parameters": "7B",
+      "disk_gb": 4.7,
+      "min_vram_gb": 6,
+      "default": true,
+      "purpose": "Column meaning, cross-company value mapping, and compiling a sentence into a segment or playbook rule.",
+      "measured": {
+        "hardware": "NVIDIA GeForce RTX 5060 Laptop, 8 GB",
+        "cold_load_seconds": 11,
+        "warm_generation_seconds": 4.4,
+        "notes": "A whole spreadsheet is one call, never one call per column. keep_alive is set to 30m so the cold load is paid once per session."
+      }
+    },
+    {
+      "name": "qwen2.5:3b",
+      "parameters": "3B",
+      "disk_gb": 1.9,
+      "min_vram_gb": 3,
+      "default": false,
+      "purpose": "Fallback for machines under 8 GB of video memory. Noticeably weaker on unusual header names; the deterministic voters carry more of the result.",
+      "measured": {
+        "hardware": "not benchmarked here",
+        "cold_load_seconds": null,
+        "warm_generation_seconds": null,
+        "notes": "Selected automatically by scripts/setup-ai.* when nvidia-smi reports under 8 GB."
+      }
+    }
+  ],
+  "environment": {
+    "PP360_LLM_ENABLED": "1 to use the model, 0 to force the deterministic path. Default 1.",
+    "PP360_LLM_BASE": "Ollama endpoint. Default http://127.0.0.1:11434",
+    "PP360_LLM_MODEL": "Model tag. Default qwen2.5:7b",
+    "PP360_LLM_KEEP_ALIVE": "How long Ollama holds the weights. Default 30m",
+    "PP360_LLM_TIMEOUT": "Seconds before a generation is abandoned. Default 120"
+  },
+  "privacy": {
+    "leaves_the_machine": "nothing",
+    "sent_to_the_local_model": [
+      "column header text",
+      "the profiler's one-line description of each column",
+      "at most three sample values per column"
+    ],
+    "never_sent": [
+      "full rows",
+      "salary figures beyond the sampled cells",
+      "anything at all over the network"
+    ]
+  }
+}
