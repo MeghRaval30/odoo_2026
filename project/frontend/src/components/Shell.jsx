@@ -180,12 +180,6 @@ export default function Shell({ route, children }) {
           )}
         </a>
 
-        {branding && branding.logo && (
-          <span className="app-mark">
-            People<span>Pay</span>360
-          </span>
-        )}
-
         <div className="spacer" />
 
         {nav.map((group) => {

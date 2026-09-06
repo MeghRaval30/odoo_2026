@@ -577,3 +577,33 @@
   border-bottom: 2px solid var(--navy);
   padding-bottom: 6px;
 }
+
+/* A wider, roomier menu, on this theme only.
+
+   Scoped rather than global because the top bar is a fixed budget: the other
+   six themes were laid out against the 13px menu and the one-line wordmark,
+   and widening every item there would push the last menu off the row at
+   1280px. Here the lockup is already trimmed for it.
+
+   The spacers on either side keep it centred as it grows -- the extra width
+   comes out of them, not out of the menu.
+
+   It is also gated on width. Nine menus at 14px with 16px of padding and 3px
+   of margin need about 1500px once the lockup and the user chip have taken
+   their share; below that the bar overflows and the last menus are simply cut
+   off. So the roomier setting starts where there is room for it, and narrower
+   windows keep the 13px menu that already fits at 1280px -- which the design
+   language requires to work. */
+@media (min-width: 1500px) {
+  :root[data-theme="corporate"] .topbar > .navitem {
+    padding: 6px 16px;
+    margin: 0 3px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.95;
+    letter-spacing: 0.005em;
+  }
+  :root[data-theme="corporate"] .topbar > .navitem.active {
+    opacity: 1;
+  }
+}

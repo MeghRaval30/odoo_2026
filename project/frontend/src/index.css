@@ -894,17 +894,3 @@ label {
 /* The unbranded fallback is still the wordmark, on the bar, not on a plate. */
 .brand:not(.brand-plate) .brand-name span { color: var(--primary); }
 
-/* Whose software this is, beside whose company it is. On the bar, not on the
-   plate: the plate carries the customer's mark and nothing else belongs on it. */
-.app-mark {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: var(--display-tracking);
-  color: var(--topbar-fg);
-  white-space: nowrap;
-  flex: 0 0 auto;
-  margin-right: 8px;
-  opacity: 0.92;
-}
-.app-mark span { color: var(--primary); }
