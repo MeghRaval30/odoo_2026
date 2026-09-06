@@ -189,6 +189,48 @@ FIELD_KEYS = [f["key"] for f in TARGET_FIELDS]
 #: rather than a second column -- see `mapper.missing_required`.
 REQUIRED_KEYS = [f["key"] for f in TARGET_FIELDS if f["required"]]
 
+#: Fields whose values come from a closed list, and the words those values are
+#: actually written as.
+#:
+#: A kind check is not enough for these. "Account Type" holding Savings and
+#: Current is a categorical column of short repeated strings, exactly like
+#: "Employment Type" holding Full Time and Intern, and the header shares the
+#: word "type" -- so the lexical voter matched it and a bank spreadsheet
+#: quietly set everybody's employment type. The values themselves are the only
+#: thing that separates the two, so for these fields they are checked.
+CLOSED_VOCABULARY = {
+    "employee_type": {
+        "full time", "fulltime", "full_time", "permanent", "regular",
+        "part time", "parttime", "part_time",
+        "intern", "internship", "trainee", "apprentice",
+        "contract", "contractor", "consultant", "temporary", "temp",
+        "probation", "probationary",
+    },
+    "gender": {"m", "f", "o", "male", "female", "other", "man", "woman",
+               "transgender", "non-binary", "prefer not to say"},
+}
+
+
+def vocabulary_supports(field_key, profile):
+    """
+    Do this column's values look like values of this field?
+
+    True when the field has no closed list -- most do not. When it has one, at
+    least a quarter of the distinct values have to be in it, which tolerates a
+    stray blank or a typo without accepting a column that is simply about
+    something else.
+    """
+    allowed = CLOSED_VOCABULARY.get(field_key)
+    if not allowed:
+        return True
+    values = [v.strip().lower() for v in (profile.get("distinct_values") or [])
+              if v and v.strip()]
+    if not values:
+        return True
+    hits = sum(1 for v in values if v in allowed)
+    return hits >= max(1, len(values) * 0.25)
+
+
 #: Which target fields a profiled column is *allowed* to be. This is the table
 #: that lets hard evidence overrule the model: a column of email addresses
 #: cannot be a joining date no matter how confidently something says so.
@@ -319,6 +361,10 @@ def match_header(header, profile=None, fields=None):
                 score *= 0.25
                 why += "; values do not look like %s" % field["label"].lower()
 
+        if profile is not None and not vocabulary_supports(field["key"], profile):
+            score *= 0.15
+            why += "; the values are not %s values" % field["label"].lower()
+
         out.append({"field": field["key"], "confidence": round(min(score, 0.99), 3),
                     "reason": why})
 
@@ -348,6 +394,8 @@ def shape_candidates(profile):
 
     out = []
     for key in allowed:
+        if not vocabulary_supports(key, profile):
+            continue
         conf = per
         # Within a kind, the flags break ties the shape alone cannot.
         if key == "wage" and "looks_annual" in (profile.get("flags") or []):

@@ -18,6 +18,7 @@ import {
   ConfidenceBar, CountUp, DiffCell, FieldChip, LlmPill, Pulse, Stagger,
   ThinkingStream, TransformRow, VoteStack, hueFor, hueVar,
 } from "../components/ai";
+import { CodePolicyCard, EnrichPanel, GapsCard } from "../components/ImportGaps";
 import { navigate } from "../lib/router";
 
 const BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
@@ -101,13 +102,17 @@ export default function ImportStudio() {
       .then((d) => {
         setHealth(d.llm);
         setFields(d.fields || []);
-        setSamples(d.samples || []);
       })
       .catch((e) => setError(e.message));
     return () => abort.current?.abort();
   }, []);
 
-  const [samples, setSamples] = useState([]);
+  // Filling the gaps: a second file, and how people are numbered. Both live
+  // on the plan, so both survive a reload and are applied by the same preview
+  // the operator approves.
+  const [enriching, setEnriching] = useState(false);
+  const [showCodes, setShowCodes] = useState(false);
+  const [codePolicy, setCodePolicy] = useState(null);
 
   const hue = useCallback((key) => hueFor(key, fields), [fields]);
   const labelFor = useCallback(
@@ -134,9 +139,6 @@ export default function ImportStudio() {
       setBusy(false);
     }
   }
-
-  const loadSample = (name) =>
-    ingest(api.post("/api/intel/sources/from-sample/", { name }));
 
   function loadFile(file) {
     if (!file) return;
@@ -337,11 +339,9 @@ export default function ImportStudio() {
 
       {stage === "choose" && (
         <ChooseStage
-          samples={samples}
           busy={busy}
           dragging={dragging}
           setDragging={setDragging}
-          onSample={loadSample}
           onFile={loadFile}
           health={health}
         />
@@ -385,14 +385,92 @@ export default function ImportStudio() {
             />
 
             {stage === "plan" && plan && (
-              <PlanDetail
-                plan={plan}
-                fields={fields}
-                labelFor={labelFor}
-                hue={hue}
-                onRemap={remap}
-                onRemapValue={remapValue}
-              />
+              <>
+                <GapsCard
+                  plan={plan}
+                  fields={fields}
+                  busy={busy}
+                  deriveOn={applyFixes.includes("derive_email")}
+                  codePolicy={codePolicy || plan.code_policy}
+                  onEnrich={() => setEnriching(true)}
+                  onOpenCodes={() => setShowCodes(true)}
+                  onDeriveEmail={async () => {
+                    const next = applyFixes.includes("derive_email")
+                      ? applyFixes.filter((f) => f !== "derive_email")
+                      : [...applyFixes, "derive_email"];
+                    setApplyFixes(next);
+                    // Sent to the server rather than kept here, so that the
+                    // one place which decides what is still missing knows
+                    // about it. Accepting this fix is a source for work email
+                    // exactly as a column would be.
+                    try {
+                      setPlan(
+                        await api.patch(`/api/intel/runs/${runId}/plan/`, {
+                          apply_fixes: next,
+                        })
+                      );
+                    } catch (e) {
+                      setError(e.message);
+                    }
+                  }}
+                />
+
+                {enriching && (
+                  <EnrichPanel
+                    runId={runId}
+                    fields={fields}
+                    hue={hue}
+                    onClose={() => setEnriching(false)}
+                    onAdded={async () => {
+                      setEnriching(false);
+                      // The plan gained a source, so re-read it rather than
+                      // patching a copy -- the server recomputed which
+                      // required fields are still missing.
+                      try {
+                        setPlan(await api.get(`/api/intel/runs/${runId}/plan/`));
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
+                  />
+                )}
+
+                {(plan.enrichments || []).map((entry, i) => (
+                  <SecondFileCard
+                    key={`${entry.source_id}-${i}`}
+                    entry={entry}
+                    labelFor={labelFor}
+                    hue={hue}
+                    onRemove={async () => {
+                      try {
+                        await api.delete(`/api/intel/runs/${runId}/enrich/${i}/`);
+                        setPlan(await api.get(`/api/intel/runs/${runId}/plan/`));
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
+                  />
+                ))}
+
+                {showCodes && (
+                  <CodePolicyCard
+                    runId={runId}
+                    policy={codePolicy || plan.code_policy}
+                    hasSourceCodes={(plan.columns || []).some(
+                      (c) => c.field === "employee_code"
+                    )}
+                    onChange={setCodePolicy}
+                    onClose={() => setShowCodes(false)}
+                  />
+                )}
+
+                <PlanDetail
+                  plan={plan}
+                  labelFor={labelFor}
+                  hue={hue}
+                  onRemapValue={remapValue}
+                />
+              </>
             )}
           </div>
 
@@ -457,15 +535,26 @@ export default function ImportStudio() {
 
 // ---------------------------------------------------------------------------
 
-function ChooseStage({ samples, busy, dragging, setDragging, onSample, onFile, health }) {
+const HANDLES = [
+  "A header that is not on the first row",
+  "Column names in any wording — DOJ, Emp Naam, A/C No",
+  "Dates in more than one format in the same column",
+  "Rupees written as Rs 45,000, 72,000 or 38500/-",
+  "A salary column that is annual where we store monthly",
+  "Departments under another company's names",
+  "Missing bank details, filled from a second file",
+  "No employee codes, generated to a pattern you pick",
+];
+
+function ChooseStage({ busy, dragging, setDragging, onFile, health }) {
   if (busy) return <Loading />;
   return (
-    <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) 340px", gap: 14 }}>
+    <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) 320px", gap: 14 }}>
       <div className="card">
-        <div className="card-title">Start from a file</div>
+        <div className="card-title">Bring a roster in</div>
         <div className="card-sub">
-          CSV, TSV or Excel. The header does not have to be on the first row, and
-          the columns do not have to be named anything in particular.
+          Excel or CSV, in whatever shape it is already in. Nothing is written
+          until you have seen what it will do and approved it.
         </div>
         <label
           className={`dropzone${dragging ? " over" : ""}`}
@@ -479,7 +568,7 @@ function ChooseStage({ samples, busy, dragging, setDragging, onSample, onFile, h
             setDragging(false);
             onFile(e.dataTransfer.files?.[0]);
           }}
-          style={{ display: "block", marginTop: 12 }}
+          style={{ display: "block", marginTop: 12, padding: "38px 18px" }}
         >
           <input
             type="file"
@@ -487,9 +576,11 @@ function ChooseStage({ samples, busy, dragging, setDragging, onSample, onFile, h
             style={{ display: "none" }}
             onChange={(e) => onFile(e.target.files?.[0])}
           />
-          <div style={{ fontSize: 13 }}>Drop a spreadsheet here, or click to choose</div>
-          <div className="tiny faint" style={{ marginTop: 4 }}>
-            Nothing is written until you approve the plan.
+          <div style={{ fontSize: 14 }}>
+            Drop a spreadsheet here, or click to choose one
+          </div>
+          <div className="tiny faint" style={{ marginTop: 5 }}>
+            .xlsx, .xlsm, .csv or .tsv
           </div>
         </label>
 
@@ -503,22 +594,27 @@ function ChooseStage({ samples, busy, dragging, setDragging, onSample, onFile, h
       </div>
 
       <div className="card">
-        <div className="card-title">Or try one of these</div>
-        <div className="card-sub">
-          Three rosters that each break in a different way.
-        </div>
-        <div className="stack" style={{ gap: 8, marginTop: 10 }}>
-          {samples.map((s, i) => (
-            <Stagger key={s.file} index={i}>
-              <div className="samplecard" onClick={() => onSample(s.file)}>
-                <h4>{s.label}</h4>
-                <p>{s.description}</p>
-                <div className="teaches">
-                  {s.rows} rows &middot; {s.teaches}
-                </div>
+        <div className="card-title">What it copes with</div>
+        <div className="stack" style={{ gap: 0, marginTop: 8 }}>
+          {HANDLES.map((line, i) => (
+            <Stagger key={line} index={i} step={35}>
+              <div
+                className="tiny"
+                style={{
+                  padding: "5px 0",
+                  borderBottom: "1px solid var(--border)",
+                  color: "var(--text-dim)",
+                }}
+              >
+                {line}
               </div>
             </Stagger>
           ))}
+        </div>
+        <div className="tiny faint" style={{ marginTop: 10, lineHeight: 1.55 }}>
+          Sample rosters to try this on are in <b>test-data/import/</b> in the
+          repository. Open one in Excel first — they look like what a company
+          actually hands you.
         </div>
       </div>
     </div>
@@ -669,7 +765,7 @@ function PlanRail({ plan, fields, hue, elapsed, busy, onPreview }) {
 
 // ---------------------------------------------------------------------------
 
-function PlanDetail({ plan, fields, labelFor, hue, onRemap, onRemapValue }) {
+function PlanDetail({ plan, labelFor, hue, onRemapValue }) {
   const [openChip, setOpenChip] = useState({});
   const mapped = (plan.columns || []).filter((c) => c.field);
 
@@ -769,6 +865,45 @@ function PlanDetail({ plan, fields, labelFor, hue, onRemap, onRemapValue }) {
 
 // ---------------------------------------------------------------------------
 
+/** A second file already attached: what it joins on and what it fills. */
+function SecondFileCard({ entry, labelFor, hue, onRemove }) {
+  const join = entry.join || {};
+  return (
+    <Stagger>
+      <div className="card">
+        <div className="row between">
+          <span className="card-title" style={{ margin: 0 }}>
+            Second file — {entry.filename}
+          </span>
+          <button className="ghost sm" onClick={onRemove}>
+            Remove
+          </button>
+        </div>
+        <div className="card-sub">
+          Matched on <b>{join.primary_header}</b> to{" "}
+          <b>{join.supplement_header}</b>. {join.matched} of{" "}
+          {(join.matched || 0) + (join.unmatched || 0)} people found.
+        </div>
+        <div className="row" style={{ gap: 5, marginTop: 8, flexWrap: "wrap" }}>
+          {(entry.fields || []).map((f) => (
+            <FieldChip key={f} label={labelFor(f)} hue={hue(f)} />
+          ))}
+        </div>
+        {join.unmatched > 0 && (
+          <div className="tiny faint" style={{ marginTop: 8 }}>
+            {join.unmatched} {join.unmatched === 1 ? "person is" : "people are"}{" "}
+            not in it
+            {entry.unmatched_examples?.length
+              ? `: ${entry.unmatched_examples.map((u) => u.label || u.key).join(", ")}`
+              : ""}
+            . They import without those fields.
+          </div>
+        )}
+      </div>
+    </Stagger>
+  );
+}
+
 function RemapForm({ column, fields, onPick }) {
   if (!column) return null;
   const grouped = fields.reduce((acc, f) => {
@@ -840,18 +975,41 @@ function PreviewStage({ preview, labelFor, busy, applyFixes, onToggleFix, onBack
                 </tr>
               </thead>
               <tbody>
-                {(preview.records || []).map((r) => (
-                  <tr key={r.row} style={r.blocked ? { opacity: 0.45 } : undefined}>
+                {(preview.records || []).map((r, i) => (
+                  <tr
+                    key={r.row}
+                    className={i < 12 ? "stagger-row" : undefined}
+                    style={{
+                      ...(r.blocked ? { opacity: 0.45 } : null),
+                      ...(i < 12 ? { animationDelay: `${i * 28}ms` } : null),
+                    }}
+                  >
                     <td className="mono">{r.row + 1}</td>
-                    {columns.map((k) => (
-                      <td key={k} className="tiny">
-                        {r.cells[k] ? (
-                          <DiffCell before={r.cells[k].before} after={r.cells[k].after} />
-                        ) : (
-                          <span className="faint">&mdash;</span>
-                        )}
-                      </td>
-                    ))}
+                    {columns.map((k) => {
+                      const cell = r.cells[k];
+                      if (!cell) {
+                        return (
+                          <td key={k} className="tiny">
+                            <span className="faint">&mdash;</span>
+                          </td>
+                        );
+                      }
+                      // A value that came from somewhere other than the file
+                      // on screen is marked, because an operator checking a
+                      // bank account needs to know where it came from.
+                      const outside = cell.from || cell.generated;
+                      return (
+                        <td key={k} className={`tiny${outside ? " from-second" : ""}`}>
+                          <DiffCell before={cell.before} after={cell.after} />
+                          {cell.from && (
+                            <div className="tiny faint">from {cell.from}</div>
+                          )}
+                          {cell.generated && (
+                            <div className="tiny faint">generated</div>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -929,6 +1087,36 @@ function PreviewStage({ preview, labelFor, busy, applyFixes, onToggleFix, onBack
             </div>
           )}
         </div>
+
+        {(preview.enrichment || []).map((e, i) => (
+          <div className="card" key={i}>
+            <div className="card-title">From {e.name}</div>
+            <div className="tiny" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              <b className="mono">{e.values_filled}</b> values filled across{" "}
+              <b className="mono">{e.matched}</b> people, matched on{" "}
+              <b>{e.joined_on}</b>.
+            </div>
+            {e.unmatched > 0 && (
+              <div className="tiny faint" style={{ marginTop: 5 }}>
+                {e.unmatched} not found in it.
+              </div>
+            )}
+          </div>
+        ))}
+
+        {preview.code_policy && preview.code_policy.mode === "generate" && (
+          <div className="card">
+            <div className="card-title">Employee codes</div>
+            <div className="tiny faint" style={{ marginTop: 5 }}>
+              {preview.code_policy.description}
+            </div>
+            <div className="row" style={{ gap: 5, marginTop: 8, flexWrap: "wrap" }}>
+              {(preview.code_policy.examples || []).slice(0, 4).map((c) => (
+                <span key={c} className="codechip">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {canDerive && (
           <div className="card">
@@ -1008,6 +1196,29 @@ function DoneStage({ result, source, onAgain }) {
         <div className="tiny faint" style={{ marginTop: 12 }}>
           {result.skipped} row{result.skipped === 1 ? " was" : "s were"} skipped
           and nothing was written for {result.skipped === 1 ? "it" : "them"}.
+        </div>
+      )}
+
+      {/* A row that was accepted and then failed at the database is a
+          different thing from one that was skipped on purpose, and it must
+          not be left to be inferred from a count that looks lower than
+          expected. */}
+      {result.failed > 0 && (
+        <div className="alert error" style={{ marginTop: 12 }}>
+          {result.failed} row{result.failed === 1 ? "" : "s"} could not be
+          written.
+          {(result.failures || []).slice(0, 3).map((f) => (
+            <div key={f.row} className="tiny" style={{ marginTop: 4 }}>
+              Row {f.row + 1}: {f.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {made.employees === 0 && result.failed === 0 && (
+        <div className="alert" style={{ marginTop: 12 }}>
+          Nothing was written. Every row was short of something the software
+          needs — the preview lists what, row by row.
         </div>
       )}
 

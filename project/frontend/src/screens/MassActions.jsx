@@ -6,7 +6,7 @@
 // the same code that performs the change, and the execute button is behind a
 // typed confirmation because a mis-click here is not undoable.
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { api, auth } from "../api";
 import { ErrorBox, Field, Loading, PageHead, useResource, rows } from "../components/ui";
 import { CountUp, Stagger } from "../components/ai";
@@ -350,8 +350,18 @@ function PreviewCard({ preview, kind, confirm, setConfirm, phrase, busy, onExecu
             </tr>
           </thead>
           <tbody>
-            {rowsList.slice(0, 40).map((r) => (
-              <tr key={r.employee_id} style={r.skip ? { opacity: 0.45 } : undefined}>
+            {rowsList.slice(0, 40).map((r, i) => (
+              // Rows arrive in sequence for the first dozen. Past that the
+              // stagger stops reading as "these are arriving" and starts
+              // reading as "this table is slow".
+              <tr
+                key={r.employee_id}
+                className={i < 12 ? "stagger-row" : undefined}
+                style={{
+                  ...(r.skip ? { opacity: 0.45 } : null),
+                  ...(i < 12 ? { animationDelay: `${i * 28}ms` } : null),
+                }}
+              >
                 <td>
                   {r.name}
                   <div className="tiny faint">{r.department || r.email}</div>
@@ -440,10 +450,18 @@ function PreviewCard({ preview, kind, confirm, setConfirm, phrase, busy, onExecu
 }
 
 function Stat({ label, value, accent }) {
+  // Counts up when it is a bare number. A formatted rupee figure is left
+  // alone -- animating the digits of a total somebody is about to approve
+  // makes it harder to read, which is the opposite of the point.
+  const numeric = typeof value === "number";
   return (
     <div>
       <div className="bignum" style={accent ? { color: "var(--primary)" } : undefined}>
-        {value ?? "—"}
+        {value === null || value === undefined
+          ? "—"
+          : numeric
+          ? <CountUp to={value} />
+          : value}
       </div>
       <div className="tiny faint">{label}</div>
     </div>

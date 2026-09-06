@@ -437,3 +437,130 @@
   .stagger { animation: none !important; }
   .sheet th, .sheet td, .confbar > i, .progress > i { transition: none !important; }
 }
+
+/* ==========================================================================
+   Completing the data: gaps, the second-file join, and numbering
+   ========================================================================== */
+
+.gaps { display: flex; flex-direction: column; gap: 2px; }
+
+.gap {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 9px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.gap:last-child { border-bottom: 0; }
+
+.gap-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+.gap.blocking .gap-mark { background: var(--red-wash); color: var(--red); }
+.gap.done .gap-mark { background: var(--green-wash); color: var(--green); }
+
+.gap-what { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gap-what b { font-weight: 600; }
+.gap.done .gap-what b { color: var(--green); }
+
+/* The join, drawn rather than described. Two column names and the line
+   between them is the whole idea, and it fits in one glance. */
+.joinviz {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.joinside { min-width: 0; }
+.joinside.right { text-align: right; }
+
+.joinkey {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.joinlink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 120px;
+}
+.joinline {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--border-2), var(--primary), var(--border-2));
+  background-size: 200% 100%;
+  animation: joinflow 2200ms linear infinite;
+}
+@keyframes joinflow {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.codechip {
+  display: inline-block;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--primary-wash);
+  color: var(--primary-dark);
+  border: 1px solid var(--border-2);
+  animation: rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* A cell whose value came from a second file rather than the one on screen. */
+.from-second {
+  background: var(--fld-6-wash);
+  border-bottom: 1px dotted var(--fld-6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joinline, .codechip { animation: none !important; }
+}
+
+/* ==========================================================================
+   Working, and rows arriving
+   ========================================================================== */
+
+.working {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+}
+.working-text { display: flex; flex-direction: column; gap: 2px; }
+
+.stagger-row {
+  animation: rowin 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes rowin {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-row { animation: none !important; }
+}

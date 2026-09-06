@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, auth } from "../api";
 import { ErrorBox, Field, Loading, Modal, PageHead, useResource, rows } from "../components/ui";
-import { Pulse, Stagger, ThinkingStream } from "../components/ai";
+import { Stagger, ThinkingStream, Working } from "../components/ai";
 
 const EXAMPLES = [
   "engineers who joined before 2026 earning under 90000",
@@ -122,10 +122,10 @@ export default function Segments() {
           </div>
 
           {thinking && (
-            <div className="row" style={{ gap: 8, marginTop: 12, alignItems: "center" }}>
-              <Pulse />
-              <span className="tiny faint">Working out which filters this means</span>
-            </div>
+            <Working
+              label="Working out which filters this means"
+              sub="reading the sentence against your departments and positions"
+            />
           )}
 
           {proposal && (

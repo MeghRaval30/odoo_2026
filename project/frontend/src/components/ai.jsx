@@ -232,3 +232,45 @@ export function LlmPill({ health, onClick }) {
     </button>
   );
 }
+
+/**
+ * Seconds since this mounted, ticking.
+ *
+ * Shown wherever the local model is thinking. A spinner says "something is
+ * happening"; a number that is visibly moving says "it is still happening and
+ * here is how long it has taken", which is the difference between waiting four
+ * seconds and wondering whether it has hung. It is also honest in a way a
+ * progress bar over an unknown duration is not.
+ */
+export function Elapsed({ from }) {
+  const [ms, setMs] = useState(0);
+  const start = useRef(from || null);
+
+  useEffect(() => {
+    if (start.current === null) start.current = performance.now();
+    const id = setInterval(() => setMs(performance.now() - start.current), 100);
+    return () => clearInterval(id);
+  }, []);
+
+  return <span className="mono">{(ms / 1000).toFixed(1)}s</span>;
+}
+
+/** The local model is working. Says what on, and for how long so far. */
+export function Working({ label, sub, model }) {
+  return (
+    <div className="working">
+      <Pulse />
+      <div className="working-text">
+        <div className="row" style={{ gap: 8, alignItems: "baseline" }}>
+          <span>{label}</span>
+          <span className="tiny faint">
+            <Elapsed />
+          </span>
+        </div>
+        {(sub || model) && (
+          <div className="tiny faint">{model ? `${model} — ${sub || "thinking"}` : sub}</div>
+        )}
+      </div>
+    </div>
+  );
+}
