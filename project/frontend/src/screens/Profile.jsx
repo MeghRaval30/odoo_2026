@@ -184,9 +184,19 @@ function DetailsTab({ profile, onSaved, onRequested }) {
 
       <div className="stack">
         <div className="card">
-          <div className="card-title">Needs HR approval</div>
+          {/* Who decides is the server's answer, not this screen's guess. It
+              depends on who is asking: an HR Manager cannot approve a change
+              to her own record, so hers goes to an administrator, and the card
+              said "Needs HR approval" -- naming her. */}
+          <div className="card-title">
+            {profile.approval?.can_be_decided === false
+              ? "Nobody can approve these right now"
+              : `Needs approval from ${profile.approval?.label ?? "HR"}`}
+          </div>
           <div className="card-sub">
-            Decided by HR. Nobody decides a change to their own record.
+            {profile.approval?.self_excluded
+              ? "Nobody decides a change to their own record, so yours goes to somebody else who can."
+              : "Nobody decides a change to their own record."}
           </div>
 
           <div className="table-wrap">
