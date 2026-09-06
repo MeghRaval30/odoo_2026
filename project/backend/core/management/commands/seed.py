@@ -26,6 +26,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Role, User
+from core.models import Branding
 from accounts.security import (AuditLog, LoginAttempt, NetworkPolicy,
                                SecuritySetting)
 from attendance.models import Attendance
@@ -103,9 +104,16 @@ class Command(BaseCommand):
                           BondTemplate, Segment, ImportRun, ImportSource):
                 model.objects.all().delete()
 
+            # Branding is a single row nothing above references, so like the
+            # security settings it outlived every reseed -- including a logo
+            # somebody uploaded mid-demo. "A known demo state" has to include
+            # whose name is in the top bar.
+            Branding.objects.all().delete()
+
         random.seed(360)  # reproducible demos
 
         company = self._company()
+        self._branding()
         roles = self._roles()
         departments = self._departments(company)
         positions = self._positions(company, departments)
@@ -970,3 +978,42 @@ class Command(BaseCommand):
             f"{PayslipLine.objects.count()} lines | "
             f"{PayslipWarning.objects.count()} warnings")
         self.stdout.write("\n  Login: admin@oxp.com / demo1234")
+
+    def _branding(self):
+        """
+        The demo ships branded.
+
+        An unbranded install is a fair default for the product but a poor
+        demo: the corporate theme is built around a customer's mark sitting in
+        the bar and washed across the page, and neither is visible with no
+        images loaded. The two SVGs beside this app are read from disk rather
+        than pasted in as base64 so they stay editable as drawings.
+
+        Anything an administrator uploads through Administration -> Branding
+        replaces these outright; this only decides what a freshly seeded
+        database looks like.
+        """
+        import base64
+        import os
+
+        here = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))), "brand_assets")
+        branding = Branding.load()
+        branding.app_name = "PeoplePay360"
+        branding.company_name = "Shree Ganesh Engineering Co"
+
+        for which, filename in (("logo", "sgec-logo.svg"),
+                                ("watermark", "sgec-watermark.svg")):
+            path = os.path.join(here, filename)
+            if not os.path.exists(path):
+                continue
+            with open(path, "rb") as handle:
+                raw = handle.read()
+            setattr(branding, "%s_b64" % which,
+                    base64.b64encode(raw).decode("ascii"))
+            setattr(branding, "%s_mime" % which, "image/svg+xml")
+            setattr(branding, "%s_filename" % which, filename)
+
+        branding.watermark_opacity = 5
+        branding.save()
+        self.stdout.write("  branding: %s" % branding.company_name)

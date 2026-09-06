@@ -268,6 +268,7 @@ class AuditLog(models.Model):
     PAYRUN_STATE = "PAYRUN_STATE"
     SECURITY_CHANGED = "SECURITY_CHANGED"
     DATA_IMPORTED = "DATA_IMPORTED"
+    BRANDING_CHANGED = "BRANDING_CHANGED"
     WORKFORCE_BULK = "WORKFORCE_BULK"
 
     ACTIONS = [
@@ -284,6 +285,7 @@ class AuditLog(models.Model):
         (PAYRUN_STATE, "Payrun state change"),
         (SECURITY_CHANGED, "Security settings changed"),
         (DATA_IMPORTED, "Roster imported"),
+        (BRANDING_CHANGED, "Branding changed"),
         (WORKFORCE_BULK, "Bulk workforce operation"),
     ]
 

@@ -87,6 +87,11 @@ WORKFORCE_WRITE = "workforce.write"      # issue, run, execute
 # -- administration ---------------------------------------------------------
 USER_MANAGE = "user.manage"
 SECURITY_MANAGE = "security.manage"
+#: Who may change the marks that say whose system this is. Admin only, and
+#: deliberately its own capability rather than folded into security.manage:
+#: a role that can restyle the product as another company is doing
+#: something different from a role that can change a password policy.
+BRANDING_MANAGE = "branding.manage"
 AUDIT_READ = "audit.read"
 
 
@@ -220,7 +225,7 @@ _PAYROLL_MANAGER = _PAYROLL_USER | {
 #: those two are siblings rather than a ladder -- otherwise the Admin would
 #: quietly lose leave approval and attendance correction along with them.
 _ADMIN = _HR_MANAGER | _PAYROLL_MANAGER | {
-    USER_MANAGE, SECURITY_MANAGE, AUDIT_READ,
+    USER_MANAGE, SECURITY_MANAGE, AUDIT_READ, BRANDING_MANAGE,
     # Salary structures and rules are readable by payroll and writable by
     # nobody below this line. Listed explicitly because it is the one
     # capability no other role carries -- take it out and the salary rules
@@ -396,6 +401,7 @@ NAVIGATION = [
             {"to": "/users", "label": "Users & Roles", "cap": USER_MANAGE},
             {"to": "/security", "label": "Security", "cap": SECURITY_MANAGE},
             {"to": "/audit", "label": "Audit Log", "cap": AUDIT_READ},
+            {"to": "/branding", "label": "Branding", "cap": BRANDING_MANAGE},
         ],
     },
 ]
