@@ -186,6 +186,8 @@ export default function Shell({ route, children }) {
           </span>
         )}
 
+        <div className="spacer" />
+
         {nav.map((group) => {
           const isActive = groupIsActive(group);
 
