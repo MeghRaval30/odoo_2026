@@ -101,7 +101,9 @@ def build_prompt(profiles):
 
 def ask_model(model, profiles):
     """Returns (votes_by_column_index, meta). Never raises."""
-    meta = {"used": False, "model": getattr(model, "model", None),
+    meta = {"used": False,
+            "model": (model.resolve() if hasattr(model, "resolve")
+                      else getattr(model, "model", None)),
             "latency_ms": None, "fallback_reason": None}
     if model is None:
         meta["fallback_reason"] = "No local model was configured for this run."
