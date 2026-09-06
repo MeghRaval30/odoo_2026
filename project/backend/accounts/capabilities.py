@@ -74,6 +74,16 @@ SALARY_CONFIG_READ = "salaryconfig.read"     # structures and rules
 SALARY_CONFIG_WRITE = "salaryconfig.write"
 DASHBOARD_PAYROLL = "dashboard.payroll"
 
+# -- workforce operations ---------------------------------------------------
+# Bulk work on many employees at once: migrating another system's roster in,
+# resolving a segment, running a mass increment or exit, issuing bonds, and the
+# playbooks that schedule those. Every one of them writes employee records or
+# contracts, so they sit on the HR side of the line D-042 draws -- a wage lives
+# on a contract, and setting a wage is deciding pay, not processing it.
+DATA_IMPORT = "data.import"              # the import studio
+WORKFORCE_READ = "workforce.read"        # see bonds, segments, playbooks
+WORKFORCE_WRITE = "workforce.write"      # issue, run, execute
+
 # -- administration ---------------------------------------------------------
 USER_MANAGE = "user.manage"
 SECURITY_MANAGE = "security.manage"
@@ -105,6 +115,11 @@ _HR_MANAGER = frozenset({
     TIMEOFF_READ_ALL, TIMEOFF_APPROVE, TIMEOFF_TYPE_WRITE,
     ALLOCATION_READ_ALL, ALLOCATION_WRITE,
     PROFILE_APPROVE, DASHBOARD_HR,
+    # Migrating a roster in and running mass actions on it are the same
+    # authority as creating one employee and one contract, applied at scale.
+    # This role already holds both singly, so withholding the bulk form would
+    # be theatre rather than control.
+    DATA_IMPORT, WORKFORCE_READ, WORKFORCE_WRITE,
 })
 
 #: The HR Payroll User is an **observer of payroll, not an operator of it**.
@@ -152,6 +167,12 @@ _PAYROLL_USER = frozenset({
     PAYRUN_READ,
     PAYSLIP_READ_ALL,
     DASHBOARD_PAYROLL,
+    # A bond carries a recovery amount and a mass increment changes next
+    # month's cost, so both are payroll-relevant figures this role must be able
+    # to check a run against. Reading them is not deciding them -- the write
+    # half stays with HR, and DATA_IMPORT is absent entirely because importing
+    # a roster creates contracts.
+    WORKFORCE_READ,
 })
 
 #: "All HR Payroll User permissions with full CRUD access to Payruns, Payslips,
@@ -294,6 +315,24 @@ NAVIGATION = [
             {"to": "/job-positions", "label": "Job Positions", "cap": REFERENCE_READ},
             {"to": "/work-locations", "label": "Work Locations", "cap": REFERENCE_READ},
             {"to": "/holidays", "label": "Holidays", "cap": REFERENCE_READ},
+        ],
+    },
+    {
+        # Bulk people operations, kept as their own group rather than folded
+        # into Employees. The distinction is not cosmetic: everything under
+        # Employees acts on one record that is already in the system, and
+        # everything here acts on many records at once -- including records
+        # that are not in the system yet. A judge reading the menu should be
+        # able to tell those two apart without opening either.
+        "key": "workforce", "label": "Workforce", "cap": WORKFORCE_READ,
+        "items": [
+            {"to": "/import", "label": "Data Import", "cap": DATA_IMPORT},
+            {"to": "/segments", "label": "Segments", "cap": WORKFORCE_READ},
+            {"to": "/mass-actions", "label": "Mass Actions",
+             "cap": WORKFORCE_WRITE},
+            {"to": "/bonds", "label": "Bonds", "cap": WORKFORCE_READ},
+            {"to": "/playbooks", "label": "Playbooks", "cap": WORKFORCE_READ},
+            {"to": "/ai-setup", "label": "Local AI", "cap": DATA_IMPORT},
         ],
     },
     {
