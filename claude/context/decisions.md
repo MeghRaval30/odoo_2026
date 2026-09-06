@@ -1110,3 +1110,247 @@ and the HR Manager, absent for both payroll ranks and the Employee.
 
 **The general rule:** a working feature with no entrance is indistinguishable
 from a broken one, and will be reported as broken.
+
+---
+
+### D-057 — The local model is one voter of three, and never the decider
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+Column mapping is settled by a reconciler over three independent voters:
+`lexical` (a synonym dictionary), `shape` (arithmetic over the actual cells)
+and `model` (a 7B running locally). Hard evidence outranks the model.
+
+**Rationale.** The obvious design — send the headers to the model, do what it
+says — was built first and *measured*. `qwen2.5:7b` at temperature 0 returned
+`null` for `Sal (pm)`, `DOJ` and `Mob No` in one pass and mapped all three
+correctly in the next. Nothing in the response distinguishes the two, so a
+design that trusts it has a failure mode that is invisible from the outside and
+lands in somebody's payroll.
+
+The three voters fail in different ways, which is the point: a dictionary
+cannot read a header it has never seen, arithmetic cannot know what a column is
+*for*, and a model confabulates. Combining them under written rules turns three
+unreliable answers into one that can be argued with.
+
+**The reconciler keeps the losing votes.** The plan carries the whole argument,
+so a screen can show that the model proposed a joining date, the profiler
+proved the column holds email addresses, and the profiler won. That record is
+the feature, not debug output — it is the difference between a tool a person
+audits and one they have to trust.
+
+Consequence: every path works with the model switched off. On the bundled
+rosters the two deterministic voters alone map 10 of 13 columns, and the
+response states which path ran rather than presenting both the same way.
+
+---
+
+### D-058 — The model is given the profiler's evidence, not the raw values
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+`intelligence/profiler.py` measures each column — type, range, distinctness,
+date formats seen, blank ratio — and renders one ASCII sentence per column.
+That sentence goes into the prompt; the cells largely do not.
+
+**Rationale.** Measured on this hardware: asked with headers and three sample
+values, the model mapped 3 of 6 columns correctly. Asked with headers plus the
+evidence sentence, the *same model at the same temperature* mapped 6 of 6,
+including correctly declining to map a free-text notes column.
+
+The prompt then removes the question the model is bad at — inferring a data
+type from three examples — and leaves the one it is good at, which is knowing
+that "Naam" is a name and "DOJ" is a date of joining. A small model is weak at
+recall and reasonable at judgement, so it is never asked to recall anything.
+
+The same sentence is rendered in the UI beside the column. Writing it once for
+both is deliberate: if the operator and the model are shown different
+descriptions of the same column, only one of them can be debugging the actual
+behaviour.
+
+---
+
+### D-059 — A local model, and a stated limit on what reaches it
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+Ollama on `127.0.0.1`, `qwen2.5:7b` by default, `qwen2.5:3b` under 8 GB of
+VRAM. No hosted API anywhere in the path and no key to configure.
+
+**Rationale.** The data on screen when this runs is a company salary register:
+names, bank accounts, PAN numbers, what every person is paid. "We send it to
+somebody else's computer to be read" ends the conversation with any HR
+department worth selling to. The constraint is the product argument, not a cost
+saving.
+
+What reaches the model is bounded and stated: column headers, the profiler's
+one-line description per column, and at most three sample values per column.
+Full rows are never sent, to the model or to anything else. One call per
+*file*, never one per column — a forty-column spreadsheet is a single
+generation.
+
+Measured cost on an RTX 5060 Laptop (8 GB): ~11s to load the weights, ~4.4s
+warm for a whole spreadsheet. Every request sends `keep_alive: 30m`, and the
+import screen warms the model when it opens, so the cold load is paid while
+somebody is choosing a file rather than while they watch a progress bar.
+
+---
+
+### D-060 — The bulk and inference tools are Admin-only
+
+**Decided by:** the user, session 09 · 2026-09-06 · *instructed directly*
+
+`DATA_IMPORT`, `WORKFORCE_READ` and `WORKFORCE_WRITE` are held by the Admin and
+by no other role.
+
+**Rationale.** The user asked for this outright, and it is defensible on the
+matrix's own terms. These are the widest-blast-radius actions in the product:
+one import creates hundreds of employees and contracts, one mass increment
+rewrites the wage on every contract in a segment, one offboarding deactivates
+people and marks their bonds breached. Each is a single click whose
+consequences spread across the whole roster, and unlike every other write in
+this system there is no per-record review step where a second person would
+notice a mistake.
+
+The HR Manager can still do each of these things one record at a time, and that
+is where the boundary sits: **doing something once is a correction, doing it to
+four hundred people is a policy decision.** The capability is not "may you edit
+an employee" but "may you commit the organisation in one action".
+
+Verified as enforcement, not decoration: all nine endpoints answer 403 to the
+HR Manager, both payroll ranks and the Employee, and the Workforce menu group
+is absent for all four.
+
+---
+
+### D-061 — Cross-company vocabulary resolves from a dictionary before the model
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+Category values are matched in three passes: against what is already in the
+database, then a dictionary of cross-company synonyms, then the model — and
+only for **closed taxonomies** (department, work location, employment type,
+gender).
+
+**Rationale.** Two failures forced this, both found by running the real files.
+
+Asked to match another company's departments, the model answered *some* of them
+and silently omitted the rest: one run resolved `People` and `Technology` and
+skipped `Revenue` and `Operations`, which would have merged two departments and
+duplicated two others for no visible reason. A dictionary is boring, complete,
+and identical every run.
+
+Asked to match *job titles*, it collapsed `Senior Developer` onto `Developer`
+and `Marketing Lead` onto `Sales Executive`. A department list is short and
+genuinely synonymous across companies — `Technology` and `IT` are the same unit
+under two names — but job titles are a long tail and are **not** synonymous.
+Folding them discards the distinction the title exists to carry. So a title
+that does not already exist is *created*, and the seniority survives the import.
+
+---
+
+### D-062 — A second file is held to a higher confidence bar than the first
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+A supplement's column contributes a field only at confidence >= 0.6, against
+the ordinary mapping floor of 0.35.
+
+**Rationale.** The operator reads the primary file column by column on screen;
+nobody does that for a second file. A bank spreadsheet's `Account Type` of
+Savings and Current scores just above the ordinary floor for *work location*,
+and filling everybody's office with "Savings" is a worse outcome than leaving
+the column alone.
+
+**The bar is a confidence, not a decision.** The first attempt required
+`decision == "auto"` and was wrong: a column can be marked for review because
+two voters picked different *runners-up* while still being an obvious match —
+`Bank A/C Number` lands at 0.79 that way — and dropping it would throw away the
+thing the second file was opened for.
+
+Related: `CLOSED_VOCABULARY` in `schema.py` settles `Account Type` versus
+`Employment Type` on the values themselves. Both are short repeated strings and
+the headers share the word "type", so nothing in the *shape* separates them.
+
+---
+
+### D-063 — Employee numbering is always asked, never assumed
+
+**Decided by:** Trevor, session 09 · 2026-09-06 · *at the user's request*
+
+The import always offers a numbering choice — keep the file's ids, generate to
+a pattern, or use the system default — even when a column already maps to
+`employee_code`.
+
+**Rationale.** The ids in an incoming file are the *previous employer's*
+numbering. `FF-101` is Fieldforce's scheme, and after the migration these
+people work here. Whether to keep it is a decision somebody should make on
+purpose rather than one taken by default because a column happened to match.
+
+A numbering scheme is also very cheap to choose now and very expensive to
+change once payslips carry it, which is why the pattern is previewed against
+*real rows* rather than an example — the year comes from each person's own
+joining date, and a scheme that looks right on a made-up row can still be wrong
+on a real one. Sequence numbers continue from what is already issued, so a
+second import does not collide with the first.
+
+---
+
+### D-064 — Demo files live on disk, not behind buttons in the app
+
+**Decided by:** the user, session 09 · 2026-09-06 · *instructed directly*
+
+The three "load a sample" buttons are gone. Seven rosters sit in
+`test-data/import/` with a README explaining what each one breaks.
+
+**Rationale.** A button that loads a file nobody has seen proves less than
+opening the spreadsheet in Excel first and then dragging *that same file* in. A
+judge who has looked at the mess in Excel understands what the import did; a
+judge who pressed a button has only the software's word for it.
+
+It also removes a whole code path — the bundled-sample package and its
+endpoint — that existed only for the demo.
+
+---
+
+### D-065 — One place decides what is still missing
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+`missing_required_after(plan)` pools three kinds of source: a column in the
+primary file, a field supplied by a joined second file, and an auto-fix the
+operator has accepted. `apply_fixes` is therefore stored **on the plan**.
+
+**Rationale.** Found by using it. Accepting "build emails from names" ticked
+green in the gap checklist while the rail beside it insisted work email was
+still needed and the Preview button stayed disabled — because the browser knew
+about the fix and the server did not. Two places answering one question is
+exactly how that contradiction appears.
+
+This is the same rule as D-034 and D-051, arrived at a third time from a third
+direction. The three sources are the same kind of answer, so they are pooled
+before the question is asked once.
+
+---
+
+### D-066 — The default seed stays at 22 employees
+
+**Decided by:** Trevor, session 09 · 2026-09-06
+
+`seed --flush` still produces the 22-person roster. `--employees 200` is
+verified and documented, and is not the default.
+
+**Rationale.** The demo script's headline evidence is three months of payroll
+whose month-over-month movement can be explained line by line — December
+INR 14,73,360 < January INR 14,82,320 < February INR 15,58,320, each gap with a
+cause you can point at. Those figures are a function of the 22-person roster.
+At 200 employees the graded *rules* all still hold (28/28) but every quoted
+number changes, and the script would need rewriting against a roster nobody can
+narrate.
+
+The scale story is told through the import instead:
+`06-vantage-240-headcount.xlsx` onboards 240 people live, which is a better
+demonstration of scale than a seed flag because the audience watches it happen.
+
+`--employees 200` is verified working: 223 contracts, 15,077 attendance rows,
+545 payslips, employee list 158 ms, dashboard 644 ms.

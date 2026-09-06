@@ -1,42 +1,40 @@
-# NEXT SESSION — you are TREVOR, session 09
+# NEXT SESSION — you are MICHAEL, session 10
 
-> Rewritten from scratch by Franklin at MEGATRON LAUNCH, 2026-09-06 03:10 IST.
+> Rewritten from scratch by Trevor at MEGATRON LAUNCH, 2026-09-06 06:20 IST.
 > Never append to this file. Rewrite it.
 
 ---
 
 ## 1. Identity and orientation
 
-You are **Trevor**, the ninth session of a relay building PeoplePay360 for a
+You are **Michael**, the tenth session of a relay building PeoplePay360 for a
 24-hour Odoo hackathon. Three Claude sessions work this project in rotation on
 three teammates' separate accounts:
 
 > **MICHAEL → FRANKLIN → TREVOR → (repeat)**
 
-Franklin just finished session 08. You have **no memory** of it. Every handoff is
+Trevor just finished session 09. You have **no memory** of it. Every handoff is
 a cold start in a brand-new chat, possibly on a different machine. **This
-repository is the only channel between sessions.** Anything not written to a file
-and pushed is gone.
+repository is the only channel between sessions.** Anything not written to a
+file and pushed is gone.
 
 ### Before your first edit
 
 ```bash
-git pull --rebase
-git config user.name  "MeghRaval30"
-git config user.email "meghraval306@gmail.com"
+git fetch origin
+git config user.name  "<your GitHub username>"
+git config user.email "<your GitHub commit email>"
 git config user.name && git config user.email    # VERIFY. Do not assume.
 ```
 
-Your identity row is in `claude/workflow/git-strategy.md` §1 and is confirmed.
-Getting it wrong is **not silently recoverable** — fixing misattributed commits
-needs a history rewrite, which this relay forbids.
+Your identity row is in `claude/workflow/git-strategy.md` §1. Getting it wrong
+is **not silently recoverable** — fixing misattributed commits needs a history
+rewrite, which this relay forbids.
 
-Then: work on a branch, merge with `--no-ff`, never force-push, never rewrite
-history. `main` stays working at all times.
+**You probably cannot check out `main`.** See §11, B-038. Base on `origin/main`
+and push with `git push origin HEAD:main`.
 
 **Check whether another session is running before you write anything** (B-030).
-Two sessions both numbered 06 ran in parallel once and it was only luck that they
-touched different files.
 
 ---
 
@@ -44,94 +42,94 @@ touched different files.
 
 ```
 Start:  2026-09-05 10:00 IST      End: 2026-09-06 10:00 IST
-Franklin closed session 08 at 2026-09-06 03:10 IST
-Elapsed ~17h 10m   REMAINING ~6h 50m
+Trevor closed session 09 at 2026-09-06 06:20 IST
+Elapsed ~20h 20m   REMAINING ~3h 40m
 ```
 
 **Run `date` yourself.** By the time you read this it will be less.
 
 | Remaining | Phase |
 |---|---|
-| > 8h | BUILD |
-| < 8h | **FREEZE — bugfix and polish only** |
-| < 4h | POLISH — seed data, rehearsal, roadmap |
+| < 4h | **POLISH — stop coding. Demo script, rehearsal, roadmap** |
 | < 2h | DEMO — rehearse only, touch nothing |
 
-You are in **FREEZE**, and POLISH begins at 06:00 IST. **There is no feature left
-that the graded deliverables need.** The board has been feature-complete since
-session 06; everything since has been finding and repairing defects. The biggest
-risk left in this project is you breaking something that works.
+You are in **POLISH**, close to DEMO. **Do not start a feature.** The product is
+larger than it has ever been and what it lacks is not code.
 
 ---
 
 ## 3. The product, in about 500 words
 
-**PeoplePay360** is an integrated HR and payroll operations platform for a single
-Indian company. It is deliberately **not a CRUD app with a payroll table bolted
-on**. The thing being graded is that HR data *drives* payroll through rules a
-human can inspect.
+**PeoplePay360** is an integrated HR and payroll operations platform for a
+single Indian company. The thing being graded is that HR data *drives* payroll
+through rules a human can inspect.
 
-An **Employee** has a **Contract** which carries a wage, a salary structure and a
+An **Employee** has a **Contract** carrying a wage, a salary structure and a
 working schedule. The contract is period-resolved: an employee may have many
 contracts over time, and payroll for December must use the contract that covered
 December, not the one running today. A **Working Schedule** defines the days and
-hours of a working week, and its weekly hours are **derived from its lines**, not
-typed in. **Attendance** records real check-in/check-out, from which worked days,
-worked hours and overtime are computed. **Time Off** is requested against an
-**Allocation** — a balance that must exist and be approved before leave can be
-taken — and unpaid leave becomes a payroll deduction.
+hours of a week, and its weekly hours are **derived from its lines**, never
+typed. **Attendance** records real check-in/check-out, from which worked days,
+hours and overtime are computed. **Time Off** is requested against an
+**Allocation** that must exist and be approved first, and unpaid leave becomes a
+payroll deduction.
 
 A **Payrun** covers a period and a set of employees. Computing it produces one
-**Payslip** per employee, and each payslip is a sequence of **Payslip Lines**, one
-per **Salary Rule** that fired. Rules run in sequence and later rules can read
-earlier results by code, which is how `HRA = 40% of BASIC` and `PF = 12% of BASIC`
-work without anybody hard-coding arithmetic. Before a payrun can be validated it
-is checked, and problems surface as **warnings** — a missing bank account, a
-duplicate payslip, a negative net.
+**Payslip** each, and each payslip is a sequence of **Payslip Lines**, one per
+**Salary Rule** that fired. Rules run in sequence and later rules read earlier
+results by code, which is how `HRA = 40% of BASIC` works without hard-coded
+arithmetic. Before validation a payrun is checked, and problems surface as
+**warnings** — a missing bank account, a duplicate payslip, a negative net.
 
 The locale is India: rupees, PF, ESIC, Professional Tax, LWF. Employer
 contributions are computed and reported as cost-to-company but **never move the
 employee's gross or net** (D-021).
 
-The other half of the product is **who may do what**. Sessions 06 and 07 turned
-this from a five-row matrix into a real separation of duties: HR owns people,
-payroll owns the payrun, and only an Admin holds both. The top bar is built
+The second half of the product is **who may do what**. The top bar is built
 **server-side** from the signed-in account's capabilities, so a role that cannot
 use a menu does not see it — and the same table enforces the API, so hiding a
 control is never mistaken for enforcing a rule.
 
-Session 08 added a corollary the hard way: **a working feature with no entrance
-is indistinguishable from a broken one.** The profile-change approval queue
-worked perfectly and was reported as broken, because its only door was a tab
-inside "My profile" (D-056).
+**Session 09 added a third half.** The biggest obstacle to a company adopting
+this software is not the software: it is five years of people data sitting in
+whatever they keep it in today. So there is now an **Import Studio** that reads a
+messy spreadsheet, and a **workforce ecosystem** for the operations that act on
+hundreds of people at once — mass increments, offboarding, bonds, and standing
+rules that raise reminders. All of it is **Admin-only** (D-060).
 
-The demo's headline evidence is three months of real payroll where **December <
-January < February**, and each gap has a cause you can point at: December is
-*lower* than January because two employees resolve to older, cheaper contracts,
-and February is higher because of overtime. That is the sentence the whole build
-exists to let someone say.
+The Import Studio's design is the interesting part, and it came from a
+measurement rather than a preference. The obvious version — hand the headers to a
+local model and do what it says — was built first and measured: `qwen2.5:7b`
+returned `null` for `Sal (pm)`, `DOJ` and `Mob No` in one pass and mapped all
+three correctly in the next, with nothing to tell the two apart. So the model is
+**one voter of three**, fed the profiler's measured evidence rather than raw
+values, and the reconciler keeps the losing votes so the screen can show
+arithmetic overruling the model.
+
+The demo's headline evidence is still three months of real payroll where
+**December < January < February**, each gap with a cause you can point at. That
+is the sentence the whole build exists to let someone say.
 
 ---
 
 ## 4. The five graded business rules
 
-These are the product. Everything else is scaffolding around them.
+These are the product. Everything else is scaffolding.
 
 | # | Rule | Acceptance |
 |---|---|---|
-| 1 | **Period-based contract resolution** | An employee with two contracts gets December's pay from December's contract. `john@oxp.com` has ₹1,03,000 for December and ₹1,10,000 for January — `core/tests.py` pins both |
-| 2 | **Derived weekly hours** | A schedule's hours per week come from its lines, never typed. "40 Hours / Week" derives 40.00h over 5 days; "Part-time 20h" derives 20.00h over 4 |
-| 3 | **Allocation-gated leave** | A leave request without an approved allocation covering it is refused. The gate runs in the serializer's `validate()`, against the *requester's own* balance |
+| 1 | **Period-based contract resolution** | `john@oxp.com` draws ₹1,03,000 for December and ₹1,10,000 for January. `core/tests.py` pins both. **Session 09 added a second demonstration**: a mass increment closes the current contract and opens a new one rather than editing a wage, so a period before the raise still resolves to the old contract — pinned by `workforce/tests.py::test_an_increment_does_not_rewrite_history` |
+| 2 | **Derived weekly hours** | "40 Hours / Week" derives 40.00h over 5 days; "Part-time 20h" derives 20.00h over 4. No weekly-hours input exists anywhere |
+| 3 | **Allocation-gated leave** | A request with no approved allocation covering it is refused, in the serializer's `validate()`, against the *requester's own* balance |
 | 4 | **Sequenced salary rules** | Rules run in `sequence` order and later rules read earlier results by code. `verify_rules.py` proves all 28 checks |
-| 5 | **Pre-finalization warnings** | A payrun with a blocking error cannot be validated or paid. Proven end to end: a negative net raises `NEGATIVE_NET` at ERROR severity, `can_validate` goes false, and `validate_payrun` refuses |
+| 5 | **Pre-finalization warnings** | A negative net raises `NEGATIVE_NET` at ERROR severity, `can_validate` goes false, and `validate_payrun` refuses |
 
-**PRD success criterion 4** — that two *distinct* warning codes fire during the
-demo — is met, and as of session 08 it is **proven by clicking, not only by
-test.** The seed leaves a March off-cycle payslip in `Computed` so the March
-payrun the operator creates finds a `DUPLICATE` alongside two `AC_MISSING`
-(D-033). **Do not mark that March run paid.**
+**PRD success criterion 4** — two *distinct* warning codes firing during the
+demo — is met and **proven by clicking**. The seed leaves a March off-cycle
+payslip in `Computed` so the March payrun the operator creates finds a
+`DUPLICATE` alongside two `AC_MISSING` (D-033). **Do not mark that run paid.**
 
-**Three D-002 integrations** must remain visible: attendance → worked days/LOP,
+**Three D-002 integrations** must stay visible: attendance → worked days/LOP,
 overtime → a salary rule, unpaid leave → a deduction.
 
 ---
@@ -141,87 +139,89 @@ overtime → a salary rule, unpaid leave → a deduction.
 ```
 project/
   backend/        Django 6.1.1 + DRF 3.18, SQLite (D-011)
-    accounts/     identity, roles, THE CAPABILITY MATRIX, security, audit,
-                  self-service and profile change requests
-    employees/    Employee, Contract, WorkingSchedule, ScheduleLine, reference data
-    attendance/   Attendance + the check-in widget's endpoints
+    accounts/     identity, roles, THE CAPABILITY MATRIX, security, audit
+    employees/    Employee, Contract, WorkingSchedule, ScheduleLine
+    attendance/   Attendance + the check-in widget
     timeoff/      TimeOffType, Allocation, TimeOffRequest
-    payroll/      SalaryStructure, SalaryRule, Payrun, Payslip, engine.py, pdf.py
-    dashboard/    the four role dashboards (api.py + role_views.py)
+    payroll/      SalaryStructure, SalaryRule, Payrun, Payslip, engine, pdf
+    dashboard/    the four role dashboards
     core/         Holiday, formatting, the seed command
-  frontend/       React 19 + Vite, no router library (hash routing in lib/router.js)
+    intelligence/ NEW s09 — the Import Studio
+    workforce/    NEW s09 — segments, bulk ops, bonds, playbooks
+  frontend/       React 19 + Vite, no router library (hash routing)
+test-data/import/ NEW s09 — seven demo rosters + README
+scripts/          NEW s09 — setup-ai.ps1 / setup-ai.sh
+docs/AI-SETUP.md  NEW s09
 ```
 
 ### The one file that matters most
 
-**`project/backend/accounts/capabilities.py`** is the single home of "who may do
-what". It holds the capability vocabulary, the five role sets, the navigation
-manifest, and which dashboard each role lands on. Permission classes, the menu
-and the frontend all read this one table.
+**`project/backend/accounts/capabilities.py`** — the single home of "who may do
+what". Capability vocabulary, the five role sets, the navigation manifest, and
+which dashboard each role lands on. Permission classes, the menu and the
+frontend all read this one table.
 
-The model properties (`user.is_admin`, `can_manage_hr`, `can_run_payroll`,
-`can_configure_payroll`) are **views onto that table**, not separate rules. So
-there is exactly one place a role is defined.
+Session 09 added `DATA_IMPORT`, `WORKFORCE_READ`, `WORKFORCE_WRITE`, held by the
+**Admin only** (D-060), and a `workforce` navigation group with six entries.
 
-**Every viewset uses `RequiresCapability(read=…, write=…, delete=…)`.** The older
-model-flag classes (`CanManageHR`, `CanRunPayroll`, `CanConfigurePayroll`) still
-exist in `permissions.py` but are **no longer wired to anything** except
-`CanReadOwnPayslips`. Do not reattach them; they cannot express a read/write split.
+### The Import Studio, module by module
 
-### Conventions that are enforced, not just preferred
+| File | Job |
+|---|---|
+| `readers.py` | Parse CSV/TSV/XLSX. **Finds the header row by scoring**, drops junk rows, blank columns and a trailing TOTAL |
+| `profiler.py` | Measure each column and render one ASCII evidence sentence, used by the UI *and* the prompt |
+| `schema.py` | 22 target fields, Indian-HR-aware synonyms, the lexical voter, the shape voter, `CLOSED_VOCABULARY` |
+| `llm.py` | Ollama client. Never raises into a caller — `LLMUnavailable` is caught everywhere |
+| `mapper.py` | **The three-voter reconciler.** Keeps losing votes. Builds value maps |
+| `transforms.py` | Named composable steps, and `suggest_transforms` deriving them from the profile |
+| `validators.py` | Row checks. Error blocks a row, warning does not |
+| `enrich.py` | **Second-file join.** Finds the key by measuring value overlap |
+| `codes.py` | Employee numbering policy, previewed against real rows |
+| `importer.py` | The single path: `preview` writes nothing, `commit` writes in one transaction |
+| `api.py` | Viewsets plus the **streaming** analyse endpoint |
 
-* **Server-side enforcement, always.** PRD-3.1: hiding a button is not
-  enforcement. The inverse is also banned — **never offer a control the server
-  will refuse.** Session 08 fixed two violations of the inverse (D-055, and the
-  register's dead default).
-* **Breadth of read is decided by a read capability** (D-045). Never gate a
-  queryset's scope on a write flag.
-* **A workflow state is not an input field** (D-054). The question is never "is
-  this field writable" but "who writes it, and does writing it grant them
-  something".
-* **Name a shared answer once, on the server** (D-034, reaffirmed as D-051).
-  When a screen and its API both decide the same thing, they will eventually
-  decide it differently.
-* **`claude/context/ui-design-language.md` is binding** for any frontend work.
-  Palette, density, one action colour, hairlines not shadows, tabular numerals,
-  and copy rules that keep the UI from reading as machine-generated. Read it
-  before you touch a screen.
-* Money is `Decimal`, quantised to 2dp on every line. The derived payslip totals
-  carry SQLite's extra precision in memory but DRF quantises before the wire —
-  this is fine, do not "fix" it.
+### Conventions that are enforced, not preferred
+
+* **Server-side enforcement, always**, and never offer a control the server will
+  refuse.
+* **Name a shared answer once, on the server** (D-034, D-051, and now D-065 —
+  the same rule found a third time from a third direction).
+* **Breadth of read is decided by a read capability** (D-045).
+* **A workflow state is not an input field** (D-054).
+* `claude/context/ui-design-language.md` is **binding** for any frontend work.
+* Money is `Decimal`, quantised to 2dp.
+* **ASCII only in Python that prints.** The Windows console is cp1252.
 
 ---
 
 ## 6. Data model, the parts that matter
 
-* **Employee → Contract** is one-to-many. `employee.contract_for_period(start,
-  end)` is the resolver for graded rule #1. It deliberately includes `EXPIRED`
-  contracts: lifecycle state is not period coverage. A December payrun must find
-  a contract that ended in January.
-* **Contract → WorkingSchedule → ScheduleLine.** `ScheduleLine` carries
-  `day_of_week` (0=Mon), `start_time`, `end_time`, `break_minutes`, and its
-  `hours` property is what graded rule #2 derives from. **The seed reads these
-  lines to generate attendance** (D-047).
-* **Payslip totals are derived properties, not columns.** `basic`, `allowances`,
-  `deductions`, `gross`, `net`, `employer_cost`, `ctc` are all computed from
-  `lines`, excluding `is_employer_cost` rows from the employee-side totals.
-* **`Payslip` has a unique constraint** on (employee, period_start, period_end) —
-  the duplicate guard behind PRD-4.5.2.
-* **`TimeOffRequest.state`** is `DRAFT / TO_APPROVE / APPROVED / REFUSED /
-  CANCELLED`. As of D-053 the API creates into **`TO_APPROVE`**; `DRAFT` remains
-  in `STATES` and the screen still acts on it so older rows stay decidable.
-  `CANCELLED` is declared but has **no action and no UI** — it is dead, and that
-  is fine.
-* **`ProfileChangeRequest`** is `PENDING / APPROVED / REFUSED / CANCELLED`, with
-  `SENSITIVE_FIELDS` deciding which fields need approval rather than applying
-  directly. `approve()` refuses a reviewer deciding their own record, **at the
-  write**.
-* **User ↔ Employee is one-to-one and optional in both directions.** An employee
-  can exist with no account; **an account can exist with no employee**, and
-  `admin@oxp.com` is exactly that. That case has now bitten four screens — see
-  traps.
-* **User ↔ Role is many-to-many but capped at one** (D-044). The union logic stays
-  because the matrix must be right for any set it is handed.
+* **Employee → Contract** is one-to-many. `employee.contract_for_period()` is
+  graded rule #1 and deliberately includes `EXPIRED` contracts.
+* **Contract → WorkingSchedule → ScheduleLine.** `ScheduleLine.hours` is what
+  rule #2 derives from, and the seed reads these lines to generate attendance.
+* **Payslip totals are derived properties, not columns.**
+* **`Payslip` has a unique constraint** on (employee, period_start, period_end).
+* **`TimeOffRequest`** is created into `TO_APPROVE` (D-053); `state` is
+  read-only (D-054).
+* **User ↔ Employee is optional in both directions.** `admin@oxp.com` has **no
+  employee record**, and that case has bitten five screens.
+* **User ↔ Role is many-to-many but capped at one** (D-044).
+
+New in session 09:
+
+* **`ImportSource` / `ImportRun` / `ImportIssue`.** The run's `plan` is a JSON
+  blob holding columns, votes, transforms, value maps, **enrichments**,
+  **code_policy** and **apply_fixes**. It is written once by the mapper, edited
+  by the operator, and read back whole.
+* **`Segment`** stores *criteria*, not a list of people, so it means the same
+  thing next month.
+* **`Bond`** carries `remaining_liability` pro-rata by months served — the
+  figure a mass-exit preview totals.
+* **`BulkOperation`** stores its preview *and* its result, so what was promised
+  can be compared with what happened.
+* **`Playbook` / `PlaybookEvent`** with a unique constraint on
+  (playbook, employee) so a rule does not refill the inbox nightly.
 
 ---
 
@@ -231,157 +231,160 @@ Run these; do not take my word for it.
 
 | Area | Proof |
 |---|---|
-| Backend suite | `manage.py test` → **236 tests OK** |
-| The five graded rules | `verify_rules.py` → **28/28** |
-| The permission model | `audit_permissions.py` → every cell, 16 refusals, 6 preserved reads, read breadth, rank identity, row scoping |
+| Backend suite | `manage.py test` → **314 tests OK** |
+| The five graded rules | `verify_rules.py` → **28/28**, at 22 employees *and* at 200 |
+| The permission model | `audit_permissions.py` → every cell, 16 refusals |
 | HTTP layer | `smoke_api.py` → **53/53** |
 | Every UI create/update payload | `probe_forms.py` → **26/26** (needs a live server) |
-| Frontend build | `npm run build` → clean, ~750 kB JS |
-| 22 routes × **all five roles** | walked with console + network instrumented, **0 errors** |
-| Robustness | 2,499 fuzzed requests, 0 crashes, 0 anonymous leaks (session 07) |
-| Payslip coherence | 61 payslips × 12 invariants |
-| Engine edges | no contract, zero wage, ₹99,99,999 wage, mid-period join and leave |
-| Idempotency | recompute changes nothing; a paid payrun refuses recomputation |
-| PDF | renders real PDFs (~76 kB) with the rupee glyph |
-| **Criterion 4 through the wizard** | walked as `aarav@oxp.com`: `DUPLICATE` on create, `AC_MISSING` ×2 after Compute — 3 warnings, 2 codes, 0 errors |
-| **Both approval workflows** | leave and profile changes driven end to end in a browser |
+| Local model | `manage.py ai_doctor` → all pass, 711 ms warm |
+| Frontend build | `npm run build` → clean, ~835 kB JS |
+| **Admin-only enforcement** | 9 endpoints × 4 other roles → **all 403**; menu absent for all four |
+| Import, end to end | `04-fieldforce-incomplete.xlsx` + `04b` → 11 employees, 11 contracts, 2 departments, walked in a browser |
+| Import, control case | `01-meridian-complete.xlsx` → 22/22, zero issues |
+| Annual-salary detection | `03-northgate-legacy-export.xlsx` → `scale ÷12`, 1080000 → 90000.00 |
+| Second-file join | 14 of 16 on `Staff ID`, names the two it could not find |
+| Employee numbering | `EMP/2021/0023…`, continuing from the 22 already issued |
+| Segments from a sentence | *"interns who have been here more than 6 months"* → 2 people, named |
+| Playbooks | `run_playbooks --dry-run` → 9 events across 2 rules |
 
-The 22 screens are complete. The seed is idempotent and reproducible
-(`random.seed(360)`).
+Everything from sessions 01–08 still holds. The 22 original screens are
+untouched.
 
 ---
 
 ## 8. What is HALF-DONE
 
-### T-107 — the demo script. This is the whole job.
+### T-107 / B-036 — the demo script. This is the whole job.
 
-`claude/deliverables/demo-script.md` has a "Session 07 corrections" section and
-three inline figure fixes. **Its figures are now all verified correct** — session
-08 confirmed every number on screen. What is stale is the **prose**: its
-description of menus and roles predates the permission rebuild, and four things
-have changed under it since.
+`claude/deliverables/demo-script.md` is stale in **two** ways now.
 
-Fold these in as you read it aloud:
+**One**, inherited: its figures were verified in session 08 but its *prose*
+predates the permission rebuild. Five specific things changed under it and were
+never folded in:
 
-* **Reports opens on February 2026, 20 payslips** (it used to open on March's
-  single payslip). D-051.
+* **Reports opens on February 2026, 20 payslips** (was March's single payslip). D-051.
 * **The register exports as `register-February-2026.csv`**, a distinct file per
-  month. It used to be `register.csv` every time. D-052.
-* **Employees → Change Requests** is a new menu entry, visible to the Admin and
-  the HR Manager only. D-056.
-* **An employee's leave request reads "To Approve"**, not Draft, and HR sees
-  Approve/Refuse on it. D-053.
+  month (was `register.csv` every time). D-052.
+* **Employees → Change Requests** is a menu entry, Admin and HR Manager only. D-056.
+* **A leave request reads "To Approve"**, not Draft, and HR sees Approve/Refuse. D-053.
 * The Administration dashboard **opens on an empty audit log** after a reseed and
-  fills as the demo signs in — so every row a judge reads is something that just
-  happened in front of them. D-050. This is worth saying out loud; it is a better
-  story than a table of stale rows.
+  fills as the demo signs in. D-050. Worth saying aloud — it is a better story
+  than a table of stale rows.
 
-There is also a **thirty-second talking point** worth using, inherited from
-session 07 and still true: sign in as `rahul@oxp.com`, open a payrun, show
-Compute and Validate are *absent*; sign in as `aarav@oxp.com`, show them present.
-The line is *the person who processes pay is not the person who decides it.*
+**Two**, new and larger: an entire top-bar group — **Workforce**, with six
+entries — does not appear in the script at all.
 
-### T-111 — Ledger's primary button is 3.05:1
+**What to do**: seed, start both servers, sign in as `aarav@oxp.com`, read
+scenario A aloud A1→A10 against the screen and fix the words. Then B. Then
+**write a scenario C for the Import Studio** as `admin@oxp.com`; the narration
+is already in `test-data/README.md` and the click-path is in §14 below.
 
-White on Claude orange fails WCAG AA at 13px. One token (`--on-primary`, or a
-darker `--primary`) closes it. **It needs the user's decision**, because Ledger is
-the shipped signature look and is fixed by `ui-design-language.md` §2. It has now
-been carried unasked across three sessions. **If you have the user's attention,
-ask them.**
+### T-156 / B-037 — the 240-row import has not been watched
+
+`06-vantage-240-headcount.xlsx` is proven through the API only. Low risk — the
+render is bounded and the code path is identical to the files that were walked —
+but it is the file you would show for scale and nobody has watched it. **Ten
+minutes.**
+
+### T-157 — the seed size is an open question
+
+The user asked for "at least 200 employees". `--employees 200` is verified
+(223 contracts, 545 payslips, 28/28 rules). D-066 chose **not** to make it the
+default because the script's three-month narrative quotes figures that only
+hold for 22 people, and told the scale story through the 240-row import instead.
+**That choice was made without the user confirming it. Ask them.**
 
 ---
 
 ## 9. NOT STARTED, in priority order
 
-1. **T-107 — read the demo script aloud against the screen.** Everything else is
-   optional.
-2. **T-111** — the contrast token. Ask the user.
-3. **T-134 / B-034 — the leave self-approval guard.** Real, small, and not
-   reachable in the demo. Only after the script.
-4. **T-089 — the 300–10,000 employee dataset.** `seed --employees N` already
-   generates above the fixed 22-person roster, so this is running the flag and
-   checking the dashboard and payrun survive the row count. Deferred by the user
-   three times.
-5. **T-126** — `/api/attendance/status/` and `/api/me/profile/` answering 400 for
-   an account with no employee (B-032). Cosmetic.
-6. **T-127** — a frontend test runner (B-033). Real, but a FREEZE-phase decision,
-   not a default.
+1. **T-107 / B-036 — the demo script.** Everything else is optional.
+2. **T-156** — walk the 240-row import. Ten minutes.
+3. **T-157** — confirm the seed size with the user.
+4. **T-134 / B-034 — the leave self-approval guard.** Real, small, not reachable
+   in the demo.
+5. **T-126 / B-032** — two reads answer 400 for an account with no employee.
+   Cosmetic; deliberately left alone four times.
+6. **T-127 / B-033** — a frontend test runner. Session 09 is more evidence:
+   six of its nine defects were frontend-adjacent and every one was found by hand.
+7. **T-111** — Ledger's primary button is 3.05:1, failing WCAG AA at 13px. One
+   token closes it, but Ledger is the shipped signature look and is fixed by
+   `ui-design-language.md` §2. **Needs the user's decision and has been carried
+   unasked across four sessions. Ask them.**
 
 ### Dead — do not resurrect without the user asking
 
-**The AI features.** The user asked for AI to manage a large dataset, chose local
-**Ollama** models, then asked for **Ollama to be uninstalled**, which was done. No
-code references it. The only remaining route is the Anthropic API, which sends
-salary data off the machine — the exact thing local models were chosen to avoid.
+Nothing. **Note that session 08's briefing said "the AI features are dead" — that
+is superseded.** The user re-commissioned them in session 09; they are built,
+tested and on `main`.
 
 ---
 
 ## 10. Decisions already made — do not relitigate
 
-Full rationale for each is in `claude/context/decisions.md`. The ones most likely
-to be second-guessed:
+Full rationale for each is in `claude/context/decisions.md`.
 
 | ID | Decision |
 |---|---|
-| **D-041** | The HR Payroll User reads payroll and writes **nothing** |
-| **D-042** | HR Manager and Payroll Manager are **siblings, not a ladder**; only Admin holds both |
-| **D-043** | Salary rules are readable by payroll, **writable only by the Admin** |
-| **D-044** | An account holds **exactly one role** |
-| **D-045** | Breadth of read is decided by a **read** capability, never a write flag |
-| **D-046** | `seed --flush` resets security settings; harnesses clean up after themselves |
-| **D-050** | `seed --flush` also resets `AuditLog` and `LoginAttempt` |
-| **D-051** | The register opens on the newest **paid** run, named by the server |
-| **D-052** | `Content-Disposition` is exposed to the browser via CORS |
-| **D-053** | Submitting a leave request **is** submitting it — creation lands in `TO_APPROVE` |
-| **D-054** | `TimeOffRequest.state` is read-only; `Allocation.state` stays writable, deliberately |
-| **D-055** | "Awaiting you" excludes your own record; the full list still shows it |
-| **D-056** | A screen reachable only from inside "My profile" is a screen nobody finds |
-| D-033 | March off-cycle payslip stays `Computed` so criterion 4 fires |
-| D-034 | The dashboard opens on the newest **paid** period |
-| D-021 | Employer contributions never move gross or net |
-| D-023 | Pay is prorated to the contract's own dates |
-| D-011 | SQLite, not PostgreSQL — neither Postgres nor Docker is installed |
-| D-012 | `claude/` is updated **only** at MEGATRON LAUNCH |
+| **D-057** | The local model is **one voter of three** and never the decider |
+| **D-058** | The model is given the profiler's **evidence**, not raw values — 3/6 → 6/6 |
+| **D-059** | Local model only. Headers + evidence + 3 samples reach it; full rows never do |
+| **D-060** | The bulk and inference tools are **Admin-only** (the user's instruction) |
+| **D-061** | Cross-company vocabulary resolves from a **dictionary** before the model, and only for closed taxonomies |
+| **D-062** | A second file is held to a **higher confidence bar** (0.6) than the first |
+| **D-063** | Employee numbering is **always asked**, never assumed |
+| **D-064** | Demo files live **on disk**, not behind buttons in the app |
+| **D-065** | **One place** decides what is still missing — column, second file and accepted fix are pooled |
+| **D-066** | The default seed stays at **22 employees** |
+| D-041–D-043 | Payroll User reads and writes nothing; HR and Payroll Managers are **siblings, not a ladder**; salary rules are Admin-writable only |
+| D-044 / D-045 | One role per account; breadth of read decided by a **read** capability |
+| D-050–D-056 | Session 08's reseed and approval-workflow decisions |
+| D-033 / D-034 | March off-cycle stays `Computed`; the dashboard opens on the newest **paid** period |
+| D-021 / D-023 | Employer contributions never move gross or net; pay prorates to the contract's own dates |
+| D-011 / D-012 | SQLite, not Postgres; `claude/` is updated **only** at MEGATRON LAUNCH |
 | D-010 / D-018 | No machine attribution in commits; no character name in subjects |
-| D-040 | Git history is left as it is — the user was asked and decided. Closed |
-
-**D-041 to D-043 are deliberately narrower than PRD 3.2.** That is recorded, it is
-the strongest thing in the build, and `audit_permissions.py` documents the
-departure in its own header. Do not "fix" it back toward the matrix.
+| D-040 | Git history is left as it is. Closed |
 
 ---
 
 ## 11. Known bugs and blockers — including what was already tried
 
+* **B-036 — the demo script is badly out of date.** See §8. **Already tried:**
+  nothing. Session 09 never reached it. This is not a failed attempt, it is
+  simply undone, and it is the most valuable thing left.
+* **B-038 (confirms B-029) — `main` is held by an abandoned worktree.**
+  `.claude/worktrees/frontend-routing-setup-e9a159` holds `main` at a ref **41
+  commits behind `origin/main`**. `git checkout main` fails here. **The working
+  approach**, used cleanly this session: branch from `origin/main`, merge into
+  that, `git push origin HEAD:main`. **Do not** try to repair the other
+  worktree — it belongs to an abandoned session.
+* **B-039 — `git merge --squash` picks the wrong base** when replaying onto a
+  branch whose history was squashed. It conflicted in `urls.py` and `App.jsx`.
+  **What works instead:** `git read-tree -u --reset <commit>` then commit, and
+  **assert tree equality** afterwards. That assertion is how session 09 proved
+  the four-branch reorganisation lost nothing.
+* **B-040 — long text must go through a file, never a shell heredoc.** This bit
+  **twice** in session 09 and once silently: a heredoc turned `\n` inside a
+  Python string into a real newline, splitting three literals and leaving
+  `seed.py` unparseable — and the first repair reported success while changing
+  nothing, because the file was CRLF and the pattern was LF. **Write with the
+  Write tool to the scratchpad, then `cat >>` or `git commit -F`.**
+* **B-037 — the 240-row import is unwatched.** See §8.
 * **B-034 — leave approval has no self-approval guard.** `timeoff/api.py::approve`
-  checks only `can_approve_leave`, unlike `ProfileChangeRequest.approve()` which
-  refuses it at the write. **Already checked:** not reachable in the demo — the
-  only approvers are `sara@oxp.com` (zero own pending requests) and
-  `admin@oxp.com` (no employee record at all, so never the subject). Not fixed in
-  session 08 because it would change the seeded approval queue during FREEZE. If
-  you fix it, mirror the profile version at the model, then re-run `smoke_api.py`,
-  which approves a request as the admin.
+  checks only `can_approve_leave`. **Already checked:** not reachable in the demo
+  — `sara@oxp.com` has zero own pending requests and `admin@oxp.com` has no
+  employee record. Not fixed because it would change the seeded approval queue.
 * **B-032 — two reads answer 400 for an account with no employee.**
   `/api/attendance/status/` and `/api/me/profile/`. **Already decided:** left
-  alone three times, deliberately, because both UIs handle it correctly and the
-  change touches a demo path. Nothing else in the API returns an unexpected 4xx.
-* **B-033 — no frontend tests.** Every bug found in sessions 07 and 08 was
-  frontend or frontend-adjacent, and every one was found by hand. **Already
-  tried:** nothing beyond the manual walk; no test runner is installed. The
-  instrumented route walk in trap 8 is the cheap substitute.
-* **B-035 — the runbook's machine paths are Trevor's, not universal.** It opens
-  with `cd C:/Users/raval/...` and a warning that `main` is held by an abandoned
-  worktree. **Neither was true on the machine session 08 ran on**, where `main`
-  checked out, merged and pushed without complaint. Treat both as "this happened
-  once, on one machine".
+  alone four times, deliberately; both UIs handle it and the change touches a
+  demo path.
+* **B-033 — no frontend tests.** **Already tried:** nothing beyond the manual
+  walk; no runner is installed. The instrumented route walk in §13 is the cheap
+  substitute.
 * **B-028 — one account, one live session.** Any login deletes that account's
-  existing token (`accounts/api.py:186`). Running a harness signs out a browser on
-  the same account. **This cost session 07 about thirty minutes**, because it looks
-  exactly like an idle timeout and is not one. Two people cannot demo from the
-  same account simultaneously.
-* **B-029 — `main` held by an abandoned worktree** on at least one machine. If you
-  cannot check `main` out, work against `origin/main` and push with
-  `git push origin HEAD:main`.
+  existing token. Running a harness signs out a browser on the same account.
+  **This cost session 07 thirty minutes** because it looks exactly like an idle
+  timeout.
 * **B-030 — two sessions once ran in parallel.** Check before you write.
 
 ---
@@ -391,102 +394,139 @@ departure in its own header. Do not "fix" it back toward the matrix.
 **1. Boot and confirm the baseline is real.**
 
 ```bash
-git pull --rebase
-git config user.name "MeghRaval30" && git config user.email "meghraval306@gmail.com"
+git fetch origin
+git config user.name "<yours>" && git config user.email "<yours>"
 cd project/backend
-./.venv/Scripts/python.exe manage.py test        # expect 236 OK
+./.venv/Scripts/python.exe manage.py test        # expect 314 OK
 ./.venv/Scripts/python.exe manage.py seed --flush
 ```
+
+If `manage.py test` fails on `ModuleNotFoundError: openpyxl`, your venv predates
+session 09 — re-run `pip install -r requirements.txt`.
 
 **2. Start both servers.**
 
 ```bash
 ./.venv/Scripts/python.exe manage.py runserver   # terminal 1
-cd ../frontend && npm run dev                    # terminal 2
+cd ../frontend && npm install && npm run dev     # terminal 2
 ```
 
-**3. Do T-107 — and this time it is prose, not arithmetic.**
+**3. Do T-107. Read the demo script aloud against the screen.**
 
-Open `claude/deliverables/demo-script.md`. Sign in as `aarav@oxp.com` /
-`demo1234`. **Read scenario A out loud from A1 to A10 against the screen**, and
-edit the script wherever the words no longer match what is in front of you. The
-five changes to fold in are listed in §8 above. Then do the same for scenario B.
+Open `claude/deliverables/demo-script.md`, sign in as `aarav@oxp.com` /
+`demo1234`, and fix the words. Then add scenario C for the Import Studio.
 
-Commit the script. That is the last graded deliverable that is currently wrong.
+**Commit the script.** It is the last graded deliverable that is wrong.
 
 ---
 
 ## 13. Traps — these cost real time
 
-1. **Any login rotates that account's token.** See B-028. If a browser session
-   dies for no reason, ask what you just ran.
+1. **Any login rotates that account's token** (B-028). If a browser session dies
+   for no reason, ask what you just ran.
 2. **Never print non-ASCII from a management command or script** (B-006). It
-   killed a packing script once *after* it had already edited one file in memory
-   but before writing it — so the damage is silent and partial.
-3. **Heredocs mangle escapes** (B-020). `\n` inside `python - <<'PYEOF'` became a
-   literal newline and produced an unterminated string. Write the script to the
-   scratchpad, or use a `python - <<'PYEOF'` block that only does literal string
-   replacement — that pattern worked fine all through session 08.
-4. **Never add `--noreload` to `runserver`** (B-016). Session 04 lost minutes to a
-   server holding pre-fix code.
-5. **`worked_days > expected_days` is a real signal.** It has twice meant the seed
-   generated attendance a contract does not allow. There is now a test for it.
-6. **An account with no employee record is a real case**, and it has broken four
-   screens. `admin@oxp.com` is that account. Check it whenever you touch a
-   personal screen — session 08's discoverability bug (D-056) was partly this:
-   the admin's only route to the approval queue was a screen that opens by saying
-   they have no profile.
-7. **A screen that inherits its scope from the server is a screen whose scope you
-   cannot see.** `MyPayslips` showed three of five roles the entire company's
-   payslips for exactly this reason.
+   killed a packing script once *after* it had edited a file in memory but
+   before writing it — silent and partial.
+3. **Heredocs mangle escapes, twice over** (B-020, B-040). Write to the
+   scratchpad with the Write tool, then `cat >>` or `git commit -F`. Never put a
+   long commit message in `-m`.
+4. **Never add `--noreload` to `runserver`** (B-016).
+5. **`worked_days > expected_days` is a real signal.** It has twice meant the
+   seed generated attendance a contract does not allow.
+6. **An account with no employee record is a real case** and has broken five
+   screens. `admin@oxp.com` is that account — and it is now also the *only*
+   account that can see the Workforce menu, so every new screen was written
+   against it.
+7. **A screen that inherits its scope from the server is a screen whose scope
+   you cannot see.**
 8. **To find frontend bugs cheaply**, inject a collector and walk every route:
    patch `console.error`, `window.onerror`, `unhandledrejection` and
-   `window.fetch` to push `{route, message}` into an array, then set
-   `location.hash` around all 22 routes and dump it. Do it **as each of the five
-   roles** — session 08 did, and it is how the clean bill of health above was
-   earned. To switch roles without clicking: POST to `/api/auth/login/`, then set
-   `localStorage.pp360_token` and `pp360_user` and reload.
+   `window.fetch` into an array, then set `location.hash` around all routes and
+   dump it. Do it **as each of the five roles**.
 9. **The frontend calls `http://127.0.0.1:8000`, not its own origin.** A `fetch`
-   to a relative `/api/...` path from the browser console 404s against Vite. Use
-   the absolute base.
-10. **Verify a new regression test fails against the old code.** Stash the fix,
-    re-run, confirm the assertion you expect, restore. Session 08 did this for all
-    five new tests. A test that passes either way is decoration, and this costs
-    about ninety seconds.
+   to a relative `/api/...` path from the browser console 404s against Vite.
+10. **Verify a new regression test fails against the old code.** Ninety seconds,
+    and a test that passes either way is decoration.
 11. **Harnesses dirty the demo; the seed is the reset.** `smoke_api.py` and
     `audit_permissions.py` both write. Always `seed --flush` before presenting.
-    As of D-050 that also clears the audit trail and any lockout.
+12. **NEW — the browser cannot read local files.** To drive a file upload from
+    the console, copy the file into `project/frontend/public/` temporarily,
+    `fetch` it, build a `File`, and dispatch a `change` event at the input.
+    **Delete it afterwards** — session 09 did.
+13. **NEW — a React controlled input ignores a native `value` set.** Setting
+    `input.value` from the console does nothing. Use the native setter from
+    `HTMLInputElement.prototype` and dispatch `input`.
+14. **NEW — regenerating `test-data` churns line endings.** `.gitattributes`
+    now pins the CSV to LF. If you see a twelve-line diff on
+    `05-northwind-acquisition.csv` with no content change, that is what it is.
 
 ---
 
 ## 14. Demo script status
 
-`claude/deliverables/demo-script.md` — **figures verified correct, mechanics
-walked, prose stale.**
+`claude/deliverables/demo-script.md` — **figures verified (session 08),
+mechanics walked (session 08), prose stale, and an entire feature area missing.**
 
 | Scenario | Status |
 |---|---|
-| A — the payroll run end to end | Every figure confirmed on screen (session 08). **Menu and role prose not yet rewritten** — that is T-107 |
+| A — the payroll run end to end | Every figure confirmed on screen. **Menu and role prose not rewritten** |
 | B — leave and the allocation gate | Confirmed: *Allocated 20.00 · Taken 2.00 · Remaining 18.00*, and the gate refuses with real wording |
-| Criterion 4 — two distinct warnings | **Proven by walking the wizard** (session 08), not only by test. `DUPLICATE` on creation, `AC_MISSING` ×2 after Compute |
+| Criterion 4 — two distinct warnings | **Proven by walking the wizard.** `DUPLICATE` on creation, `AC_MISSING` ×2 after Compute |
+| **C — the Import Studio** | **DOES NOT EXIST. Write it.** |
 
-The March off-cycle payrun exists so the March run the operator creates finds a
-`DUPLICATE` next to two `AC_MISSING`. **Leave it in `Computed`.** Paying it would
-make a one-payslip run the dashboard's default view (D-034).
+### Scenario C, ready to be written up
+
+Sign in as `admin@oxp.com`. **Open `test-data/import/04-fieldforce-incomplete.xlsx`
+in Excel first** and let the room see the mess — sixteen people, no email
+column, no bank details, no employee codes, two with no joining date, three with
+no salary.
+
+Then **Workforce → Data Import** and drag that same file in.
+
+1. It reads the file: 7 columns colour-coded, *"Read 7 headers. Mapped 7
+   automatically. qwen2.5:7b answered in 4.0s."*
+2. **Complete the data** lists what is missing. Work email is flagged blocking;
+   Preview is disabled.
+3. **Build from names** → resolves, ticks green, Preview unlocks.
+4. **Fetch from a file** → open `04b-fieldforce-bank-details.xlsx` in Excel too,
+   then drop it in. It finds the join itself: *"14 of the 16 values in 'Staff
+   ID' also appear in 'Staff ID'"*, and names the two people finance never sent.
+5. **Choose numbering** → `EMP/2021/0023…`, continuing from the 22 already
+   issued rather than colliding.
+6. **Preview** → before/after per cell; values from the second file tinted and
+   captioned; five unimportable rows greyed **with reasons**.
+7. **Import 11 employees** → 11 employees, 11 contracts, 2 new departments.
+
+The line worth saying at step 4: *nobody told it which column to join on — it
+worked that out by measuring which two columns share values.*
+
+The line worth saying about the whole thing: *the model reads meaning; every
+structural decision is arithmetic. Turn the GPU off and it still maps ten of
+thirteen columns and says so.*
+
+Two other files worth thirty seconds each: `03-northgate-legacy-export.xlsx`
+(the salary is **annual** and only the distribution reveals it — watch it
+propose ÷12 and show 1080000 → 90000.00) and `06-vantage-240-headcount.xlsx`
+(240 people onboarded live).
+
+**There is also still the thirty-second permission talking point** from session
+07: sign in as `rahul@oxp.com`, open a payrun, show Compute and Validate are
+*absent*; sign in as `aarav@oxp.com`, show them present. The line is *the person
+who processes pay is not the person who decides it.*
 
 ---
 
 ## One last thing
 
-The build is done and it is good: 236 tests, five green harnesses, a permission
-model a judge will recognise as a real control, and three months of payroll whose
-month-over-month movement you can explain line by line.
+The build is done and it is good: 314 tests, five green harnesses, a permission
+model a judge will recognise as a real control, three months of payroll whose
+movement you can explain line by line, and now a migration story that answers
+the first question any real buyer asks.
 
-Session 08's lesson is worth carrying: **all five harnesses were green before it
-started and green after it finished, and it still found five real bugs — three by
-exploring, two reported by the user from the running app.** Green harnesses mean
-the things you thought to check still work. They say nothing about the things
-nobody thought to check.
+Session 09's lesson is the same one session 08 recorded, and it earned it again:
+**every harness was green before it started and green after it finished, and it
+still found nine real defects — all nine by driving the product by hand.** Two
+of them would have corrupted a customer's payroll silently.
 
-So do not spend your session re-running them. Spend it *using the product*, out
-loud, the way the judge will. Go finish the script.
+So do not spend your session re-running harnesses. **Spend it finishing the demo
+script**, out loud, in front of the screen, the way the judge will hear it.
