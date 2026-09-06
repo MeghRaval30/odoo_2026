@@ -24,6 +24,7 @@ from core.models import Company, Department, JobPosition, WorkLocation
 from employees.models import Contract, Employee, ScheduleLine, WorkingSchedule
 from payroll.models import SalaryStructure
 
+from . import codes, enrich
 from .mapper import build_plan, reconcile_column
 from .profiler import profile_column, profile_table, strip_money
 from .readers import ParsedTable, detect_header, read_table, sniff_delimiter
@@ -448,3 +449,134 @@ class ImportApiTests(TestCase):
                     format="json")
         self.assertEqual(
             (Employee.objects.count(), Department.objects.count()), before)
+
+
+BANK_SUPPLEMENT = b"""Staff ID,Employee Name,Bank A/C Number,IFSC,PAN Number,Account Type
+S-1,Rajesh Kumar,111122223333,HDFC0000234,ABCDE1111F,Savings
+S-2,Priya Nair,444455556666,ICIC0001177,ABCDE2222G,Savings
+S-9,Nobody Here,777788889999,SBIN0007865,ABCDE3333H,Current
+"""
+
+WITH_IDS = b"""Staff ID,Staff Name,Section,Joining Date,Monthly Pay
+S-1,Rajesh Kumar,Field Ops,2021-03-08,46000
+S-2,Priya Nair,Field Ops,2022-07-19,32000
+S-3,Anil Deshpande,Warehouse,2020-05-14,33500
+"""
+
+
+class EnrichmentTests(TestCase):
+    """Joining a second file onto the first."""
+
+    def _tables(self):
+        return read_table(WITH_IDS, "primary.csv"), read_table(BANK_SUPPLEMENT, "bank.csv")
+
+    def test_the_join_key_is_found_from_the_values(self):
+        primary, supplement = self._tables()
+        join = enrich.detect_join(primary, supplement)
+        self.assertIsNotNone(join)
+        self.assertEqual(join["primary_header"], "Staff ID")
+        self.assertEqual(join["supplement_header"], "Staff ID")
+        self.assertEqual(join["matched"], 2)
+        self.assertEqual(join["unmatched"], 1)   # S-3 has no bank row
+        self.assertEqual(join["unused"], 1)      # S-9 is in neither
+
+    def test_a_repeating_column_is_never_a_join_key(self):
+        """Joining on Section would multiply rows rather than match them."""
+        primary, supplement = self._tables()
+        join = enrich.detect_join(primary, supplement)
+        self.assertNotEqual(join["primary_header"], "Section")
+
+    def test_unrelated_files_do_not_join(self):
+        primary, _ = self._tables()
+        other = read_table(b"City,Population\nPune,7000000\nKochi,600000\n", "x.csv")
+        self.assertIsNone(enrich.detect_join(primary, other))
+
+    def test_who_did_not_match_is_named(self):
+        primary, supplement = self._tables()
+        join = enrich.detect_join(primary, supplement)
+        missing = enrich.unmatched_examples(primary, supplement, join)
+        self.assertEqual([m["key"] for m in missing], ["S-3"])
+        self.assertIn("Anil", missing[0]["label"])
+
+    def test_a_supplement_never_overwrites_the_first_file(self):
+        """What the operator saw and approved wins over a second source."""
+        primary, supplement = self._tables()
+        join = enrich.detect_join(primary, supplement)
+        entry = {"name": "bank.csv", "join": join,
+                 "columns": [{"index": 2, "field": "bank_account_number",
+                              "transforms": [{"id": "trim", "params": {}}]}]}
+        records = [{"bank_account_number": "ALREADY-SET"}, {}, {}]
+        lookup = enrich.build_lookup(supplement, entry)
+        enrich.apply_enrichment(primary, records, entry, lookup)
+
+        self.assertEqual(records[0]["bank_account_number"], "ALREADY-SET")
+        self.assertEqual(records[1]["bank_account_number"], "444455556666")
+        self.assertNotIn("bank_account_number", records[2])
+
+    def test_a_low_confidence_column_is_not_taken_from_a_second_file(self):
+        """
+        The bank sheet's "Account Type" of Savings and Current scores just
+        above the mapping floor for work location. Filling everybody's office
+        with "Savings" is worse than leaving the column alone.
+        """
+        primary, supplement = self._tables()
+        entry = enrich.build_enrichment(
+            primary, supplement, profile_table(supplement),
+            type("S", (), {"pk": 1, "name": "bank.csv",
+                           "original_filename": "bank.csv"})(),
+            already_sourced={"full_name", "first_name"}, model=None)
+
+        self.assertEqual(sorted(entry["fields"]),
+                         ["bank_account_number", "bank_ifsc", "pan_number"])
+        taken = {c["header"] for c in entry["columns"] if c.get("field")}
+        self.assertNotIn("Account Type", taken)
+
+    def test_the_join_column_is_a_key_and_not_a_field(self):
+        primary, supplement = self._tables()
+        entry = enrich.build_enrichment(
+            primary, supplement, profile_table(supplement),
+            type("S", (), {"pk": 1, "name": "bank.csv",
+                           "original_filename": "bank.csv"})(),
+            already_sourced=set(), model=None)
+        key = [c for c in entry["columns"] if c["decision"] == "join_key"]
+        self.assertEqual(len(key), 1)
+        self.assertEqual(key[0]["header"], "Staff ID")
+
+
+class CodePolicyTests(TestCase):
+    def setUp(self):
+        self.records = [
+            {"date_of_joining": date(2021, 3, 8)},
+            {"date_of_joining": date(2022, 7, 19)},
+            {"date_of_joining": date(2021, 11, 2)},
+        ]
+
+    def test_the_year_comes_from_each_persons_joining_date(self):
+        assigned = codes.assign(self.records, {"mode": "generate", "prefix": "FFL"})
+        self.assertEqual(assigned,
+                         ["FFL/2021/0001", "FFL/2022/0002", "FFL/2021/0003"])
+
+    def test_a_pattern_without_a_year(self):
+        assigned = codes.assign(self.records, {
+            "mode": "generate", "prefix": "EMP", "separator": "-",
+            "include_year": False, "width": 3})
+        self.assertEqual(assigned, ["EMP-001", "EMP-002", "EMP-003"])
+
+    def test_keeping_the_files_own_ids_assigns_nothing(self):
+        self.assertEqual(codes.assign(self.records, {"mode": "keep"}),
+                         [None, None, None])
+
+    def test_a_collision_with_an_existing_code_is_stepped_over(self):
+        assigned = codes.assign(
+            self.records, {"mode": "generate", "prefix": "FFL"},
+            existing_codes={"FFL/2021/0001"})
+        self.assertNotIn("FFL/2021/0001", assigned)
+        self.assertEqual(len(set(assigned)), 3)
+
+    def test_nonsense_settings_are_refused_quietly(self):
+        policy = codes.normalise_policy({"mode": "explode", "prefix": "a b/c!",
+                                         "width": 99, "separator": "@@"})
+        self.assertEqual(policy["mode"], "generate")
+        self.assertEqual(policy["prefix"], "ABC")
+        self.assertEqual(policy["width"], 8)
+        self.assertEqual(policy["separator"], "/")

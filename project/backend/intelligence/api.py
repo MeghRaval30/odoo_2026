@@ -26,14 +26,14 @@ from accounts import capabilities as caps
 from accounts.permissions import RequiresCapability
 from accounts.security import AuditLog
 from core.models import Company, Department, JobPosition, WorkLocation
+from employees.models import Employee
 
-from . import importer
+from . import codes, enrich, importer
 from .llm import LocalModel
-from .mapper import build_plan
+from .mapper import build_plan, missing_required
 from .models import ImportIssue, ImportRun, ImportSource
 from .profiler import profile_table
 from .readers import read_table
-from .samples import list_samples, load_sample
 from .schema import FIELDS_BY_KEY, TARGET_FIELDS
 
 CAP = RequiresCapability(read=caps.DATA_IMPORT, write=caps.DATA_IMPORT)
@@ -92,11 +92,52 @@ def health_view(request):
         model.warm()
     return Response({
         "llm": health,
-        "samples": list_samples(),
         "fields": [{k: f[k] for k in ("key", "label", "kind", "required",
                                       "group", "hint")}
                    for f in TARGET_FIELDS],
+        "code_policy_default": codes.DEFAULT_POLICY,
     })
+
+
+def _read_upload(request):
+    """
+    Pull raw bytes out of whichever upload shape the caller used.
+
+    Returns (bytes, filename, error_response). Shared by the primary source
+    and by a second file, so both accept a multipart upload and a base64 body
+    on the same terms.
+    """
+    upload = request.FILES.get("file")
+    if upload is not None:
+        return upload.read(), upload.name, None
+
+    content = request.data.get("content_b64")
+    filename = request.data.get("filename") or "upload.csv"
+    if not content:
+        return None, None, Response(
+            {"detail": "Send a file, or content_b64 with a filename."},
+            status=status.HTTP_400_BAD_REQUEST)
+    try:
+        return base64.b64decode(content), filename, None
+    except Exception:                           # noqa: BLE001
+        return None, None, Response(
+            {"detail": "content_b64 is not valid base64."},
+            status=status.HTTP_400_BAD_REQUEST)
+
+
+def missing_required_after(plan):
+    """
+    Which required fields are still unsourced once every file is counted.
+
+    The primary file's columns and each supplement's fields are the same kind
+    of answer -- a source for a field -- so they are pooled before the check
+    rather than the screen being left to reconcile two lists.
+    """
+    columns = list(plan.get("columns") or [])
+    for entry in (plan.get("enrichments") or []):
+        for field in (entry.get("fields") or []):
+            columns.append({"field": field})
+    return missing_required(columns)
 
 
 # ==========================================================================
@@ -134,32 +175,10 @@ class ImportSourceViewSet(viewsets.ModelViewSet):
         return Response(payload, status=status.HTTP_201_CREATED)
 
     def create(self, request, *args, **kwargs):
-        upload = request.FILES.get("file")
-        if upload is not None:
-            return self._ingest(request, upload.read(), upload.name)
-
-        content = request.data.get("content_b64")
-        filename = request.data.get("filename") or "upload.csv"
-        if not content:
-            return Response({"detail": "Send a file, or content_b64 with a filename."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        try:
-            raw = base64.b64decode(content)
-        except Exception:
-            return Response({"detail": "content_b64 is not valid base64."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        raw, filename, error = _read_upload(request)
+        if error:
+            return error
         return self._ingest(request, raw, filename)
-
-    @action(detail=False, methods=["post"], url_path="from-sample")
-    def from_sample(self, request):
-        """Load one of the bundled demo files without a round trip through disk."""
-        name = request.data.get("name") or ""
-        loaded = load_sample(name)
-        if loaded is None:
-            return Response({"detail": "No sample called %r." % name},
-                            status=status.HTTP_404_NOT_FOUND)
-        raw, label = loaded
-        return self._ingest(request, raw, name, name=label)
 
     @action(detail=True, methods=["get"])
     def grid(self, request, pk=None):
@@ -338,8 +357,7 @@ class ImportRunViewSet(viewsets.ModelViewSet):
                 if "transforms" in body:
                     col["transforms"] = body["transforms"]
                 break
-            from .mapper import missing_required
-            plan["missing_required"] = missing_required(plan.get("columns", []))
+            plan["missing_required"] = missing_required_after(plan)
             plan["unmapped_columns"] = [c["index"] for c in plan.get("columns", [])
                                         if not c.get("field")]
 
@@ -369,6 +387,123 @@ class ImportRunViewSet(viewsets.ModelViewSet):
         run.save(update_fields=["plan", "updated_at"])
         return Response(plan)
 
+    # -- a second file ----------------------------------------------------
+
+    @action(detail=True, methods=["post"])
+    def enrich(self, request, pk=None):
+        """
+        Attach a second file and work out how it completes the first.
+
+        Takes the same upload shapes as a primary source. The response is the
+        whole enrichment -- the join it found, what matched, and which fields
+        the supplement will fill -- so the screen can show the operator the
+        join before they accept it.
+        """
+        run = self.get_object()
+        if not run.plan:
+            return Response({"detail": "Analyse the first file before adding a second."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        raw, filename, error = _read_upload(request)
+        if error:
+            return error
+
+        supplement_table = read_table(raw, filename)
+        if not supplement_table.headers:
+            return Response({"detail": "That file has no readable columns."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        source = ImportSource.objects.create(
+            name=filename, original_filename=filename,
+            content_b64=base64.b64encode(raw).decode("ascii"),
+            byte_size=len(raw),
+            uploaded_by=request.user if request.user.is_authenticated else None,
+            sheet_name=supplement_table.sheet_name or "",
+            encoding=supplement_table.encoding or "",
+            row_count=supplement_table.row_count,
+            column_count=supplement_table.column_count,
+            header_row_index=supplement_table.header_row_index,
+            junk_rows_above=supplement_table.junk_rows_above,
+            notes=supplement_table.notes)
+
+        primary_table = importer.load_table(run.source)
+        already = {c["field"] for c in (run.plan.get("columns") or [])
+                   if c.get("field")}
+        for previous in (run.plan.get("enrichments") or []):
+            already |= set(previous.get("fields") or [])
+
+        model = LocalModel()
+        entry = enrich.build_enrichment(
+            primary_table, supplement_table, profile_table(supplement_table),
+            source, already,
+            model=model if model.available() else None,
+            known_values=_known_values(Company.objects.order_by("id").first()))
+
+        if not entry.get("join"):
+            source.delete()
+            return Response(
+                {"detail": "Nothing in that file matches the first one. It "
+                           "needs a column of ids, emails or names in common."},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        plan = run.plan
+        plan.setdefault("enrichments", []).append(entry)
+        plan["missing_required"] = missing_required_after(plan)
+        run.plan = plan
+        run.save(update_fields=["plan", "updated_at"])
+
+        entry["grid"] = _grid(supplement_table)
+        return Response(entry)
+
+    @action(detail=True, methods=["delete"], url_path=r"enrich/(?P<index>\d+)")
+    def drop_enrichment(self, request, pk=None, index=None):
+        run = self.get_object()
+        plan = run.plan or {}
+        entries = plan.get("enrichments") or []
+        try:
+            entries.pop(int(index))
+        except (ValueError, IndexError):
+            return Response({"detail": "No such second file."},
+                            status=status.HTTP_404_NOT_FOUND)
+        plan["enrichments"] = entries
+        plan["missing_required"] = missing_required_after(plan)
+        run.plan = plan
+        run.save(update_fields=["plan", "updated_at"])
+        return Response(plan)
+
+    # -- how employees are numbered ---------------------------------------
+
+    @action(detail=True, methods=["post"], url_path="code-policy")
+    def code_policy_view(self, request, pk=None):
+        """
+        Set the numbering scheme, and show what it produces.
+
+        Previewed against the real rows rather than against an example,
+        because the year comes from each person's joining date and a scheme
+        that looks right on a made-up row can still be wrong on a real one.
+        """
+        run = self.get_object()
+        if not run.plan:
+            return Response({"detail": "Analyse the file first."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        policy = codes.normalise_policy(request.data.get("policy") or {})
+        plan = run.plan
+        plan["code_policy"] = policy
+        run.plan = plan
+        run.save(update_fields=["plan", "updated_at"])
+
+        table = importer.load_table(run.source)
+        records, _ = importer.build_records(table, plan)
+        existing = set(Employee.objects.values_list("employee_code", flat=True))
+        return Response({
+            "policy": policy,
+            "description": codes.describe(policy),
+            "examples": codes.preview(records, policy, existing),
+            "next_sequence": codes.next_sequence(policy)
+            if policy["mode"] == "generate" else None,
+        })
+
     # -- dry run and commit -----------------------------------------------
 
     @action(detail=True, methods=["post"])
@@ -377,8 +512,10 @@ class ImportRunViewSet(viewsets.ModelViewSet):
         if not run.plan:
             return Response({"detail": "Analyse the file first."},
                             status=status.HTTP_400_BAD_REQUEST)
-        result = importer.run(run.source, run.plan, commit=False,
-                              apply_fixes=request.data.get("apply_fixes") or [])
+        result = importer.run(
+            run.source, run.plan, commit=False,
+            apply_fixes=request.data.get("apply_fixes") or [],
+            email_domain=request.data.get("email_domain"))
         run.state = ImportRun.PREVIEWED
         run.save(update_fields=["state", "updated_at"])
         return Response(result)
@@ -399,7 +536,8 @@ class ImportRunViewSet(viewsets.ModelViewSet):
             result = importer.run(
                 run.source, run.plan, commit=True,
                 actor=request.user if request.user.is_authenticated else None,
-                apply_fixes=request.data.get("apply_fixes") or [])
+                apply_fixes=request.data.get("apply_fixes") or [],
+                email_domain=request.data.get("email_domain"))
         except Exception as exc:                # noqa: BLE001
             run.state = ImportRun.FAILED
             run.error = str(exc)[:500]
