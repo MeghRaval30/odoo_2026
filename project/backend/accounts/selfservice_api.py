@@ -21,9 +21,9 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from . import capabilities as caps
-from .models import (APPROVAL_FIELDS, DIRECT_FIELDS, READ_ONLY_FIELDS,
-                     AuditLog, NetworkPolicy, ProfileChangeRequest,
-                     SecuritySetting, User, client_ip)
+from .models import (APPROVAL_FIELDS, AuditLog, DIRECT_FIELDS,
+                     NetworkPolicy, ProfileChangeRequest, READ_ONLY_FIELDS,
+                     Role, SecuritySetting, User, client_ip)
 from .permissions import RequiresCapability
 from .security_session import SessionActivity
 
@@ -64,7 +64,62 @@ class MyProfileSerializer(serializers.Serializer):
             "needs_approval": label_map(APPROVAL_FIELDS),
             "read_only": label_map(READ_ONLY_FIELDS),
             "pending": pending,
+            "approval": approval_authority(employee),
         }
+
+
+#: How a role reads in a sentence about who decides something. The model's own
+#: display names are titles for a person ("HR Manager"), not descriptions of an
+#: authority, and "Needs HR Manager approval" reads like a job advert.
+_APPROVER_WORDS = {
+    Role.HR_MANAGER: "HR",
+    Role.ADMIN: "an administrator",
+}
+
+
+def approval_authority(employee):
+    """
+    Who can actually decide this person's change requests.
+
+    Not simply "HR". `ProfileChangeRequest.approve` refuses a reviewer deciding
+    their own record, so the answer depends on who is asking: an ordinary
+    employee's request can be decided by HR or by an administrator, and the HR
+    Manager's own request can only be decided by an administrator. Telling her
+    "Needs HR approval" names herself, which is both wrong and misleading about
+    where the request has gone.
+
+    Computed from the accounts that actually exist rather than from the role
+    table, because two HR Managers can decide each other's requests and one
+    cannot decide her own. Returned as data for the same reason the field
+    groups above are: the screen should not hold a second copy of this rule.
+    """
+    holders = [u for u in User.objects.filter(is_active=True)
+               .prefetch_related("roles")
+               if u.can(caps.PROFILE_APPROVE)]
+
+    eligible = [u for u in holders
+                if employee is None or u.employee_id != employee.pk]
+    excluded = len(eligible) < len(holders)
+
+    # Ordered by the dictionary above rather than by role code or by whichever
+    # account came back first, so the sentence reads the same way every time
+    # and reads the way a person would say it: HR before the administrator.
+    held = {code for user in eligible for code in user.role_codes}
+    seen = {code for code in held if code in _APPROVER_WORDS}
+    words = [_APPROVER_WORDS[code] for code in _APPROVER_WORDS if code in seen]
+
+    if not words:
+        # A real state, not an impossible one: it happens when the only account
+        # holding the capability is the person asking. Say so rather than
+        # inventing an approver who does not exist.
+        label = "nobody else right now"
+    elif len(words) == 1:
+        label = words[0]
+    else:
+        label = " or ".join([", ".join(words[:-1]), words[-1]])
+
+    return {"label": label, "roles": sorted(seen), "self_excluded": excluded,
+            "can_be_decided": bool(words)}
 
 
 def _display(employee, field):
@@ -109,8 +164,9 @@ def my_profile_update_view(request):
         gated = sorted(unknown & set(APPROVAL_FIELDS))
         detail = f"These fields cannot be edited directly: {', '.join(sorted(unknown))}."
         if gated:
-            detail += (f" {', '.join(gated)} must be raised as a change request "
-                       f"for HR to approve.")
+            detail += (f" {', '.join(gated)} must be raised as a change "
+                       f"request for {approval_authority(employee)['label']} "
+                       f"to approve.")
         return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
     changed = []

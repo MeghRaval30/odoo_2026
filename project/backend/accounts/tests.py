@@ -1257,3 +1257,82 @@ class LoginTests(RoleFixtureMixin, APITestCase):
             "email": "payroll.manager@example.com", "password": "wrong",
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ProfileScreenNamesTheRealApproverTests(RoleFixtureMixin, APITestCase):
+    """
+    The profile screen must name whoever can actually decide *this* person's
+    request, which depends on who is asking.
+
+    Reported by the user: signed in as the HR Manager, the sensitive-fields
+    card read "Needs HR approval" — naming her, when `approve()` refuses a
+    reviewer deciding their own record and the request can in fact only go to
+    an administrator. The screen was holding its own copy of a rule the server
+    owns, and the two disagreed.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.company = Company.objects.create(name="OXP Test Co")
+        cls.hr_record = Employee.objects.create(
+            first_name="Sara", last_name="Khan", work_email="sara@example.com",
+            company=cls.company, date_of_joining=date(2025, 1, 1))
+        cls.staff_record = Employee.objects.create(
+            first_name="John", last_name="Dsouza", work_email="john@example.com",
+            company=cls.company, date_of_joining=date(2025, 1, 1))
+        cls.hr = cls.make_user("hr@example.com", Role.HR_MANAGER,
+                               employee=cls.hr_record)
+        cls.staff = cls.make_user("staff@example.com", Role.EMPLOYEE,
+                                  employee=cls.staff_record)
+        # No employee record, which is the real admin's shape.
+        cls.admin = cls.make_user("admin@example.com", Role.ADMIN)
+
+    def approval_for(self, user):
+        self.client.force_authenticate(user=user)
+        response = self.client.get("/api/me/profile/")
+        self.assertEqual(response.status_code, 200)
+        return response.data["approval"]
+
+    def test_an_employee_is_told_hr_or_an_administrator(self):
+        approval = self.approval_for(self.staff)
+        self.assertEqual(approval["label"], "HR or an administrator")
+        self.assertFalse(approval["self_excluded"])
+        self.assertTrue(approval["can_be_decided"])
+
+    def test_the_hr_manager_is_told_an_administrator(self):
+        """She cannot decide her own record, so she is not offered as the answer."""
+        approval = self.approval_for(self.hr)
+        self.assertEqual(approval["label"], "an administrator")
+        self.assertTrue(approval["self_excluded"])
+        self.assertNotIn("HR", approval["roles"])
+
+    def test_a_second_hr_manager_can_decide_the_first_ones_request(self):
+        """Computed from the accounts that exist, not from the role table."""
+        other_record = Employee.objects.create(
+            first_name="Nita", last_name="Rao", work_email="nita@example.com",
+            company=self.company, date_of_joining=date(2025, 1, 1))
+        self.make_user("hr2@example.com", Role.HR_MANAGER, employee=other_record)
+
+        approval = self.approval_for(self.hr)
+        self.assertEqual(approval["label"], "HR or an administrator")
+        self.assertTrue(approval["self_excluded"])
+
+    def test_the_only_approver_asking_is_told_nobody_can(self):
+        """
+        A real state, not an impossible one. Inventing an approver here would
+        send somebody to wait for a decision that cannot arrive.
+        """
+        User.objects.filter(email="admin@example.com").delete()
+        approval = self.approval_for(self.hr)
+        self.assertFalse(approval["can_be_decided"])
+        self.assertEqual(approval["roles"], [])
+
+    def test_the_direct_edit_refusal_names_the_same_authority(self):
+        """One answer, so the two messages cannot drift apart."""
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.patch(
+            "/api/me/profile/update/", {"bank_account_number": "9999"},
+            format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("an administrator", response.data["detail"])
+        self.assertNotIn("for HR to approve", response.data["detail"])
