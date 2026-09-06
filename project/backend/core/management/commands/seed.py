@@ -981,39 +981,19 @@ class Command(BaseCommand):
 
     def _branding(self):
         """
-        The demo ships branded.
+        The product's own name in the top bar, and no customer mark.
 
-        An unbranded install is a fair default for the product but a poor
-        demo: the corporate theme is built around a customer's mark sitting in
-        the bar and washed across the page, and neither is visible with no
-        images loaded. The two SVGs beside this app are read from disk rather
-        than pasted in as base64 so they stay editable as drawings.
-
-        Anything an administrator uploads through Administration -> Branding
-        replaces these outright; this only decides what a freshly seeded
-        database looks like.
+        A fresh database is not anybody's install yet, so it ships unbranded
+        and the shell falls back to the PeoplePay360 wordmark. A customer's
+        logo, their name and the background wash are all set from
+        Administration -> Branding, which is the only place that decides them.
         """
-        import base64
-        import os
-
-        here = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__)))), "brand_assets")
         branding = Branding.load()
         branding.app_name = "PeoplePay360"
-        branding.company_name = "Shree Ganesh Engineering Co"
-
-        for which, filename in (("logo", "sgec-logo.svg"),
-                                ("watermark", "sgec-watermark.svg")):
-            path = os.path.join(here, filename)
-            if not os.path.exists(path):
-                continue
-            with open(path, "rb") as handle:
-                raw = handle.read()
-            setattr(branding, "%s_b64" % which,
-                    base64.b64encode(raw).decode("ascii"))
-            setattr(branding, "%s_mime" % which, "image/svg+xml")
-            setattr(branding, "%s_filename" % which, filename)
-
-        branding.watermark_opacity = 5
+        branding.company_name = ""
+        for which in ("logo", "watermark"):
+            setattr(branding, "%s_b64" % which, "")
+            setattr(branding, "%s_mime" % which, "")
+            setattr(branding, "%s_filename" % which, "")
         branding.save()
-        self.stdout.write("  branding: %s" % branding.company_name)
+        self.stdout.write("  branding: %s (no customer mark)" % branding.app_name)
