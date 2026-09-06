@@ -236,8 +236,10 @@ function DetailsTab({ profile, onSaved, onRequested }) {
         </div>
 
         <div className="card">
-          <div className="card-title">Set by HR</div>
-          <div className="card-sub">Changed by HR, not requested here.</div>
+          <div className="card-title">Not yours to change</div>
+          <div className="card-sub">
+            These are set on your employee record, not through a request.
+          </div>
           <dl className="kv">
             {profile.read_only.map((f) => (
               <FragmentRow key={f.field} label={f.label} value={f.value} />
@@ -250,6 +252,7 @@ function DetailsTab({ profile, onSaved, onRequested }) {
         <RequestModal
           field={asking}
           current={asking.value}
+          approval={profile.approval}
           onClose={() => setAsking(null)}
           onDone={() => {
             setAsking(null);
@@ -270,11 +273,17 @@ function FragmentRow({ label, value }) {
   );
 }
 
-function RequestModal({ field, current, onClose, onDone }) {
+function RequestModal({ field, current, approval, onClose, onDone }) {
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // Capitalised for the start of a sentence. The server hands back "HR or an
+  // administrator", which reads correctly mid-sentence and wrongly at the
+  // front of one.
+  const label = approval?.label || "Whoever decides";
+  const approver = label.charAt(0).toUpperCase() + label.slice(1);
 
   const submit = async () => {
     setBusy(true);
@@ -318,7 +327,7 @@ function RequestModal({ field, current, onClose, onDone }) {
           </Field>
           <Field
             label="Why"
-            hint="HR sees this when deciding."
+            hint={`${approver} sees this when deciding.`}
           >
             <textarea
               rows={3}
@@ -330,7 +339,7 @@ function RequestModal({ field, current, onClose, onDone }) {
         <div className="modal-foot">
           <button onClick={onClose}>Cancel</button>
           <button className="primary" disabled={!value.trim() || busy} onClick={submit}>
-            Send to HR
+            Send for approval
           </button>
         </div>
       </div>
@@ -382,7 +391,7 @@ function RequestsTab() {
       <div className="card-sub">
         {canApprove
           ? "Waiting and already decided. Sensitive requests change where money goes."
-          : "What you have asked HR to change, and what they decided."}
+          : "What you have asked to be changed, and what was decided."}
       </div>
       <ErrorBox error={error} />
 
