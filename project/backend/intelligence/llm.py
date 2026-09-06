@@ -88,35 +88,6 @@ class LocalModel:
             return None
         return [m.get("name") for m in tags.get("models", []) if m.get("name")]
 
-    def resolve(self, models=None):
-        """
-        The exact tag to generate against, given what is actually pulled.
-
-        Ollama's tags are exact strings: asking it for "qwen2.5:7b" when what
-        is installed is "qwen2.5:7b-instruct" is a 404, not a near miss. The
-        health check has always matched loosely, on the model family, so
-        without this the two disagree -- the setup screen reports the model
-        ready and every import then fails on a model that is not there.
-
-        Preference order is the exact tag, then a tag in the same family that
-        the configured one is a prefix of, then the shortest tag in the family.
-        Shortest because tags grow by qualification: between "qwen2.5:7b" and
-        "qwen2.5:7b-instruct-q4_K_M" the shorter is the more general build, and
-        the more general one is the better guess when configuration did not say.
-        """
-        if models is None:
-            models = self.installed_models()
-        if not models:
-            return self.model
-        if self.model in models:
-            return self.model
-        family = self.model.split(":")[0]
-        kin = [m for m in models if m.split(":")[0] == family]
-        if not kin:
-            return self.model
-        prefixed = [m for m in kin if m.startswith(self.model)]
-        return min(prefixed or kin, key=len)
-
     def available(self):
         return bool(self.health().get("available"))
 
@@ -147,11 +118,9 @@ class LocalModel:
                 out["installed_models"] = models
                 # Ollama reports "qwen2.5:7b"; a caller may have configured
                 # "qwen2.5" and meant the same thing.
-                resolved = self.resolve(models)
-                out["model_present"] = resolved in models
-                # What the screen names has to be what generation will use.
-                out["configured_model"] = self.model
-                out["model"] = resolved
+                out["model_present"] = any(
+                    m == self.model or m.split(":")[0] == self.model.split(":")[0]
+                    for m in models)
                 out["latency_ms"] = int((time.time() - started) * 1000)
                 if out["model_present"]:
                     out["available"] = True
@@ -177,7 +146,7 @@ class LocalModel:
             return False
         try:
             self._post("/api/generate", {
-                "model": self.resolve(), "prompt": "ok", "stream": False,
+                "model": self.model, "prompt": "ok", "stream": False,
                 "keep_alive": self.keep_alive,
                 "options": {"num_predict": 1, "temperature": 0},
             }, timeout=self.timeout)
@@ -243,7 +212,7 @@ class LocalModel:
             raise LLMUnavailable("The local model is switched off by configuration.")
 
         payload = {
-            "model": self.resolve(),
+            "model": self.model,
             "prompt": prompt,
             "stream": False,
             "format": "json",

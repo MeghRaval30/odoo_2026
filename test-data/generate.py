@@ -503,10 +503,6 @@ def build_bulk(path):
     return len(roster)
 
 
-
-
-# ==========================================================================
-# 07 -- three months of pay from the system this one replaces
 # ==========================================================================
 
 FILES = [

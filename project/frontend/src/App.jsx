@@ -9,7 +9,6 @@ import Contracts from "./screens/Contracts";
 import DashboardRouter from "./screens/DashboardRouter";
 import Employees from "./screens/Employees";
 import Bonds from "./screens/Bonds";
-import Branding from "./screens/Branding";
 import Holidays from "./screens/Holidays";
 import ImportStudio from "./screens/ImportStudio";
 import Login from "./screens/Login";
@@ -59,7 +58,6 @@ const SCREENS = {
   reports: Reports,
   users: Users,
   security: Security,
-  branding: Branding,
   audit: AuditLog,
 };
 

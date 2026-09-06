@@ -39,12 +39,6 @@ export const THEMES = [
     swatch: ["#fbf5ea", "#d98324", "#2e2317"],
   },
   {
-    id: "corporate",
-    name: "Corporate",
-    blurb: "Navy chrome, grey field, square corners, no shadow",
-    swatch: ["#eceef1", "#1e2340", "#b07a2b"],
-  },
-  {
     id: "graphite",
     name: "Graphite",
     blurb: "Neutral dark, amber accent, grotesk display",

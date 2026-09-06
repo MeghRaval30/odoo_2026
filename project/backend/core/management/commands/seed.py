@@ -26,7 +26,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Role, User
-from core.models import Branding
 from accounts.security import (AuditLog, LoginAttempt, NetworkPolicy,
                                SecuritySetting)
 from attendance.models import Attendance
@@ -104,16 +103,9 @@ class Command(BaseCommand):
                           BondTemplate, Segment, ImportRun, ImportSource):
                 model.objects.all().delete()
 
-            # Branding is a single row nothing above references, so like the
-            # security settings it outlived every reseed -- including a logo
-            # somebody uploaded mid-demo. "A known demo state" has to include
-            # whose name is in the top bar.
-            Branding.objects.all().delete()
-
         random.seed(360)  # reproducible demos
 
         company = self._company()
-        self._branding()
         roles = self._roles()
         departments = self._departments(company)
         positions = self._positions(company, departments)
@@ -978,22 +970,3 @@ class Command(BaseCommand):
             f"{PayslipLine.objects.count()} lines | "
             f"{PayslipWarning.objects.count()} warnings")
         self.stdout.write("\n  Login: admin@oxp.com / demo1234")
-
-    def _branding(self):
-        """
-        The product's own name in the top bar, and no customer mark.
-
-        A fresh database is not anybody's install yet, so it ships unbranded
-        and the shell falls back to the PeoplePay360 wordmark. A customer's
-        logo, their name and the background wash are all set from
-        Administration -> Branding, which is the only place that decides them.
-        """
-        branding = Branding.load()
-        branding.app_name = "PeoplePay360"
-        branding.company_name = ""
-        for which in ("logo", "watermark"):
-            setattr(branding, "%s_b64" % which, "")
-            setattr(branding, "%s_mime" % which, "")
-            setattr(branding, "%s_filename" % which, "")
-        branding.save()
-        self.stdout.write("  branding: %s (no customer mark)" % branding.app_name)

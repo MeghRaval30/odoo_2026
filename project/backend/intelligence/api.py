@@ -291,11 +291,10 @@ class ImportRunViewSet(viewsets.ModelViewSet):
                         time.sleep(pace)
 
                 yield sse("model_start",
-                          ("Asking %s to read %d headers"
-                           % (model.resolve(), len(profiles)))
+                          ("Asking %s to read %d headers" % (model.model, len(profiles)))
                           if use_model else
                           "No local model available; matching on rules alone",
-                          0.42, {"model": model.resolve(), "available": use_model})
+                          0.42, {"model": model.model, "available": use_model})
 
                 queue = []
                 plan = build_plan(table, profiles,

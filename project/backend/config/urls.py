@@ -12,7 +12,6 @@ from accounts.selfservice_api import (AuditLogViewSet, NetworkPolicyViewSet,
                                       my_sessions_view, security_settings_view)
 from attendance.api import AttendanceViewSet
 from core.api import HolidayViewSet
-from core.branding_api import branding_update_view, branding_view
 from dashboard.api import dashboard_view, filter_options_view
 from dashboard.role_views import (admin_dashboard_view, hr_dashboard_view,
                                  my_dashboard_view)
@@ -99,9 +98,6 @@ urlpatterns = [
 
     path("api/intel/health/", health_view, name="intel-health"),
     path("api/intel/fields/", fields_view, name="intel-fields"),
-    path("api/branding/", branding_view, name="branding"),
-    path("api/branding/update/", branding_update_view,
-         name="branding-update"),
 
     path("api/dashboard/", dashboard_view, name="dashboard"),
     path("api/dashboard/filters/", filter_options_view, name="dashboard-filters"),
