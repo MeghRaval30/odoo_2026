@@ -370,6 +370,8 @@ NAVIGATION = [
         "items": [
             {"to": "/payroll", "label": "Payruns", "cap": PAYRUN_READ},
             {"to": "/payslips", "label": "Payslips", "cap": PAYSLIP_READ_ALL},
+            {"to": "/payslip-import", "label": "Import Past Payslips",
+             "cap": DATA_IMPORT},
         ],
     },
     {
