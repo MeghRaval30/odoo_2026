@@ -18,9 +18,6 @@ from dashboard.role_views import (admin_dashboard_view, hr_dashboard_view,
                                  my_dashboard_view)
 from intelligence.api import (ImportRunViewSet, ImportSourceViewSet,
                               fields_view, health_view)
-from intelligence.payslip_api import (PayslipImportRunViewSet,
-                                      payslip_fields_view,
-                                      payslip_import_health_view)
 from employees.api import (CompanyViewSet, ContractViewSet, DepartmentViewSet,
                            EmployeeViewSet, JobPositionViewSet,
                            WorkLocationViewSet, WorkingScheduleViewSet)
@@ -62,8 +59,6 @@ router.register("payslips", PayslipViewSet, basename="payslip")
 # Data migration -- the import studio
 router.register("intel/sources", ImportSourceViewSet, basename="importsource")
 router.register("intel/runs", ImportRunViewSet, basename="importrun")
-router.register("intel/payslip-runs", PayslipImportRunViewSet,
-                basename="payslipimportrun")
 
 # Workforce -- bulk people operations
 router.register("workforce/segments", SegmentViewSet, basename="segment")
@@ -104,10 +99,6 @@ urlpatterns = [
 
     path("api/intel/health/", health_view, name="intel-health"),
     path("api/intel/fields/", fields_view, name="intel-fields"),
-    path("api/intel/payslip-fields/", payslip_fields_view,
-         name="intel-payslip-fields"),
-    path("api/intel/payslip-health/", payslip_import_health_view,
-         name="intel-payslip-health"),
     path("api/branding/", branding_view, name="branding"),
     path("api/branding/update/", branding_update_view,
          name="branding-update"),

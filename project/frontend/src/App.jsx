@@ -16,7 +16,6 @@ import Login from "./screens/Login";
 import MyPayslips from "./screens/MyPayslips";
 import MassActions from "./screens/MassActions";
 import Payruns from "./screens/Payruns";
-import PayslipImport from "./screens/PayslipImport";
 import Payslips from "./screens/Payslips";
 import Playbooks from "./screens/Playbooks";
 import Profile from "./screens/Profile";
@@ -44,7 +43,6 @@ const SCREENS = {
   "timeoff-types": TimeOffTypes,
   payroll: Payruns,
   payslips: Payslips,
-  "payslip-import": PayslipImport,
   "my-payslips": MyPayslips,
   "salary-structures": SalaryStructures,
   "salary-rules": SalaryRules,

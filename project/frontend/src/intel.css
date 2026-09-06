@@ -564,31 +564,3 @@
 @media (prefers-reduced-motion: reduce) {
   .stagger-row { animation: none !important; }
 }
-
-/* ------------------------------------------- historical payslip import */
-
-.gap-list { list-style: none; margin: 8px 0 0; padding: 0; }
-.gap-list li {
-  padding: 7px 0;
-  border-top: var(--border-width) solid var(--border);
-}
-.gap-list li:first-child { border-top: 0; }
-
-.inline-form { display: flex; gap: 8px; margin-top: 10px; }
-.inline-form input { flex: 1; max-width: 260px; }
-
-.actions-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: var(--gap);
-}
-.actions-row > .muted:first-child { margin-right: auto; }
-
-/* A row that will not be written, and a column that will not be read. Both
-   are dimmed rather than hidden: the operator needs to see that the importer
-   noticed them, and why, or the counts above the table look like data loss. */
-.row-blocked td { opacity: 0.55; }
-.row-blocked td:first-child { box-shadow: inset 2px 0 0 var(--red); }
-.row-muted td { opacity: 0.6; }
